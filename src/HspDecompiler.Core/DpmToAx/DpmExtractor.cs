@@ -115,7 +115,7 @@ namespace HspDecompiler.Core.DpmToAx
         {
             reader!.BaseStream.Seek(fileOffset, SeekOrigin.Begin);
             byte[] buffer = new byte[fileSize];
-            reader.BaseStream.Read(buffer, 0, fileSize);
+            reader.BaseStream.ReadExactly(buffer, 0, fileSize);
             return buffer;
         }
 

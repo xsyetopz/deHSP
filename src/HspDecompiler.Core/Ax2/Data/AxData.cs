@@ -69,31 +69,31 @@ namespace HspDecompiler.Core.Ax2.Data
                 Header head = header;
                 tokenData = new byte[head.ScriptByte];
                 stream.Seek(startPosition + head.ScriptOffset, SeekOrigin.Begin);
-                stream.Read(tokenData, 0, head.ScriptByte);
+                stream.ReadExactly(tokenData, 0, head.ScriptByte);
 
                 dllData = new byte[head.DllByte];
                 stream.Seek(startPosition + head.DllOffset, SeekOrigin.Begin);
-                stream.Read(dllData, 0, head.DllByte);
+                stream.ReadExactly(dllData, 0, head.DllByte);
 
                 funcData = new byte[head.FuncByte];
                 stream.Seek(startPosition + head.FuncOffset, SeekOrigin.Begin);
-                stream.Read(funcData, 0, head.FuncByte);
+                stream.ReadExactly(funcData, 0, head.FuncByte);
 
                 deffuncData = new byte[head.DeffuncByte];
                 stream.Seek(startPosition + head.DeffuncOffset, SeekOrigin.Begin);
-                stream.Read(deffuncData, 0, head.DeffuncByte);
+                stream.ReadExactly(deffuncData, 0, head.DeffuncByte);
 
                 moduleData = new byte[head.ModuleByte];
                 stream.Seek(startPosition + head.ModuleOffset, SeekOrigin.Begin);
-                stream.Read(moduleData, 0, head.ModuleByte);
+                stream.ReadExactly(moduleData, 0, head.ModuleByte);
 
                 labelData = new byte[head.LabelByte];
                 stream.Seek(startPosition + head.LabelOffset, SeekOrigin.Begin);
-                stream.Read(labelData, 0, head.LabelByte);
+                stream.ReadExactly(labelData, 0, head.LabelByte);
 
                 stringData = new byte[head.TextByte];
                 stream.Seek(startPosition + head.TextOffset, SeekOrigin.Begin);
-                stream.Read(stringData, 0, head.TextByte);
+                stream.ReadExactly(stringData, 0, head.TextByte);
             }
             catch (Exception e)
             {

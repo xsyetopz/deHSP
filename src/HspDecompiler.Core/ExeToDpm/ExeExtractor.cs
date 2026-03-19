@@ -49,7 +49,7 @@ namespace HspDecompiler.Core.ExeToDpm
                 exeStream.Seek(dpmOffset, SeekOrigin.Begin);
                 int dpmSize = (int)(exeStream.Length - dpmOffset);
                 byte[] data = new byte[dpmSize];
-                exeStream.Read(data, 0, dpmSize);
+                exeStream.ReadExactly(data, 0, dpmSize);
                 dpmStream.Write(data, 0, dpmSize);
             }
             catch (IOException ex)
@@ -64,7 +64,7 @@ namespace HspDecompiler.Core.ExeToDpm
             if (exeStream.Length >= DpmxOffsetLarge + 4)
             {
                 exeStream.Seek(DpmxOffsetLarge, SeekOrigin.Begin);
-                exeStream.Read(header, 0, 4);
+                exeStream.ReadExactly(header, 0, 4);
                 if (header[0] == DpmxMagicD && header[1] == DpmxMagicP && header[2] == DpmxMagicM && header[3] == DpmxMagicX)
                 {
                     return DpmxOffsetLarge;
@@ -74,7 +74,7 @@ namespace HspDecompiler.Core.ExeToDpm
             if (exeStream.Length >= DpmxOffsetSmall + 4)
             {
                 exeStream.Seek(DpmxOffsetSmall, SeekOrigin.Begin);
-                exeStream.Read(header, 0, 4);
+                exeStream.ReadExactly(header, 0, 4);
                 if (header[0] == DpmxMagicD && header[1] == DpmxMagicP && header[2] == DpmxMagicM && header[3] == DpmxMagicX)
                 {
                     return DpmxOffsetSmall;
