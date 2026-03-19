@@ -1,5 +1,3 @@
-using System;
-
 namespace HspDecompiler.Core.Ax3.Data
 {
     abstract class CodeToken

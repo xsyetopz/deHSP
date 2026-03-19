@@ -11,16 +11,18 @@ namespace HspDecompiler.Core.DpmToAx
         {
         }
 
-        internal static DpmExtractor FromBinaryReader(BinaryReader reader)
+        internal static DpmExtractor? FromBinaryReader(BinaryReader reader)
         {
             DpmExtractor ret = new DpmExtractor();
             try
             {
                 ret.reader = reader;
-                if (ret.readHeader())
+                if (ret.ReadHeader())
+                {
                     return ret;
+                }
             }
-            catch (Exception)
+            catch (IOException)
             {
                 return null;
             }
@@ -31,17 +33,20 @@ namespace HspDecompiler.Core.DpmToAx
         long streamLength;
         long fileOffsetStart;
 
-        private bool readHeader()
+        private bool ReadHeader()
         {
-            startPosition = reader.BaseStream.Position;
+            startPosition = reader!.BaseStream.Position;
             streamLength = reader.BaseStream.Length - startPosition;
             char[] identifier = reader.ReadChars(4);
             if (identifier.Length < 4)
+            {
                 return false;
+            }
+
             reader.BaseStream.Seek(startPosition, SeekOrigin.Begin);
             if ((identifier[0] == 'M') && (identifier[1] == 'Z'))
             {
-                Win32PeHeader winHeader = Win32PeHeader.FromBinaryReader(reader);
+                Win32PeHeader? winHeader = Win32PeHeader.FromBinaryReader(reader);
                 if (winHeader == null)
                 {
                     return false;
@@ -51,7 +56,9 @@ namespace HspDecompiler.Core.DpmToAx
                 reader.BaseStream.Seek(startPosition, SeekOrigin.Begin);
                 identifier = reader.ReadChars(4);
                 if (identifier.Length < 4)
+                {
                     return false;
+                }
             }
             if (!((identifier[0] == 'D') && (identifier[1] == 'P') && (identifier[2] == 'M') && (identifier[3] == 'X')))
             {
@@ -83,14 +90,17 @@ namespace HspDecompiler.Core.DpmToAx
                 file.FileOffset = reader.ReadInt32();
                 file.FileSize = reader.ReadInt32();
                 if ((file.FileOffset + file.FileSize) > (streamLength))
+                {
                     return false;
+                }
+
                 files.Add(file);
             }
 
             return true;
         }
 
-        private BinaryReader reader;
+        private BinaryReader? reader;
         private List<DpmFileEntry> files = new List<DpmFileEntry>();
 
         internal List<DpmFileEntry> FileList
@@ -103,42 +113,35 @@ namespace HspDecompiler.Core.DpmToAx
 
         internal byte[] GetFile(int fileOffset, int fileSize)
         {
-            reader.BaseStream.Seek(fileOffset, SeekOrigin.Begin);
+            reader!.BaseStream.Seek(fileOffset, SeekOrigin.Begin);
             byte[] buffer = new byte[fileSize];
             reader.BaseStream.Read(buffer, 0, fileSize);
             return buffer;
         }
 
-        internal DpmFileEntry GetStartAx()
+        /// <summary>
+        /// Returns the "start.ax" entry, or null if not present.
+        /// Consolidated from the former GetStartAx/SeekStartAx pair.
+        /// </summary>
+        internal DpmFileEntry? GetStartAx()
         {
             foreach (DpmFileEntry file in files)
             {
-                if (file.FileName == "start.ax")
-                    return file;
-            }
-            return null;
-        }
-
-        internal bool SeekStartAx()
-        {
-            foreach (DpmFileEntry file in files)
-            {
-                if (file.FileName.Equals("start.ax", StringComparison.Ordinal))
+                if (file.FileName != null && file.FileName.Equals("start.ax", StringComparison.Ordinal))
                 {
-                    reader.BaseStream.Seek(file.FileOffset + this.fileOffsetStart, SeekOrigin.Begin);
-                    return true;
+                    return file;
                 }
             }
-            return false;
+            return null;
         }
 
         internal bool Seek(DpmFileEntry file)
         {
             try
             {
-                reader.BaseStream.Seek(file.FileOffset + this.fileOffsetStart, SeekOrigin.Begin);
+                reader!.BaseStream.Seek(file.FileOffset + fileOffsetStart, SeekOrigin.Begin);
             }
-            catch
+            catch (IOException)
             {
                 return false;
             }

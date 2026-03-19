@@ -20,21 +20,27 @@ namespace HspDecompiler.Core.Ax3.Data.Primitive
         internal LabelPrimitive(PrimitiveTokenDataSet dataSet)
             : base(dataSet)
         {
-            label = dataSet.Parent.Labels[Value];
+            label = dataSet.Parent!.Labels[Value];
         }
-        readonly Label label = null;
+        readonly Label? label = null;
 
         public override string ToString()
         {
             if (label == null)
+            {
                 return DefaultName;
+            }
+
             return label.LabelName;
         }
 
         internal void LabelIsUsed()
         {
             if (label == null)
+            {
                 return;
+            }
+
             label.Visible = true;
         }
     }
@@ -98,7 +104,7 @@ namespace HspDecompiler.Core.Ax3.Data.Primitive
         {
             this.str = str;
         }
-        readonly string str = null;
+        readonly string? str = null;
         public override string ToString()
         {
             StringBuilder builder = new StringBuilder();

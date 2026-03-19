@@ -10,20 +10,23 @@ namespace HspDecompiler.Core.Ax3.Data.Token
             this.token = token;
         }
 
-        readonly private LiteralPrimitive token = null;
+        readonly private LiteralPrimitive? token = null;
         internal bool IsNegativeNumber
         {
             get
             {
                 if (token == null)
+                {
                     return false;
+                }
+
                 return token.IsNegativeNumber;
             }
         }
 
         internal bool IsMinusOne
         {
-            get { return token.IsMinusOne; }
+            get { return token!.IsMinusOne; }
         }
 
         internal override int TokenOffset
@@ -31,15 +34,21 @@ namespace HspDecompiler.Core.Ax3.Data.Token
             get
             {
                 if (token == null)
+                {
                     return -1;
+                }
+
                 return token.TokenOffset;
             }
         }
 
         public override string ToString()
         {
-            if ((token.CodeType == HspCodeType.Symbol) && (token.ToString() == "?"))
+            if ((token!.CodeType == HspCodeType.Symbol) && (token.ToString() == "?"))
+            {
                 return "";
+            }
+
             return token.ToString();
         }
 
@@ -47,15 +56,18 @@ namespace HspDecompiler.Core.Ax3.Data.Token
         {
             get
             {
-                if (this.IsNegativeNumber)
+                if (IsNegativeNumber)
+                {
                     return -1;
+                }
+
                 return 100;
             }
         }
 
         internal override void CheckLabel()
         {
-            LabelPrimitive label = token as LabelPrimitive;
+            LabelPrimitive? label = token as LabelPrimitive;
             if (label != null)
             {
                 label.LabelIsUsed();

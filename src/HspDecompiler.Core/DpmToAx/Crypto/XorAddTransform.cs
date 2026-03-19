@@ -14,21 +14,30 @@ namespace HspDecompiler.Core.DpmToAx.Crypto
         internal byte Encode(byte b)
         {
             if (XorSum)
+            {
                 return Sum(Xor(b, XorByte), AddByte);
+            }
+
             return Xor(Sum(b, AddByte), XorByte);
         }
 
         internal byte Decode(byte b)
         {
             if (XorSum)
+            {
                 return Xor(Dif(b, AddByte), XorByte);
+            }
+
             return Dif(Xor(b, XorByte), AddByte);
         }
 
         internal static byte GetXorByte(byte add, byte plain, byte encrypted, bool XorSum)
         {
             if (XorSum)
+            {
                 return (byte)(Dif(encrypted, add) ^ plain);
+            }
+
             return Xor(encrypted, Sum(plain, add));
         }
 

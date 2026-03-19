@@ -1,13 +1,13 @@
 using System;
-using Xunit;
 using HspDecompiler.Core.DpmToAx.Crypto;
+using Xunit;
 
 namespace HspDecompiler.Core.Tests
 {
     public class HspCryptoTransformTests
     {
         [Fact]
-        public void Test_Encryption_Decryption_Roundtrip()
+        public void EncryptionDecryptionRoundtrip()
         {
             var transform = new HspCryptoTransform();
             transform.XorAdd = new XorAddTransform
@@ -25,7 +25,7 @@ namespace HspDecompiler.Core.Tests
         }
 
         [Fact]
-        public void Test_Encryption_Produces_Different_Output()
+        public void EncryptionProducesDifferentOutput()
         {
             var transform = new HspCryptoTransform();
             transform.XorAdd = new XorAddTransform
@@ -40,12 +40,15 @@ namespace HspDecompiler.Core.Tests
 
             bool allSame = true;
             for (int i = 0; i < plaintext.Length; i++)
+            {
                 if (plaintext[i] != encrypted[i]) { allSame = false; break; }
+            }
+
             Assert.False(allSame);
         }
 
         [Fact]
-        public void Test_CrackEncryption_Finds_Key_For_HSP3_Header()
+        public void CrackEncryptionFindsKeyForHsp3Header()
         {
             var originalTransform = new HspCryptoTransform();
             originalTransform.XorAdd = new XorAddTransform

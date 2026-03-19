@@ -26,7 +26,10 @@ namespace HspDecompiler.Core.Ax3.Data.PP
             get
             {
                 if (function != null)
+                {
                     return true;
+                }
+
                 return visible;
             }
             set { visible = value; }
@@ -41,19 +44,30 @@ namespace HspDecompiler.Core.Ax3.Data.PP
         public override string ToString()
         {
             if (function != null)
+            {
                 return function.ToString();
+            }
+
             return labelName;
         }
 
-        public int CompareTo(Label other)
+        public int CompareTo(Label? other)
         {
+            if (other == null)
+            {
+                return 1;
+            }
+
             int ret = tokenOffset.CompareTo(other.tokenOffset);
             if (ret != 0)
+            {
                 return ret;
+            }
+
             return index.CompareTo(other.index);
         }
 
-        private Function function = null;
+        private Function? function = null;
         internal void SetFunction(Function f)
         {
             function = f;

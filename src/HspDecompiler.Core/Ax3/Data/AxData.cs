@@ -4,7 +4,6 @@ using System.IO;
 using System.Text;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.PP;
-using HspDecompiler.Core.Ax3.Dictionary;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Resources;
 
@@ -12,14 +11,20 @@ namespace HspDecompiler.Core.Ax3.Data
 {
     class AxData
     {
-        private AxHeader header;
+        // Fix #30: Named constants for HSP debug info markers
+        private const byte DebugMarkerFileName = 252;
+        private const byte DebugMarkerVariable = 253;
+        private const byte DebugMarkerLineNumber = 254;
+        private const byte DebugMarkerEnd = 255;
+
+        private AxHeader? header;
         TokenCollection tokens = new TokenCollection();
         List<Label> labels = new List<Label>();
         List<Usedll> dlls = new List<Usedll>();
         List<Function> functions = new List<Function>();
         List<Param> functionParams = new List<Param>();
         List<PlugIn> plugIns = new List<PlugIn>();
-        Runtime runtime = null;
+        Runtime? runtime = null;
         List<Function> modules = new List<Function>();
         List<string> variableName = new List<string>();
 
@@ -33,12 +38,12 @@ namespace HspDecompiler.Core.Ax3.Data
             get { return plugIns; }
         }
 
-        internal Runtime Runtime
+        internal Runtime? Runtime
         {
             get { return runtime; }
         }
 
-        internal AxHeader Header
+        internal AxHeader? Header
         {
             get { return header; }
         }
@@ -68,64 +73,100 @@ namespace HspDecompiler.Core.Ax3.Data
             return Labels[index];
         }
 
-        internal Function GetUserFunction(int index)
+        internal Function? GetUserFunction(int index)
         {
             if (index < 0)
+            {
                 return null;
+            }
+
             if (index >= functions.Count)
+            {
                 return null;
+            }
+
             return functions[index];
         }
 
-        internal Function GetDllFunction(int index)
+        internal Function? GetDllFunction(int index)
         {
             if (index < 0)
+            {
                 return null;
+            }
+
             if (index >= functions.Count)
+            {
                 return null;
+            }
+
             return functions[index];
         }
 
-        internal Usedll GetUsedll(int index)
+        internal Usedll? GetUsedll(int index)
         {
             if (index < 0)
+            {
                 return null;
+            }
+
             if (index >= dlls.Count)
+            {
                 return null;
+            }
+
             return dlls[index];
         }
 
-        internal Param GetParam(int index)
+        internal Param? GetParam(int index)
         {
             if (index < 0)
+            {
                 return null;
+            }
+
             if (index >= functionParams.Count)
+            {
                 return null;
+            }
+
             return functionParams[index];
         }
 
-        internal string GetVariableName(int index)
+        internal string? GetVariableName(int index)
         {
             if (index < 0)
+            {
                 return null;
+            }
+
             if (index >= variableName.Count)
+            {
                 return null;
+            }
+
             return variableName[index];
         }
 
-        internal Cmd AddCmd(int pluginIndex, int methodIndex)
+        internal Cmd? AddCmd(int pluginIndex, int methodIndex)
         {
             if (pluginIndex < 0)
+            {
                 return null;
+            }
+
             if (pluginIndex >= plugIns.Count)
+            {
                 return null;
+            }
+
             return plugIns[pluginIndex].AddCmd(methodIndex);
         }
 
         internal string ReadString(int offset, int max_count)
         {
             long seekOffset = seekOrigin + offset;
-            long nowPosition = reader.BaseStream.Position;
+            long nowPosition = reader!.BaseStream.Position;
             reader.BaseStream.Seek(seekOffset, SeekOrigin.Begin);
             List<Char> chars = new List<char>();
             char token = '\0';
@@ -158,7 +199,9 @@ namespace HspDecompiler.Core.Ax3.Data
                 }
                 count++;
                 if (count >= max_count)
+                {
                     break;
+                }
             }
             char[] arrayChars = new char[chars.Count];
             chars.CopyTo(arrayChars);
@@ -168,14 +211,14 @@ namespace HspDecompiler.Core.Ax3.Data
 
         internal string ReadStringLiteral(int offset)
         {
-            return ReadString((int)(header.LiteralStart + offset), (int)(header.LiteralSize - offset));
+            return ReadString((int)(header!.LiteralStart + offset), (int)(header.LiteralSize - offset));
         }
 
         internal double ReadDoubleLiteral(int offset)
         {
             double ret = 0.0;
-            long seekOffset = seekOrigin + header.LiteralStart + offset;
-            long nowPosition = reader.BaseStream.Position;
+            long seekOffset = seekOrigin + header!.LiteralStart + offset;
+            long nowPosition = reader!.BaseStream.Position;
             reader.BaseStream.Seek(seekOffset, SeekOrigin.Begin);
             ret = reader.ReadDouble();
             reader.BaseStream.Seek(nowPosition, SeekOrigin.Begin);
@@ -185,9 +228,9 @@ namespace HspDecompiler.Core.Ax3.Data
         internal string ReadIidCodeLiteral(int offset)
         {
             StringBuilder strbd = new StringBuilder();
-            byte[] buf = null;
-            long seekOffset = seekOrigin + header.LiteralStart + offset;
-            long nowPosition = reader.BaseStream.Position;
+            byte[] buf;
+            long seekOffset = seekOrigin + header!.LiteralStart + offset;
+            long nowPosition = reader!.BaseStream.Position;
             reader.BaseStream.Seek(seekOffset, SeekOrigin.Begin);
             buf = reader.ReadBytes(0x10);
             reader.BaseStream.Seek(nowPosition, SeekOrigin.Begin);
@@ -216,12 +259,18 @@ namespace HspDecompiler.Core.Ax3.Data
             return strbd.ToString();
         }
 
-        internal void LoadStart(BinaryReader theReader, Hsp3Dictionary theDictionary)
+        internal void LoadStart(BinaryReader theReader, Hsp3Dictionary? theDictionary)
         {
             if (theReader == null)
+            {
                 throw new ArgumentNullException(Strings.ArgumentNullReader);
+            }
+
             if (theDictionary == null)
+            {
                 throw new ArgumentNullException(Strings.ArgumentNullDictionary);
+            }
+
             seekOrigin = theReader.BaseStream.Position;
             reader = theReader;
             dictionary = theDictionary;
@@ -237,39 +286,45 @@ namespace HspDecompiler.Core.Ax3.Data
         }
 
         long seekOrigin;
-        BinaryReader reader = null;
-        Hsp3Dictionary dictionary = null;
+        BinaryReader? reader = null;
+        Hsp3Dictionary? dictionary = null;
         bool isStarted = false;
 
         internal bool IsStarted
         {
             get { return isStarted; }
         }
-        internal BinaryReader Reader
+        // Fix #17: removed unused setter
+        internal BinaryReader? Reader
         {
             get { return reader; }
-            set { reader = value; }
         }
         internal long StartOfCode
         {
             get
             {
-                return header.CodeStart + seekOrigin;
+                return header!.CodeStart + seekOrigin;
             }
         }
-        internal Hsp3Dictionary Dictionary
+        // Fix #18: removed unused setter
+        internal Hsp3Dictionary? Dictionary
         {
             get { return dictionary; }
-            set { dictionary = value; }
         }
 
         internal void ReadHeader()
         {
             if (!isStarted)
+            {
                 throw new InvalidOperationException(Strings.LoadStartNotCalled);
-            long streamSize = reader.BaseStream.Length - seekOrigin;
+            }
+
+            long streamSize = reader!.BaseStream.Length - seekOrigin;
             if (streamSize < 0x60)
+            {
                 throw new HspDecoderException("AxData", Strings.FileHeaderMissing);
+            }
+
             try
             {
                 header = AxHeader.FromBinaryReader(reader);
@@ -281,23 +336,31 @@ namespace HspDecompiler.Core.Ax3.Data
             return;
         }
 
-        internal void ReadPreprocessor(Hsp3Dictionary dictionary)
+        internal void ReadPreprocessor(Hsp3Dictionary? dictionary)
         {
             if (!isStarted)
+            {
                 throw new InvalidOperationException(Strings.LoadStartNotCalled);
+            }
+
             if (header == null)
+            {
                 throw new InvalidOperationException(Strings.HeaderNotLoaded);
+            }
+
             if (header.RuntimeStart != 0)
             {
                 string runtimeName = ReadString((int)header.RuntimeStart, (int)(header.CodeStart - header.RuntimeStart));
                 if (runtimeName != null)
+                {
                     runtime = new Runtime(runtimeName);
+                }
             }
             uint count = header.LabelCount;
             for (int i = 0; i < count; i++)
             {
                 long offset = seekOrigin + header.LabelStart + ((int)HeaderDataSize.Label * i);
-                reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+                reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
                 labels.Add(Label.FromBinaryReader(reader, this, i));
             }
 
@@ -305,7 +368,7 @@ namespace HspDecompiler.Core.Ax3.Data
             for (int i = 0; i < count; i++)
             {
                 long offset = seekOrigin + header.DllStart + ((int)HeaderDataSize.Dll * i);
-                reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+                reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
                 dlls.Add(Usedll.FromBinaryReader(reader, this, i));
             }
 
@@ -313,7 +376,7 @@ namespace HspDecompiler.Core.Ax3.Data
             for (int i = 0; i < count; i++)
             {
                 long offset = seekOrigin + header.ParameterStart + ((int)HeaderDataSize.Parameter * i);
-                reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+                reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
                 functionParams.Add(Param.FromBinaryReader(reader, this, i));
             }
 
@@ -321,7 +384,7 @@ namespace HspDecompiler.Core.Ax3.Data
             for (int i = 0; i < count; i++)
             {
                 long offset = seekOrigin + header.FunctionStart + ((int)HeaderDataSize.Function * i);
-                reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+                reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
                 functions.Add(Function.FromBinaryReader(reader, this, i));
             }
 
@@ -329,7 +392,7 @@ namespace HspDecompiler.Core.Ax3.Data
             for (int i = 0; i < count; i++)
             {
                 long offset = seekOrigin + header.PluginStart + ((int)HeaderDataSize.Plugin * i);
-                reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+                reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
                 plugIns.Add(PlugIn.FromBinaryReader(reader, this, i));
             }
             if ((count != 0) && (header.PluginParameterCount != 0))
@@ -341,12 +404,13 @@ namespace HspDecompiler.Core.Ax3.Data
             {
                 param.SetFunction(this);
             }
-            RenameFunctions(dictionary);
+            RenameFunctions(dictionary!);
 
             ReadDebugInfo();
         }
 
-        internal void DeleteInvisibleLables()
+        // Fix #25: renamed from DeleteInvisibleLables
+        internal void DeleteInvisibleLabels()
         {
             labels = labels.FindAll(LabelIsVisible);
         }
@@ -356,6 +420,7 @@ namespace HspDecompiler.Core.Ax3.Data
             return label.Visible;
         }
 
+        // Fix #9: extracted rename loops into dedicated private methods
         private void RenameFunctions(Hsp3Dictionary dictionary)
         {
             List<string> functionNames = new List<string>();
@@ -378,18 +443,27 @@ namespace HspDecompiler.Core.Ax3.Data
                     case FunctionType.deffunc:
                     case FunctionType.module:
                         if (func.ParentModule != null)
+                        {
                             initializer.Add(func);
+                        }
                         else
                         {
-                            func.SetName(func.DefaultName);
-                            functionNames.Add(func.DefaultName.ToLower());
+                            func.SetName(func.DefaultName ?? "");
+                            functionNames.Add((func.DefaultName ?? "").ToLower());
                         }
                         break;
                 }
             }
+            RenameUserFunctions(functionNames, initializer);
+            RenameDllFunctions(functionNames, dllfuncs);
+            RenameComFunctions(functionNames, comfuncs);
+        }
+
+        private void RenameUserFunctions(List<string> functionNames, List<Function> initializer)
+        {
             foreach (Function func in initializer)
             {
-                string defName = func.DefaultName;
+                string defName = func.DefaultName ?? "";
                 if (!functionNames.Contains(defName.ToLower()))
                 {
                     func.SetName(defName);
@@ -406,15 +480,25 @@ namespace HspDecompiler.Core.Ax3.Data
                 func.SetName(newName);
                 functionNames.Add(newName.ToLower());
             }
+        }
+
+        private void RenameDllFunctions(List<string> functionNames, List<Function> dllfuncs)
+        {
             foreach (Function func in dllfuncs)
             {
-                string defName = func.DefaultName;
+                string defName = func.DefaultName ?? "";
                 string newName = defName;
-                if (newName.StartsWith("_", StringComparison.Ordinal) && (newName.Length > 1))
+                if (newName.StartsWith('_') && (newName.Length > 1))
+                {
                     newName = newName.Substring(1);
-                int atIndex = newName.IndexOf("@", StringComparison.Ordinal);
+                }
+
+                int atIndex = newName.IndexOf('@');
                 if (atIndex > 0)
+                {
                     newName = newName.Substring(0, atIndex);
+                }
+
                 if (!functionNames.Contains(newName.ToLower()))
                 {
                     func.SetName(newName);
@@ -430,6 +514,10 @@ namespace HspDecompiler.Core.Ax3.Data
                 func.SetName(newName);
                 functionNames.Add(newName.ToLower());
             }
+        }
+
+        private void RenameComFunctions(List<string> functionNames, List<Function> comfuncs)
+        {
             foreach (Function func in comfuncs)
             {
                 string newName = "";
@@ -447,7 +535,10 @@ namespace HspDecompiler.Core.Ax3.Data
         internal void RenameLables()
         {
             if (labels.Count <= 0)
+            {
                 return;
+            }
+
             labels.Sort();
             int keta = ((int)System.Math.Log10(labels.Count)) + 1;
             string formatBase = "*label_{0:D0" + keta.ToString() + "}";
@@ -460,26 +551,27 @@ namespace HspDecompiler.Core.Ax3.Data
 
         private bool ReadDebugInfo()
         {
-            // int var_no = 0;
-            for (uint i = 0; i < header.DebugSize; i++)
+            // Fix #21: removed commented-out dead code
+            for (uint i = 0; i < header!.DebugSize; i++)
             {
                 long offset = seekOrigin + header.DebugStart + i;
-                reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+                reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
 
+                // Fix #30: use named constants instead of magic bytes
                 switch (reader.ReadByte())
                 {
-                    case 252:
+                    case DebugMarkerFileName:
                         i += 2;
                         break;
-                    case 253:
+                    case DebugMarkerVariable:
                         int literalOffset = reader.ReadByte() ^ (reader.ReadByte() << 8) ^ (reader.ReadByte() << 16);
                         variableName.Add(ReadStringLiteral(literalOffset));
                         i += 5;
                         break;
-                    case 254:
+                    case DebugMarkerLineNumber:
                         i += 5;
                         break;
-                    case 255:
+                    case DebugMarkerEnd:
                         return true;
                 }
             }

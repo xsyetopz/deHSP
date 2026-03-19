@@ -7,12 +7,12 @@ namespace HspDecompiler.Core.Ax3.Data
 {
     internal class PrimitiveTokenDataSet
     {
-        internal AxData Parent;
+        internal AxData? Parent;
         internal int TokenOffset;
         internal int Type;
         internal int Flag;
         internal int Value;
-        internal string Name;
+        internal string? Name;
         internal HspDictionaryValue DicValue;
     }
 
@@ -25,7 +25,7 @@ namespace HspDecompiler.Core.Ax3.Data
             codeType = dataSet.DicValue.Type;
             codeExtraFlags = dataSet.DicValue.Extra;
             dicValueName = dataSet.DicValue.Name;
-            oparatorPriority = dataSet.DicValue.OparatorPriority;
+            oparatorPriority = dataSet.DicValue.OperatorPriority;
             tokenOffset = dataSet.TokenOffset;
             type = dataSet.Type;
             flag = dataSet.Flag;
@@ -46,19 +46,25 @@ namespace HspDecompiler.Core.Ax3.Data
         }
 
         private readonly HspCodeExtraFlags codeExtraFlags;
-        private readonly AxData parent = null;
+        private readonly AxData? parent = null;
         private int oparatorPriority;
-        private string name;
+        private string? name;
         int tokenOffset;
 
         internal bool HasGhostLabel
         {
             get
             {
-                if (!this.IsLineHead)
+                if (!IsLineHead)
+                {
                     return false;
+                }
+
                 if ((codeExtraFlags & HspCodeExtraFlags.HasGhostLabel) == HspCodeExtraFlags.HasGhostLabel)
+                {
                     return true;
+                }
+
                 return false;
             }
         }
@@ -75,7 +81,10 @@ namespace HspDecompiler.Core.Ax3.Data
             get
             {
                 if (codeType != HspCodeType.Operator)
+                {
                     throw new InvalidOperationException(Strings.OperatorPriorityOnNonOperator);
+                }
+
                 return oparatorPriority;
             }
         }
@@ -101,7 +110,7 @@ namespace HspDecompiler.Core.Ax3.Data
             }
         }
 
-        internal string Name
+        internal string? Name
         {
             get { return name; }
         }
@@ -113,7 +122,7 @@ namespace HspDecompiler.Core.Ax3.Data
 
         internal void SetName()
         {
-            switch (this.codeType)
+            switch (codeType)
             {
                 case HspCodeType.Label:
                     name = dicValueName + value.ToString();
@@ -133,7 +142,7 @@ namespace HspDecompiler.Core.Ax3.Data
 
         public override string ToString()
         {
-            return name;
+            return name ?? string.Empty;
         }
 
         internal virtual string DefaultName
@@ -147,9 +156,14 @@ namespace HspDecompiler.Core.Ax3.Data
                 builder.Append(flag.ToString("X02"));
                 builder.Append(' ');
                 if (HasLongTypeValue)
+                {
                     builder.Append(value.ToString("X08"));
+                }
                 else
+                {
                     builder.Append(value.ToString("X04"));
+                }
+
                 builder.Append("*/");
                 return builder.ToString();
             }

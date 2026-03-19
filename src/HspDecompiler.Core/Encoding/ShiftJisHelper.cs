@@ -4,7 +4,7 @@ namespace HspDecompiler.Core.Encoding
 {
     public static class ShiftJisHelper
     {
-        private static System.Text.Encoding _encoding;
+        private static System.Text.Encoding? _encoding;
         private static readonly object _lock = new object();
 
         public static System.Text.Encoding Encoding

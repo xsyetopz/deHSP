@@ -10,28 +10,36 @@ namespace HspDecompiler.Core.Ax3.Data.Token
             primitive = source;
         }
 
-        readonly OperatorPrimitive primitive = null;
+        readonly OperatorPrimitive? primitive = null;
         internal override int TokenOffset
         {
-            get { return primitive.TokenOffset; }
+            get { return primitive!.TokenOffset; }
         }
 
         public override string ToString()
         {
-            return primitive.ToString();
+            return primitive!.ToString();
         }
 
         internal string ToString(bool isAssignment, bool hasExpression)
         {
-            string ret = primitive.ToString();
+            string ret = primitive!.ToString();
             if (primitive.CodeType != HspCodeType.Operator)
+            {
                 return primitive.ToString();
+            }
+
             if (isAssignment)
             {
                 if ((!hasExpression) && (ret == "+"))
+                {
                     return "++";
+                }
                 else if ((!hasExpression) && (ret == "-"))
+                {
                     return "--";
+                }
+
                 switch (ret)
                 {
                     case "=":
@@ -66,7 +74,7 @@ namespace HspDecompiler.Core.Ax3.Data.Token
 
         internal override int Priority
         {
-            get { return primitive.OperatorPriority; }
+            get { return primitive!.OperatorPriority; }
         }
     }
 }

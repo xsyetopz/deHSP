@@ -9,7 +9,7 @@ namespace HspDecompiler.Core.Ax3.Dictionary
             try
             {
                 str = str.Trim();
-                if (str.StartsWith("0x"))
+                if (str.StartsWith("0x", StringComparison.Ordinal))
                 {
                     str = str.Substring(2);
                     return Int32.Parse(str, System.Globalization.NumberStyles.HexNumber);

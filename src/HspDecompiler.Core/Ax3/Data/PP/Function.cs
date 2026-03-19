@@ -24,6 +24,16 @@ namespace HspDecompiler.Core.Ax3.Data.PP
 
     class Function : Preprocessor
     {
+        // Fix #32: named constants for dllIndex/functionIndex/labelIndex sentinel values
+        private const int DllIndexDeffunc = -1;
+        private const int DllIndexDefcfunc = -2;
+        private const int DllIndexModule = -3;
+        private const int FuncIndexComfunc = -7;
+        private const int LabelIndexFunc1 = 2;
+        private const int LabelIndexOnExit = 3;
+        private const int LabelIndexCfunc = 4;
+        private const int LabelIndexFunc2 = 6;
+
         private Function() { }
         private Function(int index) : base(index) { }
         private int dllIndex;
@@ -45,10 +55,16 @@ namespace HspDecompiler.Core.Ax3.Data.PP
             int paramStart = reader.ReadInt32();
             int paramCount = reader.ReadInt32();
             if (paramCount != 0)
+            {
                 ret.functionParams = parent.FunctionParams.GetRange(paramStart, paramCount);
+            }
+
             ret.strIndex = reader.ReadInt32();
             if (ret.strIndex >= 0)
+            {
                 ret.defaultName = parent.ReadStringLiteral(ret.strIndex);
+            }
+
             ret.paramSizeSum = reader.ReadInt32();
             ret.labelIndex = reader.ReadInt32();
 
@@ -60,16 +76,22 @@ namespace HspDecompiler.Core.Ax3.Data.PP
                 case FunctionType.deffunc:
                     Label label = parent.GetLabel(ret.labelIndex);
                     if (label != null)
+                    {
                         label.SetFunction(ret);
+                    }
+
                     ret.label = label;
                     break;
 
                 case FunctionType.func:
                 case FunctionType.cfunc:
                 case FunctionType.comfunc:
-                    Usedll dll = parent.GetUsedll(ret.dllIndex);
+                    Usedll? dll = parent.GetUsedll(ret.dllIndex);
                     if (dll != null)
+                    {
                         dll.AddFunction(ret);
+                    }
+
                     ret.dll = dll;
                     break;
                 case FunctionType.module:
@@ -83,21 +105,21 @@ namespace HspDecompiler.Core.Ax3.Data.PP
         {
             get
             {
-                return this.Type == FunctionType.module;
+                return Type == FunctionType.module;
             }
         }
         internal bool IsComFunction
         {
             get
             {
-                return this.Type == FunctionType.comfunc;
+                return Type == FunctionType.comfunc;
             }
         }
         internal bool IsUserFunction
         {
             get
             {
-                switch (this.Type)
+                switch (Type)
                 {
                     case FunctionType.deffunc:
                     case FunctionType.defcfunc:
@@ -111,7 +133,7 @@ namespace HspDecompiler.Core.Ax3.Data.PP
         {
             get
             {
-                switch (this.Type)
+                switch (Type)
                 {
                     case FunctionType.func:
                     case FunctionType.cfunc:
@@ -121,47 +143,75 @@ namespace HspDecompiler.Core.Ax3.Data.PP
             }
         }
 
-        private string defaultName = null;
+        private string? defaultName = null;
 
-        internal string DefaultName
+        internal string? DefaultName
         {
             get { return defaultName; }
         }
 
-        internal Function ParentModule
+        internal Function? ParentModule
         {
             get
             {
                 if (functionParams.Count == 0)
+                {
                     return null;
+                }
+
                 if (!functionParams[0].IsModuleType)
+                {
                     return null;
+                }
+
                 return functionParams[0].Module;
             }
         }
-        private string name = null;
-        private Label label = null;
-        private Usedll dll = null;
+        private string? name = null;
+        private Label? label = null;
+        private Usedll? dll = null;
+
+        // Fix #32: use named sentinel constants instead of magic numbers
         internal FunctionType Type
         {
             get
             {
-                if (dllIndex == -1)
+                if (dllIndex == DllIndexDeffunc)
+                {
                     return FunctionType.deffunc;
-                if (dllIndex == -2)
+                }
+
+                if (dllIndex == DllIndexDefcfunc)
+                {
                     return FunctionType.defcfunc;
-                if (dllIndex == -3)
+                }
+
+                if (dllIndex == DllIndexModule)
+                {
                     return FunctionType.module;
+                }
+
                 if (dllIndex >= 0)
                 {
-                    if (functionIndex == -7)
+                    if (functionIndex == FuncIndexComfunc)
+                    {
                         return FunctionType.comfunc;
-                    if (labelIndex == 2 || labelIndex == 6)
+                    }
+
+                    if (labelIndex == LabelIndexFunc1 || labelIndex == LabelIndexFunc2)
+                    {
                         return FunctionType.func;
-                    if (labelIndex == 3)
+                    }
+
+                    if (labelIndex == LabelIndexOnExit)
+                    {
                         return FunctionType.func;
-                    if (labelIndex == 4)
+                    }
+
+                    if (labelIndex == LabelIndexCfunc)
+                    {
                         return FunctionType.cfunc;
+                    }
                 }
                 return FunctionType.NULL;
             }
@@ -170,10 +220,16 @@ namespace HspDecompiler.Core.Ax3.Data.PP
         {
             get
             {
-                if ((flags == 1) && (dllIndex == -1))
+                if ((flags == 1) && (dllIndex == DllIndexDeffunc))
+                {
                     return FunctionFlags.onexit;
-                if ((dllIndex >= 0) && (labelIndex == 3))
+                }
+
+                if ((dllIndex >= 0) && (labelIndex == LabelIndexOnExit))
+                {
                     return FunctionFlags.onexit;
+                }
+
                 return FunctionFlags.NULL;
             }
         }
@@ -182,19 +238,25 @@ namespace HspDecompiler.Core.Ax3.Data.PP
             this.name = name;
         }
 
-        internal string FunctionName
+        internal string? FunctionName
         {
             get
             {
                 if (name != null)
+                {
                     return name;
+                }
+
                 if (defaultName == null)
                 {
-                    if (this.Type == FunctionType.comfunc)
+                    if (Type == FunctionType.comfunc)
+                    {
                         return "comfunc_" + index.ToString();
+                    }
+
                     return null;
                 }
-                switch (this.Type)
+                switch (Type)
                 {
                     case FunctionType.defcfunc:
                     case FunctionType.deffunc:
@@ -203,7 +265,10 @@ namespace HspDecompiler.Core.Ax3.Data.PP
                     case FunctionType.func:
                     case FunctionType.cfunc:
                         if (name != null)
+                        {
                             return name;
+                        }
+
                         return defaultName;
                     case FunctionType.comfunc:
                         return "comfunc_" + index.ToString();
@@ -217,7 +282,7 @@ namespace HspDecompiler.Core.Ax3.Data.PP
         private string modFunctionToString()
         {
             StringBuilder strBld = new StringBuilder();
-            switch (this.defaultName)
+            switch (defaultName)
             {
                 case "__init":
                     strBld.Append("#modinit");
@@ -228,7 +293,7 @@ namespace HspDecompiler.Core.Ax3.Data.PP
                 default:
                     strBld.Append("#modfunc");
                     strBld.Append(' ');
-                    strBld.Append(this.FunctionName);
+                    strBld.Append(FunctionName);
                     break;
             }
             if (functionParams.Count > 1)
@@ -236,7 +301,10 @@ namespace HspDecompiler.Core.Ax3.Data.PP
                 for (int i = 1; i < functionParams.Count; i++)
                 {
                     if (i != 1)
+                    {
                         strBld.Append(',');
+                    }
+
                     strBld.Append(' ');
                     strBld.Append(functionParams[i].ToString());
                 }
@@ -250,19 +318,22 @@ namespace HspDecompiler.Core.Ax3.Data.PP
             if (useModuleStyle)
             {
                 strBld.Append("#module ");
-                strBld.Append(this.FunctionName);
+                strBld.Append(FunctionName);
             }
             else
             {
                 strBld.Append("#struct ");
-                strBld.Append(this.FunctionName);
+                strBld.Append(FunctionName);
             }
             if (functionParams.Count > 1)
             {
                 for (int i = 1; i < functionParams.Count; i++)
                 {
                     if (i != 1)
+                    {
                         strBld.Append(',');
+                    }
+
                     strBld.Append(' ');
                     if (useModuleStyle)
                     {
@@ -277,48 +348,77 @@ namespace HspDecompiler.Core.Ax3.Data.PP
             return strBld.ToString();
         }
 
+        // Fix #11: extracted parameter-formatting logic into AppendParams helper
+        private void AppendParams(StringBuilder strBld, int paramStart)
+        {
+            if (functionParams.Count > paramStart)
+            {
+                for (int i = paramStart; i < functionParams.Count; i++)
+                {
+                    if (i != paramStart)
+                    {
+                        strBld.Append(',');
+                    }
+
+                    strBld.Append(' ');
+                    strBld.Append(functionParams[i].ToString());
+                }
+            }
+        }
+
         internal string ToString(bool useModuleStyle)
         {
             StringBuilder strBld = new StringBuilder();
 
             int paramStart = 0;
-            switch (this.Type)
+            switch (Type)
             {
                 case FunctionType.defcfunc:
                     strBld.Append("#defcfunc ");
-                    strBld.Append(this.FunctionName);
+                    strBld.Append(FunctionName);
                     break;
                 case FunctionType.module:
                     return moduleToString(useModuleStyle);
                 case FunctionType.deffunc:
                     if (useModuleStyle)
+                    {
                         if ((functionParams.Count != 0) && (functionParams[0].IsModuleType))
+                        {
                             return modFunctionToString();
+                        }
+                    }
+
                     strBld.Append("#deffunc ");
-                    strBld.Append(this.FunctionName);
+                    strBld.Append(FunctionName);
                     if ((Flags & FunctionFlags.onexit) == FunctionFlags.onexit)
+                    {
                         strBld.Append(" onexit");
+                    }
+
                     break;
                 case FunctionType.func:
                     strBld.Append("#func ");
-                    strBld.Append(this.FunctionName);
+                    strBld.Append(FunctionName);
                     strBld.Append(' ');
                     if ((Flags & FunctionFlags.onexit) == FunctionFlags.onexit)
+                    {
                         strBld.Append("onexit ");
+                    }
+
                     strBld.Append('"');
                     strBld.Append(defaultName);
                     strBld.Append('"');
                     break;
                 case FunctionType.cfunc:
                     strBld.Append("#cfunc ");
-                    strBld.Append(this.FunctionName);
+                    strBld.Append(FunctionName);
                     strBld.Append(@" """);
                     strBld.Append(defaultName);
                     strBld.Append('"');
                     break;
                 case FunctionType.comfunc:
                     strBld.Append("#comfunc ");
-                    strBld.Append(this.FunctionName);
+                    strBld.Append(FunctionName);
                     strBld.Append(' ');
                     strBld.Append(labelIndex.ToString());
                     paramStart = 1;
@@ -326,16 +426,7 @@ namespace HspDecompiler.Core.Ax3.Data.PP
                 default:
                     return "/*#deffunc?*/";
             }
-            if (functionParams.Count > paramStart)
-            {
-                for (int i = paramStart; i < functionParams.Count; i++)
-                {
-                    if (i != paramStart)
-                        strBld.Append(',');
-                    strBld.Append(' ');
-                    strBld.Append(functionParams[i].ToString());
-                }
-            }
+            AppendParams(strBld, paramStart);
             return strBld.ToString();
         }
 

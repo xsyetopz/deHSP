@@ -1,11 +1,12 @@
 using System.IO;
 using System.Text;
-using HspDecompiler.Core.Ax3.Dictionary;
 
 namespace HspDecompiler.Core.Ax3.Data.PP
 {
     class Param : Preprocessor
     {
+        // Fix #38: named constant for the invalid-type comment prefix (HSP source convention)
+        private const string InvalidTypeCommentPrefix = "/*不正な型 ";
         private Param() { }
         private Param(int paramIndex) : base(paramIndex) { }
         string paramTypeName = "NULL";
@@ -16,8 +17,15 @@ namespace HspDecompiler.Core.Ax3.Data.PP
         {
             Param ret = new Param(index);
             ret.paramType = reader.ReadUInt16();
-            if (!parent.Dictionary.ParamLookUp(ret.paramType, out ret.paramTypeName))
+            if (!parent.Dictionary!.ParamLookUp(ret.paramType, out string? lookupName))
+            {
                 ret.paramTypeName = "NULL";
+            }
+            else
+            {
+                ret.paramTypeName = lookupName ?? "NULL";
+            }
+
             ret.deffuncIndex = reader.ReadInt16();
             ret.paramStartByte = reader.ReadInt32();
 
@@ -26,9 +34,9 @@ namespace HspDecompiler.Core.Ax3.Data.PP
 
         private bool paramNameIsUsed = false;
         private System.UInt16 paramType = 0;
-        private Function module = null;
+        private Function? module = null;
 
-        internal Function Module
+        internal Function? Module
         {
             get { return module; }
         }
@@ -37,15 +45,27 @@ namespace HspDecompiler.Core.Ax3.Data.PP
         internal void SetFunction(AxData parent)
         {
             if (deffuncIndex < 0)
+            {
                 return;
+            }
+
             module = parent.GetUserFunction(deffuncIndex);
             if (module == null)
+            {
                 return;
+            }
+
             if (module.IsModuleFunction)
-                if (this.IsModuleType)
-                    this.nameFormatter = module.FunctionName;
+            {
+                if (IsModuleType)
+                {
+                    nameFormatter = module.FunctionName ?? "prm_{0}";
+                }
                 else
+                {
                     isStructParameter = true;
+                }
+            }
         }
 
         internal bool ParamNameIsUsed
@@ -59,10 +79,10 @@ namespace HspDecompiler.Core.Ax3.Data.PP
         {
             get
             {
-                if (this.isStructParameter)
+                if (isStructParameter)
                 {
                     StringBuilder strbd = new StringBuilder();
-                    strbd.Append(module.FunctionName);
+                    strbd.Append(module!.FunctionName);
                     strbd.Append('_');
                     strbd.Append(string.Format(nameFormatter, index));
                     return strbd.ToString();
@@ -78,19 +98,26 @@ namespace HspDecompiler.Core.Ax3.Data.PP
             {
                 if (paramTypeName == "NULL")
                 {
-                    strbd.Append("/*不正な型 ");
+                    strbd.Append(InvalidTypeCommentPrefix);
                     strbd.Append(paramType.ToString("X04"));
                     strbd.Append("*/");
                 }
                 else if ((localToVar) && (paramTypeName.Equals("local", System.StringComparison.Ordinal)))
+                {
                     strbd.Append("var");
+                }
                 else
+                {
                     strbd.Append(paramTypeName);
+                }
             }
-            if ((force_Named) || (paramNameIsUsed) || (this.IsModuleType))
+            if ((force_Named) || (paramNameIsUsed) || (IsModuleType))
             {
                 if (strbd.Length > 0)
+                {
                     strbd.Append(' ');
+                }
+
                 strbd.Append(string.Format(nameFormatter, index));
             }
             return strbd.ToString();

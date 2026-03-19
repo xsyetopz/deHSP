@@ -44,30 +44,36 @@ namespace HspDecompiler.Core.DpmToAx.Crypto
             return plain;
         }
 
-        internal static HspCryptoTransform CrackEncryption(byte[] encrypted, Func<byte[], bool> validator)
+        internal static HspCryptoTransform? CrackEncryption(byte[] encrypted, Func<byte[], bool> validator)
         {
             byte[] plain3 = new byte[4];
             plain3[0] = 0x48; // H
             plain3[1] = 0x53; // S
             plain3[2] = 0x50; // P
             plain3[3] = 0x33; // 3
-            HspCryptoTransform hsp3crypto = CrackEncryption(plain3, encrypted, validator);
+            HspCryptoTransform? hsp3crypto = CrackEncryption(plain3, encrypted, validator);
             if (hsp3crypto != null)
+            {
                 return hsp3crypto;
+            }
+
             byte[] plain2 = new byte[4];
             plain2[0] = 0x48; // H
             plain2[1] = 0x53; // S
             plain2[2] = 0x50; // P
             plain2[3] = 0x32; // 2
-            HspCryptoTransform hsp2crypto = CrackEncryption(plain2, encrypted, validator);
+            HspCryptoTransform? hsp2crypto = CrackEncryption(plain2, encrypted, validator);
             return hsp2crypto;
         }
 
-        internal static HspCryptoTransform CrackEncryption(byte[] plain, byte[] encrypted, Func<byte[], bool> validator)
+        internal static HspCryptoTransform? CrackEncryption(byte[] plain, byte[] encrypted, Func<byte[], bool> validator)
         {
             int count = Math.Min(plain.Length, encrypted.Length);
             if (count < 2)
+            {
                 throw new Exception(Strings.BufferSizeTooSmall);
+            }
+
             byte[] difBuffer = new byte[count];
             byte prevByte = 0;
             byte andByte = 0xFF;
@@ -80,7 +86,9 @@ namespace HspDecompiler.Core.DpmToAx.Crypto
                 orByte |= difBuffer[i];
             }
             if ((andByte != 0x00) || (orByte != 0xFF))
+            {
                 throw new Exception(Strings.InsufficientDecryptionInfo);
+            }
 
             List<XorAddTransform> transformList = new List<XorAddTransform>();
             for (int i = 0; i < 0x100; i++)

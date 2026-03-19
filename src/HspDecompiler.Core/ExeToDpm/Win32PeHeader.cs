@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -14,21 +13,32 @@ namespace HspDecompiler.Core.ExeToDpm
         /// </summary>
         const int IMAGE_NT_SIGNATURE = 0x4550;
         internal uint Signature;
-        internal IMAGE_FILE_HEADER FileHeader;
-        internal IMAGE_OPTIONAL_HEADER OptionalHeader;
+        internal IMAGE_FILE_HEADER? FileHeader;
+        internal IMAGE_OPTIONAL_HEADER? OptionalHeader;
 
-        internal static IMAGE_NT_HEADERS FromBinaryReader(BinaryReader reader)
+        internal static IMAGE_NT_HEADERS? FromBinaryReader(BinaryReader reader)
         {
             IMAGE_NT_HEADERS ret = new IMAGE_NT_HEADERS();
             ret.Signature = reader.ReadUInt32();
             if (ret.Signature != IMAGE_NT_SIGNATURE)
+            {
                 return null;
-            ret.FileHeader = IMAGE_FILE_HEADER.FromBinaryReader(reader);
-            if (ret.FileHeader == null)
+            }
+
+            IMAGE_FILE_HEADER? fileHeader = IMAGE_FILE_HEADER.FromBinaryReader(reader);
+            if (fileHeader == null)
+            {
                 return null;
-            ret.OptionalHeader = IMAGE_OPTIONAL_HEADER.FromBinaryReader(reader);
-            if (ret.OptionalHeader == null)
+            }
+
+            ret.FileHeader = fileHeader;
+            IMAGE_OPTIONAL_HEADER? optHeader = IMAGE_OPTIONAL_HEADER.FromBinaryReader(reader);
+            if (optHeader == null)
+            {
                 return null;
+            }
+
+            ret.OptionalHeader = optHeader;
             return ret;
         }
     }
@@ -43,7 +53,7 @@ namespace HspDecompiler.Core.ExeToDpm
         internal ushort SizeOfOptionalHeader;
         internal ushort Characteristics;
 
-        internal static IMAGE_FILE_HEADER FromBinaryReader(BinaryReader reader)
+        internal static IMAGE_FILE_HEADER? FromBinaryReader(BinaryReader reader)
         {
             IMAGE_FILE_HEADER ret = new IMAGE_FILE_HEADER();
             try
@@ -56,7 +66,7 @@ namespace HspDecompiler.Core.ExeToDpm
                 ret.SizeOfOptionalHeader = reader.ReadUInt16();
                 ret.Characteristics = reader.ReadUInt16();
             }
-            catch
+            catch (IOException)
             {
                 return null;
             }
@@ -99,7 +109,7 @@ namespace HspDecompiler.Core.ExeToDpm
         internal uint NumberOfRvaAndSizes;
         internal IMAGE_DATA_DIRECTORY[] DataDirectory = new IMAGE_DATA_DIRECTORY[IMAGE_NUMBEROF_DIRECTORY_ENTRIES];
 
-        internal static IMAGE_OPTIONAL_HEADER FromBinaryReader(BinaryReader reader)
+        internal static IMAGE_OPTIONAL_HEADER? FromBinaryReader(BinaryReader reader)
         {
             IMAGE_OPTIONAL_HEADER ret = new IMAGE_OPTIONAL_HEADER();
             try
@@ -142,7 +152,7 @@ namespace HspDecompiler.Core.ExeToDpm
                     ret.DataDirectory[i].Size = reader.ReadUInt32();
                 }
             }
-            catch
+            catch (IOException)
             {
                 return null;
             }
@@ -171,7 +181,7 @@ namespace HspDecompiler.Core.ExeToDpm
         internal ushort NumberOfLinenumbers;
         internal uint Characteristics;
 
-        internal static IMAGE_SECTION_HEADER FromBinaryReader(BinaryReader reader)
+        internal static IMAGE_SECTION_HEADER? FromBinaryReader(BinaryReader reader)
         {
             IMAGE_SECTION_HEADER ret = new IMAGE_SECTION_HEADER();
             try
@@ -183,7 +193,10 @@ namespace HspDecompiler.Core.ExeToDpm
                     allZero &= (ret.Name[i] == 0);
                 }
                 if (allZero)
+                {
                     return null;
+                }
+
                 ret.PhysicalAddress = reader.ReadUInt32();
                 ret.VirtualAddress = reader.ReadUInt32();
                 ret.SizeOfRawData = reader.ReadUInt32();
@@ -194,7 +207,7 @@ namespace HspDecompiler.Core.ExeToDpm
                 ret.NumberOfLinenumbers = reader.ReadUInt16();
                 ret.Characteristics = reader.ReadUInt32();
             }
-            catch
+            catch (IOException)
             {
                 return null;
             }
@@ -228,14 +241,17 @@ namespace HspDecompiler.Core.ExeToDpm
         internal ushort[] e_res2 = new ushort[10];   // Reserved words
         internal uint e_lfanew;                      // File address of new exe header
 
-        internal static IMAGE_DOS_HEADER FromBinaryReader(BinaryReader reader)
+        internal static IMAGE_DOS_HEADER? FromBinaryReader(BinaryReader reader)
         {
             IMAGE_DOS_HEADER ret = new IMAGE_DOS_HEADER();
             try
             {
                 ret.e_magic = reader.ReadUInt16();                     // Magic number
                 if (ret.e_magic != IMAGE_DOS_SIGNATURE)
+                {
                     return null;
+                }
+
                 ret.e_cblp = reader.ReadUInt16();                      // Bytes on last page of file
                 ret.e_cp = reader.ReadUInt16();                        // Pages in file
                 ret.e_crlc = reader.ReadUInt16();                      // Relocations
@@ -250,14 +266,20 @@ namespace HspDecompiler.Core.ExeToDpm
                 ret.e_lfarlc = reader.ReadUInt16();                    // File address of relocation table
                 ret.e_ovno = reader.ReadUInt16();                      // Overlay number
                 for (int i = 0; i < 4; i++)
+                {
                     ret.e_res[i] = reader.ReadUInt16();
+                }
+
                 ret.e_oemid = reader.ReadUInt16();
                 ret.e_oeminfo = reader.ReadUInt16();
                 for (int i = 0; i < 10; i++)
+                {
                     ret.e_res2[i] = reader.ReadUInt16();
+                }
+
                 ret.e_lfanew = reader.ReadUInt32();
             }
-            catch
+            catch (IOException)
             {
                 return null;
             }
@@ -273,7 +295,7 @@ namespace HspDecompiler.Core.ExeToDpm
         internal uint Name;
         internal uint FirstThunk;
 
-        internal static IMAGE_IMPORT_DESCRIPTOR FromBinaryReader(BinaryReader reader)
+        internal static IMAGE_IMPORT_DESCRIPTOR? FromBinaryReader(BinaryReader reader)
         {
             IMAGE_IMPORT_DESCRIPTOR ret = new IMAGE_IMPORT_DESCRIPTOR();
             try
@@ -284,7 +306,7 @@ namespace HspDecompiler.Core.ExeToDpm
                 ret.Name = reader.ReadUInt32();
                 ret.FirstThunk = reader.ReadUInt32();
             }
-            catch
+            catch (IOException)
             {
                 return null;
             }
@@ -294,8 +316,8 @@ namespace HspDecompiler.Core.ExeToDpm
 
     internal sealed class Win32PeHeader
     {
-        IMAGE_DOS_HEADER DosHeader;
-        IMAGE_NT_HEADERS NtHeader;
+        IMAGE_DOS_HEADER? DosHeader;
+        IMAGE_NT_HEADERS? NtHeader;
         List<IMAGE_SECTION_HEADER> SectionHeaders = new List<IMAGE_SECTION_HEADER>();
 
         internal long EndOfExecutableRegion
@@ -303,31 +325,46 @@ namespace HspDecompiler.Core.ExeToDpm
             get
             {
                 if (SectionHeaders.Count == 0)
+                {
                     return -1;
+                }
+
                 IMAGE_SECTION_HEADER section = SectionHeaders[SectionHeaders.Count - 1];
                 return (section.PointerToRawData + section.SizeOfRawData);
             }
         }
 
-        internal static Win32PeHeader FromBinaryReader(BinaryReader reader)
+        internal static Win32PeHeader? FromBinaryReader(BinaryReader reader)
         {
             try
             {
                 long startPosition = reader.BaseStream.Position;
                 long length = reader.BaseStream.Length - startPosition;
                 if (length < 0x1000)
+                {
                     return null;
+                }
+
                 Win32PeHeader ret = new Win32PeHeader();
                 ret.DosHeader = IMAGE_DOS_HEADER.FromBinaryReader(reader);
                 if (ret.DosHeader == null)
+                {
                     return null;
+                }
+
                 if (ret.DosHeader.e_lfanew <= 0)
+                {
                     return ret;
+                }
+
                 reader.BaseStream.Seek(startPosition + ret.DosHeader.e_lfanew, SeekOrigin.Begin);
                 ret.NtHeader = IMAGE_NT_HEADERS.FromBinaryReader(reader);
                 if (ret.NtHeader == null)
+                {
                     return null;
-                IMAGE_SECTION_HEADER section = IMAGE_SECTION_HEADER.FromBinaryReader(reader);
+                }
+
+                IMAGE_SECTION_HEADER? section = IMAGE_SECTION_HEADER.FromBinaryReader(reader);
                 while (section != null)
                 {
                     ret.SectionHeaders.Add(section);
@@ -335,7 +372,7 @@ namespace HspDecompiler.Core.ExeToDpm
                 }
                 return ret;
             }
-            catch
+            catch (IOException)
             {
                 return null;
             }

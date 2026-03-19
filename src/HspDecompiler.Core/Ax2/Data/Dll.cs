@@ -1,5 +1,3 @@
-using System;
-
 namespace HspDecompiler.Core.Ax2.Data
 {
     internal struct Dll

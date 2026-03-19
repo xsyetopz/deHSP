@@ -1,6 +1,7 @@
 namespace HspDecompiler.Core.Ax3.Data.Line
 {
-    internal sealed class ScoopEnd : LogicalLine
+    // Fix #26: renamed from ScoopEnd → ScopeEnd
+    internal sealed class ScopeEnd : LogicalLine
     {
         internal override bool TabDecrement
         {

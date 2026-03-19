@@ -24,7 +24,9 @@ namespace HspDecompiler.Gui.ViewModels
         public async Task ProcessFileAsync(string filePath)
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            {
                 return;
+            }
 
             IsProcessing = true;
             LogText = "";
@@ -41,7 +43,7 @@ namespace HspDecompiler.Gui.ViewModels
                 var options = new DecompilerOptions
                 {
                     InputPath = filePath,
-                    OutputDirectory = Path.GetDirectoryName(filePath),
+                    OutputDirectory = Path.GetDirectoryName(filePath) ?? "",
                     DictionaryPath = dictPath,
                     AllowDecryption = true,
                     SkipEncrypted = false
@@ -50,16 +52,22 @@ namespace HspDecompiler.Gui.ViewModels
                 var result = await Task.Run(async () =>
                 {
                     if (!pipeline.Initialize(dictPath))
+                    {
                         return new DecompilerResult { Success = false, ErrorMessage = Strings.FailedToLoadDictionary };
+                    }
 
                     return await pipeline.RunAsync(options, CancellationToken.None);
                 });
 
                 foreach (var file in result.DpmFiles)
+                {
                     DpmFiles.Add(file);
+                }
 
                 if (!result.Success)
+                {
                     AppendLog(string.Format(Strings.ErrorFormat, result.ErrorMessage));
+                }
             }
             catch (Exception ex)
             {

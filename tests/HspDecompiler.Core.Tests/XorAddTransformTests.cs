@@ -1,13 +1,12 @@
-using System;
-using Xunit;
 using HspDecompiler.Core.DpmToAx.Crypto;
+using Xunit;
 
 namespace HspDecompiler.Core.Tests
 {
     public class XorAddTransformTests
     {
         [Fact]
-        public void Test_Encode_Decode_Roundtrip_Returns_Original()
+        public void EncodeDecodeRoundtripReturnsOriginal()
         {
             var transform = new XorAddTransform
             {
@@ -23,7 +22,7 @@ namespace HspDecompiler.Core.Tests
         }
 
         [Fact]
-        public void Test_Encode_Decode_Roundtrip_XorSum_Returns_Original()
+        public void EncodeDecodeRoundtripXorSumReturnsOriginal()
         {
             var transform = new XorAddTransform
             {
@@ -39,7 +38,7 @@ namespace HspDecompiler.Core.Tests
         }
 
         [Fact]
-        public void Test_Encode_Decode_All_Byte_Values_Roundtrip()
+        public void EncodeDecodeAllByteValuesRoundtrip()
         {
             var transform = new XorAddTransform
             {
@@ -58,28 +57,28 @@ namespace HspDecompiler.Core.Tests
         }
 
         [Fact]
-        public void Test_Sum_Wraps_At_256()
+        public void SumWrapsAt256()
         {
             Assert.Equal((byte)0x00, XorAddTransform.Sum(0x80, 0x80));
             Assert.Equal((byte)0x01, XorAddTransform.Sum(0xFF, 0x02));
         }
 
         [Fact]
-        public void Test_Dif_Wraps_Below_Zero()
+        public void DifWrapsBelowZero()
         {
             Assert.Equal((byte)0xFF, XorAddTransform.Dif(0x00, 0x01));
             Assert.Equal((byte)0x80, XorAddTransform.Dif(0x00, 0x80));
         }
 
         [Fact]
-        public void Test_Xor_Is_Self_Inverse()
+        public void XorIsSelfInverse()
         {
             byte a = 0x48, b = 0xAB;
             Assert.Equal(a, XorAddTransform.Xor(XorAddTransform.Xor(a, b), b));
         }
 
         [Fact]
-        public void Test_GetXorByte_Produces_Correct_Encode()
+        public void GetXorByteProducesCorrectEncode()
         {
             byte add = 0x34;
             byte plain = 0x48;

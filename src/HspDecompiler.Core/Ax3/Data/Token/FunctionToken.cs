@@ -17,25 +17,28 @@ namespace HspDecompiler.Core.Ax3.Data.Token
             arg = theArg;
         }
 
-        readonly FunctionPrimitive primitive = null;
+        readonly FunctionPrimitive? primitive = null;
 
         internal FunctionPrimitive Primitive
         {
-            get { return primitive; }
+            get { return primitive!; }
         }
 
-        readonly ArgumentToken arg = null;
+        readonly ArgumentToken? arg = null;
 
         internal override int TokenOffset
         {
-            get { return primitive.TokenOffset; }
+            get { return primitive!.TokenOffset; }
         }
 
         public override string ToString()
         {
             if (arg == null)
-                return primitive.ToString();
-            StringBuilder builder = new StringBuilder(primitive.ToString());
+            {
+                return primitive!.ToString();
+            }
+
+            StringBuilder builder = new StringBuilder(primitive!.ToString());
             builder.Append(arg.ToString());
             return builder.ToString();
         }
@@ -48,13 +51,18 @@ namespace HspDecompiler.Core.Ax3.Data.Token
         internal override void CheckLabel()
         {
             if (arg != null)
+            {
                 arg.CheckLabel();
+            }
         }
 
         internal override bool CheckRpn()
         {
             if (arg != null)
+            {
                 return arg.CheckRpn();
+            }
+
             return true;
         }
     }

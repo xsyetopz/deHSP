@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using HspDecompiler.Core.Abstractions;
 using HspDecompiler.Core.Ax3.Data;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
-using HspDecompiler.Core.Ax3.Dictionary;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Resources;
 
@@ -16,9 +15,9 @@ namespace HspDecompiler.Core.Ax3
     {
         internal Ax3Decoder() { }
 
-        private Hsp3Dictionary dictionary;
+        private Hsp3Dictionary? dictionary;
 
-        internal Hsp3Dictionary Dictionary
+        internal Hsp3Dictionary? Dictionary
         {
             get { return dictionary; }
             set { dictionary = value; }
@@ -27,10 +26,10 @@ namespace HspDecompiler.Core.Ax3
         public async Task<List<string>> DecodeAsync(BinaryReader reader, IDecompilerLogger logger, IProgressReporter progress, CancellationToken ct = default)
         {
             AxData data = new AxData();
-            LexicalAnalyzer lex = null;
-            TokenCollection stream = null;
-            SyntacticAnalyzer synt = null;
-            List<LogicalLine> lines = null;
+            LexicalAnalyzer? lex = null;
+            TokenCollection? stream = null;
+            SyntacticAnalyzer? synt = null;
+            List<LogicalLine>? lines = null;
             List<string> stringLines = new List<string>();
             try
             {
@@ -40,7 +39,7 @@ namespace HspDecompiler.Core.Ax3
                 logger.Write(Strings.AnalyzingPreprocessor);
                 data.ReadPreprocessor(dictionary);
                 logger.Write(Strings.LexicalAnalysis);
-                lex = new LexicalAnalyzer(dictionary);
+                lex = new LexicalAnalyzer(dictionary!);
                 stream = lex.Analyze(data);
                 data.LoadEnd();
                 logger.Write(Strings.SyntacticAnalysis);

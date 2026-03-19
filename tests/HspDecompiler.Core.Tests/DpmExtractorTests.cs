@@ -1,16 +1,14 @@
-using System;
 using System.IO;
-using System.Text;
-using Xunit;
 using HspDecompiler.Core.DpmToAx;
 using HspDecompiler.Core.Encoding;
+using Xunit;
 
 namespace HspDecompiler.Core.Tests
 {
     public class DpmExtractorTests
     {
         [Fact]
-        public void Test_FromBinaryReader_Valid_Dpm_Header()
+        public void FromBinaryReaderValidDpmHeader()
         {
             using var ms = new MemoryStream();
             using var bw = new BinaryWriter(ms);
@@ -46,7 +44,7 @@ namespace HspDecompiler.Core.Tests
         }
 
         [Fact]
-        public void Test_FromBinaryReader_Invalid_Magic_Returns_Null()
+        public void FromBinaryReaderInvalidMagicReturnsNull()
         {
             var data = new byte[16];
             using var ms = new MemoryStream(data);
@@ -56,14 +54,14 @@ namespace HspDecompiler.Core.Tests
         }
 
         [Fact]
-        public void Test_DpmFileEntry_IsEncrypted_When_Key_NonZero()
+        public void DpmFileEntryIsEncryptedWhenKeyNonZero()
         {
             var entry = new DpmFileEntry { EncryptionKey = 0x1234 };
             Assert.True(entry.IsEncrypted);
         }
 
         [Fact]
-        public void Test_DpmFileEntry_Not_Encrypted_When_Key_Zero()
+        public void DpmFileEntryNotEncryptedWhenKeyZero()
         {
             var entry = new DpmFileEntry { EncryptionKey = 0 };
             Assert.False(entry.IsEncrypted);

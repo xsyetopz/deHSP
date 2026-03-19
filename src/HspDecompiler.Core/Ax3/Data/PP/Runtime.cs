@@ -10,7 +10,7 @@ namespace HspDecompiler.Core.Ax3.Data.PP
             name = theName;
         }
 
-        string name;
+        string? name;
 
         public override string ToString()
         {

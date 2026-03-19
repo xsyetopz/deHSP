@@ -1,7 +1,5 @@
 using System;
-using System.Text.RegularExpressions;
 using System.Diagnostics;
-using System.Text;
 
 namespace HspDecompiler.Core.Ax2.Data
 {
@@ -15,7 +13,7 @@ namespace HspDecompiler.Core.Ax2.Data
         {
         }
 
-        private static AxData data = null;
+        private static AxData? data = null;
 
         internal static AxData CurrentData
         {
@@ -35,19 +33,19 @@ namespace HspDecompiler.Core.Ax2.Data
         #region static
         private static int nextOffset;
         internal static int Index;
-        private static Token nextToken;
+        private static Token? nextToken;
 
         internal static void SetZero()
         {
             Index = 0;
             nextOffset = 0;
             nextToken = GetToken(0);
-            nextOffset += nextToken.size;
+            nextOffset += nextToken!.size;
         }
 
-        internal static Token GetNext()
+        internal static Token? GetNext()
         {
-            Token ret = nextToken;
+            Token? ret = nextToken;
 
             nextToken = GetToken(nextOffset);
             if (ret == null)
@@ -57,26 +55,35 @@ namespace HspDecompiler.Core.Ax2.Data
             }
             Index = ret.id;
             if ((nextToken == null) || (nextToken.isLinehead))
+            {
                 ret.isLineend = true;
+            }
+
             if (nextToken != null)
             {
                 nextOffset += nextToken.size;
                 if (ret.NextIsUnenableLabel)
                 {
                     ret.isLineend = false;
-                    Token UnenableToken = GetNext();
+                    Token? UnenableToken = GetNext();
                     if ((nextToken == null) || (nextToken.isLinehead))
+                    {
                         ret.isLineend = true;
+                    }
+
                     return ret;
                 }
             }
             return ret;
         }
 
-        private static Token GetToken(int offset)
+        private static Token? GetToken(int offset)
         {
-            if ((offset < 0) || ((offset + 1) >= data.TokenData.Length))
+            if ((offset < 0) || ((offset + 1) >= data!.TokenData.Length))
+            {
                 return null;
+            }
+
             Token ret = new Token();
             ret.id = offset / 2;
             ret.fValue = data.TokenData[offset]; offset++;
@@ -106,7 +113,7 @@ namespace HspDecompiler.Core.Ax2.Data
         {
             get
             {
-                double ret = ((double)nextOffset * 100.0) / data.TokenData.Length;
+                double ret = ((double)nextOffset * 100.0) / data!.TokenData.Length;
                 return (int)ret;
             }
         }
@@ -135,7 +142,10 @@ namespace HspDecompiler.Core.Ax2.Data
             get
             {
                 if ((Type == 0x40) && ((fValue == 0x03) || (fValue == 0x11) || (fValue == 0x2b)))
+                {
                     return true;
+                }
+
                 return false;
             }
         }
@@ -163,12 +173,16 @@ namespace HspDecompiler.Core.Ax2.Data
                 if (Type == 0x40)
                 {
                     if (Value == 0x11)
+                    {
                         return true;
+                    }
                 }
                 if (Type == 0x58)
                 {
                     if ((Value == 0) || (Value == 1))
+                    {
                         return true;
+                    }
                 }
                 return false;
             }
@@ -181,7 +195,9 @@ namespace HspDecompiler.Core.Ax2.Data
                 if (Type == 0x40)
                 {
                     if (Value == 0x12)
+                    {
                         return true;
+                    }
                 }
                 return false;
             }
@@ -220,9 +236,15 @@ namespace HspDecompiler.Core.Ax2.Data
             get
             {
                 if (isLinehead)
+                {
                     return -1;
+                }
+
                 if (Type == 0x18)
+                {
                     return Value;
+                }
+
                 return -1;
             }
         }
@@ -231,7 +253,7 @@ namespace HspDecompiler.Core.Ax2.Data
         #region propaty for decompile
         internal string GetString()
         {
-            string ret = null;
+            string? ret = null;
             switch (Type)
             {
                 case 0x00:
@@ -254,7 +276,7 @@ namespace HspDecompiler.Core.Ax2.Data
                 case 0x08:
                     return Value.ToString();
                 case 0x10:
-                    ret = data.GetString(Value);
+                    ret = data!.GetString(Value);
                     return "\"" + Escape(ret) + "\"";
                 case 0x18:
                     return "label_" + Value.ToString();
@@ -263,37 +285,61 @@ namespace HspDecompiler.Core.Ax2.Data
                 case 0x38:
                     ret = GetStdFunc1Name(Value);
                     if (ret != null)
+                    {
                         return ret;
+                    }
+
                     break;
                 case 0x40:
                     ret = GetStdFunc2Name(Value);
                     if (ret != null)
+                    {
                         return ret;
+                    }
+
                     break;
                 case 0x48:
                     ret = GetStdFunc3Name(Value);
                     if (ret != null)
+                    {
                         return ret;
+                    }
+
                     break;
                 case 0x50:
-                    ret = data.GetFuncName(Value - 0x10);
+                    ret = data!.GetFuncName(Value - 0x10);
                     if (ret != null)
+                    {
                         return "func_" + ret;
+                    }
+
                     break;
                 case 0x58:
                     if (Value == 0)
+                    {
                         return "if";
+                    }
+
                     if (Value == 1)
+                    {
                         return "else";
+                    }
+
                     break;
                 case 0x60:
-                    ret = data.GetDeffuncName(Value - 0x10);
+                    ret = data!.GetDeffuncName(Value - 0x10);
                     if (ret != null)
+                    {
                         return ret;
+                    }
+
                     break;
                 case 0x78:
                     if (Value == 0)
+                    {
                         return "end";
+                    }
+
                     break;
             }
             return Type.ToString("x2") + Value.ToString("x2");
@@ -303,7 +349,7 @@ namespace HspDecompiler.Core.Ax2.Data
         {
             get
             {
-                string ret = null;
+                string? ret = null;
                 switch (Type)
                 {
                     case 0x00:
@@ -319,37 +365,61 @@ namespace HspDecompiler.Core.Ax2.Data
                     case 0x38:
                         ret = GetStdFunc1Name(Value);
                         if (ret != null)
+                        {
                             return true;
+                        }
+
                         break;
                     case 0x40:
                         ret = GetStdFunc2Name(Value);
                         if (ret != null)
+                        {
                             return true;
+                        }
+
                         break;
                     case 0x48:
                         ret = GetStdFunc3Name(Value);
                         if (ret != null)
+                        {
                             return true;
+                        }
+
                         break;
                     case 0x50:
-                        ret = data.GetFuncName(Value - 0x10);
+                        ret = data!.GetFuncName(Value - 0x10);
                         if (ret != null)
+                        {
                             return true;
+                        }
+
                         break;
                     case 0x58:
                         if (Value == 0)
+                        {
                             return true;
+                        }
+
                         if (Value == 1)
+                        {
                             return true;
+                        }
+
                         break;
                     case 0x60:
-                        ret = data.GetDeffuncName(Value - 0x10);
+                        ret = data!.GetDeffuncName(Value - 0x10);
                         if (ret != null)
+                        {
                             return true;
+                        }
+
                         break;
                     case 0x78:
                         if (Value == 0)
+                        {
                             return true;
+                        }
+
                         break;
                 }
                 return false;
@@ -358,12 +428,18 @@ namespace HspDecompiler.Core.Ax2.Data
 
         private readonly char[] escapeWord = new char[] { '\n', '\r', '\t', '\"', '\\' };
 
-        private string Escape(string str)
+        private string? Escape(string? str)
         {
             if (str == null)
+            {
                 return null;
+            }
+
             if (str.Length == 0)
+            {
                 return str;
+            }
+
             int i;
             if ((i = str.IndexOfAny(escapeWord)) >= 0)
             {
@@ -398,7 +474,7 @@ namespace HspDecompiler.Core.Ax2.Data
         }
 
         #region HSPfuncname
-        private string GetStdFunc1Name(int v)
+        private string? GetStdFunc1Name(int v)
         {
             switch (v)
             {
@@ -437,7 +513,7 @@ namespace HspDecompiler.Core.Ax2.Data
             return null;
         }
 
-        private string GetStdFunc2Name(int v)
+        private string? GetStdFunc2Name(int v)
         {
             switch (v)
             {
@@ -496,7 +572,7 @@ namespace HspDecompiler.Core.Ax2.Data
             return null;
         }
 
-        private string GetStdFunc3Name(int v)
+        private string? GetStdFunc3Name(int v)
         {
             switch (v)
             {

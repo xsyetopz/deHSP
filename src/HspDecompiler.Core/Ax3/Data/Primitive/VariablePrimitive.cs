@@ -14,19 +14,22 @@ namespace HspDecompiler.Core.Ax3.Data.Primitive
 
     internal sealed class GlobalVariablePrimitive : VariablePrimitive
     {
-        readonly string varName;
+        readonly string? varName;
 
         private GlobalVariablePrimitive() { }
         internal GlobalVariablePrimitive(PrimitiveTokenDataSet dataSet)
             : base(dataSet)
         {
-            varName = dataSet.Parent.GetVariableName(Value);
+            varName = dataSet.Parent!.GetVariableName(Value);
         }
 
         public override string ToString()
         {
             if (varName != null)
+            {
                 return varName;
+            }
+
             StringBuilder bld = new StringBuilder("var");
             bld.Append("_");
             bld.Append(Value.ToString());
@@ -40,16 +43,21 @@ namespace HspDecompiler.Core.Ax3.Data.Primitive
         internal ParameterPrimitive(PrimitiveTokenDataSet dataSet)
             : base(dataSet)
         {
-            param = dataSet.Parent.GetParam(Value);
+            param = dataSet.Parent!.GetParam(Value);
             if (param != null)
+            {
                 param.ParamNameIsUsed = true;
+            }
         }
 
-        private readonly Param param = null;
+        private readonly Param? param = null;
         public override string ToString()
         {
             if (param != null)
+            {
                 return param.ParamName;
+            }
+
             return DefaultName;
         }
     }

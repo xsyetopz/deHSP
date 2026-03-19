@@ -13,9 +13,13 @@ namespace HspDecompiler.Gui.Services
         {
             ct.ThrowIfCancellationRequested();
             if (Dispatcher.UIThread.CheckAccess())
-                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background, ct);
+            }
             else
+            {
                 await Task.Yield();
+            }
         }
     }
 }

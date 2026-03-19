@@ -17,14 +17,17 @@ namespace HspDecompiler.Core.Ax3.Data.Primitive
         internal UserFunctionPrimitive(PrimitiveTokenDataSet dataSet)
             : base(dataSet)
         {
-            func = dataSet.Parent.GetUserFunction(Value);
+            func = dataSet.Parent!.GetUserFunction(Value);
         }
-        private readonly Function func = null;
+        private readonly Function? func = null;
         public override string ToString()
         {
             if (func == null)
+            {
                 return DefaultName;
-            return func.FunctionName;
+            }
+
+            return func.FunctionName ?? DefaultName;
         }
     }
 
@@ -34,14 +37,17 @@ namespace HspDecompiler.Core.Ax3.Data.Primitive
         internal DllFunctionPrimitive(PrimitiveTokenDataSet dataSet)
             : base(dataSet)
         {
-            func = dataSet.Parent.GetDllFunction(Value);
+            func = dataSet.Parent!.GetDllFunction(Value);
         }
-        private readonly Function func = null;
+        private readonly Function? func = null;
         public override string ToString()
         {
             if (func == null)
+            {
                 return DefaultName;
-            return func.FunctionName;
+            }
+
+            return func.FunctionName ?? DefaultName;
         }
     }
 
@@ -51,14 +57,17 @@ namespace HspDecompiler.Core.Ax3.Data.Primitive
         internal PlugInFunctionPrimitive(PrimitiveTokenDataSet dataSet)
             : base(dataSet)
         {
-            int pluginIndex = dataSet.DicValue.OparatorPriority;
-            cmd = dataSet.Parent.AddCmd(pluginIndex, Value);
+            int pluginIndex = dataSet.DicValue.OperatorPriority;
+            cmd = dataSet.Parent!.AddCmd(pluginIndex, Value);
         }
-        private readonly Cmd cmd = null;
+        private readonly Cmd? cmd = null;
         public override string ToString()
         {
             if (cmd == null)
+            {
                 return DefaultName;
+            }
+
             return cmd.FunctionName;
         }
     }
@@ -69,14 +78,17 @@ namespace HspDecompiler.Core.Ax3.Data.Primitive
         internal ComFunctionPrimitive(PrimitiveTokenDataSet dataSet)
             : base(dataSet)
         {
-            func = dataSet.Parent.GetDllFunction(Value - 0x1000);
+            func = dataSet.Parent!.GetDllFunction(Value - 0x1000);
         }
-        private readonly Function func = null;
+        private readonly Function? func = null;
         public override string ToString()
         {
             if (func == null)
+            {
                 return DefaultName;
-            return func.FunctionName;
+            }
+
+            return func.FunctionName ?? DefaultName;
         }
     }
 }

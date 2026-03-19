@@ -18,15 +18,18 @@ namespace HspDecompiler.Core.Ax3.Data.Line
             arg = theArg;
         }
 
-        readonly IfStatementPrimitive ifToken = null;
-        readonly ArgumentToken arg = null;
+        readonly IfStatementPrimitive? ifToken = null;
+        readonly ArgumentToken? arg = null;
 
         internal override int TokenOffset
         {
             get
             {
                 if (ifToken == null)
+                {
                     return -1;
+                }
+
                 return ifToken.TokenOffset;
             }
         }
@@ -35,7 +38,7 @@ namespace HspDecompiler.Core.Ax3.Data.Line
         {
             get
             {
-                return ifToken.JumpToOffset;
+                return ifToken!.JumpToOffset;
             }
         }
 
@@ -43,8 +46,11 @@ namespace HspDecompiler.Core.Ax3.Data.Line
         {
             get
             {
-                if ((ifToken.CodeType & HspCodeType.IfStatement) == HspCodeType.IfStatement)
+                if ((ifToken!.CodeType & HspCodeType.IfStatement) == HspCodeType.IfStatement)
+                {
                     return true;
+                }
+
                 return false;
             }
         }
@@ -53,8 +59,11 @@ namespace HspDecompiler.Core.Ax3.Data.Line
         {
             get
             {
-                if ((ifToken.CodeType & HspCodeType.ElseStatement) == HspCodeType.ElseStatement)
+                if ((ifToken!.CodeType & HspCodeType.ElseStatement) == HspCodeType.ElseStatement)
+                {
                     return true;
+                }
+
                 return false;
             }
         }
@@ -65,7 +74,7 @@ namespace HspDecompiler.Core.Ax3.Data.Line
 
         public override string ToString()
         {
-            StringBuilder builder = new StringBuilder(ifToken.ToString());
+            StringBuilder builder = new StringBuilder(ifToken!.ToString());
             if (arg != null)
             {
                 builder.Append(" (");
@@ -79,13 +88,18 @@ namespace HspDecompiler.Core.Ax3.Data.Line
         internal override void CheckLabel()
         {
             if (arg != null)
+            {
                 arg.CheckLabel();
+            }
         }
 
         internal override bool CheckRpn()
         {
             if (arg != null)
+            {
                 return arg.CheckRpn();
+            }
+
             return true;
         }
     }

@@ -1,5 +1,3 @@
-using System;
-
 namespace HspDecompiler.Core.Ax2.Data
 {
     internal class Label
@@ -18,7 +16,7 @@ namespace HspDecompiler.Core.Ax2.Data
         private int index;
         private int tokenIndex;
         private int loadCount = 0;
-        private string name;
+        private string name = "";
         private bool enabled;
         private int deffunc = -1;
 
@@ -71,7 +69,10 @@ namespace HspDecompiler.Core.Ax2.Data
             get
             {
                 if (deffunc != -1)
+                {
                     return true;
+                }
+
                 return enabled;
             }
             set

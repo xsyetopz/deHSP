@@ -22,16 +22,17 @@ namespace HspDecompiler.Core.Ax3.Data.Analyzer
             set
             {
                 if (position < 0)
-                    throw new ArgumentOutOfRangeException();
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value));
+                }
+
                 if (position > primitives.Count)
-                    throw new ArgumentOutOfRangeException();
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value));
+                }
+
                 position = value;
             }
-        }
-
-        internal List<PrimitiveToken> GetPrimives()
-        {
-            return primitives;
         }
 
         internal PrimitiveToken this[int i]
@@ -50,12 +51,15 @@ namespace HspDecompiler.Core.Ax3.Data.Analyzer
             }
         }
 
-        internal PrimitiveToken NextToken
+        internal PrimitiveToken? NextToken
         {
             get
             {
-                if (this.NextIsEndOfStream)
+                if (NextIsEndOfStream)
+                {
                     return null;
+                }
+
                 return primitives[position];
             }
         }
@@ -63,26 +67,38 @@ namespace HspDecompiler.Core.Ax3.Data.Analyzer
         {
             get
             {
-                if (this.NextIsEndOfStream)
+                if (NextIsEndOfStream)
+                {
                     return false;
+                }
+
                 if ((position + 1) >= primitives.Count)
+                {
                     return false;
+                }
+
                 PrimitiveToken token = primitives[position + 1];
                 return ((token.CodeExtraFlags & HspCodeExtraFlags.GotoFunction) == HspCodeExtraFlags.GotoFunction);
             }
         }
 
-        internal TokenCollection GetLine()
+        internal TokenCollection? GetLine()
         {
             if (NextIsEndOfStream)
+            {
                 return null;
+            }
+
             List<PrimitiveToken> list = new List<PrimitiveToken>();
             list.Add(primitives[position]);
             position++;
             while (position < primitives.Count)
             {
                 if (primitives[position].IsLineHead)
+                {
                     break;
+                }
+
                 list.Add(primitives[position]);
                 position++;
             }
@@ -91,10 +107,13 @@ namespace HspDecompiler.Core.Ax3.Data.Analyzer
             return ret;
         }
 
-        internal PrimitiveToken GetNextToken()
+        internal PrimitiveToken? GetNextToken()
         {
             if (position >= primitives.Count)
+            {
                 return null;
+            }
+
             PrimitiveToken ret = primitives[position];
             position++;
             return ret;
@@ -113,9 +132,15 @@ namespace HspDecompiler.Core.Ax3.Data.Analyzer
             get
             {
                 if (NextIsEndOfStream)
+                {
                     return true;
+                }
+
                 if (primitives[position].IsLineHead)
+                {
                     return true;
+                }
+
                 return false;
             }
         }
@@ -125,11 +150,20 @@ namespace HspDecompiler.Core.Ax3.Data.Analyzer
             get
             {
                 if (NextIsEndOfStream)
+                {
                     return true;
+                }
+
                 if (primitives[position].IsLineHead)
+                {
                     return true;
+                }
+
                 if (primitives[position].IsParamHead)
+                {
                     return true;
+                }
+
                 return false;
             }
         }
@@ -139,10 +173,16 @@ namespace HspDecompiler.Core.Ax3.Data.Analyzer
             get
             {
                 if (NextIsEndOfStream)
+                {
                     return false;
+                }
+
                 PrimitiveToken token = primitives[position];
                 if ((token.CodeExtraFlags & HspCodeExtraFlags.BracketStart) == HspCodeExtraFlags.BracketStart)
+                {
                     return true;
+                }
+
                 return false;
             }
         }
@@ -152,10 +192,16 @@ namespace HspDecompiler.Core.Ax3.Data.Analyzer
             get
             {
                 if (NextIsEndOfStream)
+                {
                     return false;
+                }
+
                 PrimitiveToken token = primitives[position];
                 if ((token.CodeExtraFlags & HspCodeExtraFlags.BracketEnd) == HspCodeExtraFlags.BracketEnd)
+                {
                     return true;
+                }
+
                 return false;
             }
         }

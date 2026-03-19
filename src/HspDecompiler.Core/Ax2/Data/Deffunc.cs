@@ -1,5 +1,3 @@
-using System;
-
 namespace HspDecompiler.Core.Ax2.Data
 {
     internal struct Deffunc
@@ -50,20 +48,32 @@ namespace HspDecompiler.Core.Ax2.Data
             if (hikiCount >= 1)
             {
                 if ((hikiType & 1) != 0)
+                {
                     hiki = "val";
+                }
                 else if ((hikiType & 2) != 0)
+                {
                     hiki = "str";
+                }
                 else
+                {
                     hiki = "int";
+                }
             }
             if (hikiCount >= 2)
             {
                 if ((hikiType & 0x10) != 0)
+                {
                     hiki += ", val";
+                }
                 else if ((hikiType & 0x20) != 0)
+                {
                     hiki += ", str";
+                }
                 else
+                {
                     hiki += ", int";
+                }
             }
             for (int i = 0; i < (hikiCount - 2); i++)
             {

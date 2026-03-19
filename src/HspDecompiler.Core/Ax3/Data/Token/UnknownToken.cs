@@ -7,15 +7,15 @@ namespace HspDecompiler.Core.Ax3.Data.Token
         {
             this.token = token;
         }
-        PrimitiveToken token;
+        PrimitiveToken? token;
         internal override int TokenOffset
         {
-            get { return token.TokenOffset; }
+            get { return token!.TokenOffset; }
         }
 
         public override string ToString()
         {
-            return " /*" + token.ToString() + "*/";
+            return " /*" + token!.ToString() + "*/";
         }
     }
 }

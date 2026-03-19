@@ -10,14 +10,17 @@ namespace HspDecompiler.Core.Ax3.Data.Line
             this.function = function;
         }
 
-        readonly FunctionToken function = null;
+        readonly FunctionToken? function = null;
 
         internal override bool TabIncrement
         {
             get
             {
-                if ((function.Primitive.CodeExtraFlags & HspCodeExtraFlags.AddTab) == HspCodeExtraFlags.AddTab)
+                if ((function!.Primitive.CodeExtraFlags & HspCodeExtraFlags.AddTab) == HspCodeExtraFlags.AddTab)
+                {
                     return true;
+                }
+
                 return false;
             }
         }
@@ -25,8 +28,11 @@ namespace HspDecompiler.Core.Ax3.Data.Line
         {
             get
             {
-                if ((function.Primitive.CodeExtraFlags & HspCodeExtraFlags.RemoveTab) == HspCodeExtraFlags.RemoveTab)
+                if ((function!.Primitive.CodeExtraFlags & HspCodeExtraFlags.RemoveTab) == HspCodeExtraFlags.RemoveTab)
+                {
                     return true;
+                }
+
                 return false;
             }
         }
@@ -34,8 +40,11 @@ namespace HspDecompiler.Core.Ax3.Data.Line
         {
             get
             {
-                if ((function.Primitive.CodeExtraFlags & HspCodeExtraFlags.HasGhostGoto) == HspCodeExtraFlags.HasGhostGoto)
+                if ((function!.Primitive.CodeExtraFlags & HspCodeExtraFlags.HasGhostGoto) == HspCodeExtraFlags.HasGhostGoto)
+                {
                     return true;
+                }
+
                 return false;
             }
         }
@@ -43,32 +52,40 @@ namespace HspDecompiler.Core.Ax3.Data.Line
         {
             get
             {
-                if ((function.Primitive.CodeExtraFlags & HspCodeExtraFlags.IsGhost) == HspCodeExtraFlags.IsGhost)
+                if ((function!.Primitive.CodeExtraFlags & HspCodeExtraFlags.IsGhost) == HspCodeExtraFlags.IsGhost)
+                {
                     return true;
+                }
+
                 return false;
             }
         }
 
         internal override int TokenOffset
         {
-            get { return function.TokenOffset; }
+            get { return function!.TokenOffset; }
         }
 
         public override string ToString()
         {
-            return function.ToString();
+            return function!.ToString();
         }
 
         internal override void CheckLabel()
         {
             if (function != null)
+            {
                 function.CheckLabel();
+            }
         }
 
         internal override bool CheckRpn()
         {
             if (function != null)
+            {
                 return function.CheckRpn();
+            }
+
             return true;
         }
     }

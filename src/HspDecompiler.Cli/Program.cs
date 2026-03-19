@@ -9,22 +9,51 @@ namespace HspDecompiler.Cli
 {
     internal static class Program
     {
+        private static readonly string[] OutputAliases = ["-o"];
+        private static readonly string[] DictAliases = ["-d"];
+        private static readonly string[] VerboseAliases = ["-v"];
+
         static async Task<int> Main(string[] args)
         {
-            var inputArg = new Argument<FileInfo>("input-file", "Input file to decompile (.ax, .exe, .dpm)");
-            var outputOpt = new Option<DirectoryInfo>(new[] { "-o", "--output" }, "Output directory");
-            var dictOpt = new Option<FileInfo>(new[] { "-d", "--dictionary" }, "Dictionary.csv path");
-            var noDecryptOpt = new Option<bool>("--no-decrypt", "Skip encrypted file decryption");
-            var skipEncOpt = new Option<bool>("--skip-encrypted", "Extract only non-encrypted files");
-            var verboseOpt = new Option<bool>(new[] { "-v", "--verbose" }, "Verbose logging");
+            var inputArg = new Argument<FileInfo>("input-file")
+            {
+                Description = "Input file to decompile (.ax, .exe, .dpm)"
+            };
+            var outputOpt = new Option<DirectoryInfo>("--output", OutputAliases)
+            {
+                Description = "Output directory"
+            };
+            var dictOpt = new Option<FileInfo>("--dictionary", DictAliases)
+            {
+                Description = "Dictionary.csv path"
+            };
+            var noDecryptOpt = new Option<bool>("--no-decrypt")
+            {
+                Description = "Skip encrypted file decryption"
+            };
+            var skipEncOpt = new Option<bool>("--skip-encrypted")
+            {
+                Description = "Extract only non-encrypted files"
+            };
+            var verboseOpt = new Option<bool>("--verbose", VerboseAliases)
+            {
+                Description = "Verbose logging"
+            };
 
             var rootCommand = new RootCommand("HSP Decompiler - Decompile HSP2/HSP3 compiled files")
             {
                 inputArg, outputOpt, dictOpt, noDecryptOpt, skipEncOpt, verboseOpt
             };
 
-            rootCommand.SetHandler(async (input, output, dict, noDecrypt, skipEnc, verbose) =>
+            rootCommand.SetAction(async (parseResult, ct) =>
             {
+                var input = parseResult.GetValue(inputArg)!;
+                var output = parseResult.GetValue(outputOpt);
+                var dict = parseResult.GetValue(dictOpt);
+                var noDecrypt = parseResult.GetValue(noDecryptOpt);
+                var skipEnc = parseResult.GetValue(skipEncOpt);
+                var verbose = parseResult.GetValue(verboseOpt);
+
                 var logger = new CliLogger(verbose);
                 var progress = new CliProgressReporter();
                 var pipeline = new DecompilerPipeline(logger, progress);
@@ -56,13 +85,18 @@ namespace HspDecompiler.Cli
                 else
                 {
                     if (result.Warnings.Count > 0)
+                    {
                         Console.Error.WriteLine($"{result.Warnings.Count} warning(s) during decompilation.");
-                    if (result.OutputPath != null)
-                        Console.WriteLine("Output: " + result.OutputPath);
-                }
-            }, inputArg, outputOpt, dictOpt, noDecryptOpt, skipEncOpt, verboseOpt);
+                    }
 
-            return await rootCommand.InvokeAsync(args);
+                    if (result.OutputPath != null)
+                    {
+                        Console.WriteLine("Output: " + result.OutputPath);
+                    }
+                }
+            });
+
+            return await rootCommand.Parse(args).InvokeAsync();
         }
     }
 }

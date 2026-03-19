@@ -15,8 +15,8 @@ namespace HspDecompiler.Core.Ax3.Data.PP
     {
         private Usedll() { }
         private Usedll(int index) : base(index) { }
-        private string name = null;
-        private string clsName = null;
+        private string? name = null;
+        private string? clsName = null;
         private int type;
         private int int_2;
 
@@ -60,9 +60,12 @@ namespace HspDecompiler.Core.Ax3.Data.PP
         public override string ToString()
         {
             if (name == null)
+            {
                 return @"//#uselib? //dll情報なし";
+            }
+
             StringBuilder strBld = new StringBuilder();
-            switch (this.Type)
+            switch (Type)
             {
                 case UsedllType.uselib:
                     strBld.Append(@"#uselib """);
@@ -103,7 +106,7 @@ namespace HspDecompiler.Core.Ax3.Data.PP
         }
         internal List<Function> GetFunctions()
         {
-            if ((this.Type == UsedllType.usecom) && (functions.Count != 0))
+            if ((Type == UsedllType.usecom) && (functions.Count != 0))
             {
                 List<Function> ret = new List<Function>(functions);
                 ret.RemoveAt(0);

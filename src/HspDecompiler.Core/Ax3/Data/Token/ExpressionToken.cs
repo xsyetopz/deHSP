@@ -12,17 +12,23 @@ namespace HspDecompiler.Core.Ax3.Data.Token
             tokens = elements;
         }
 
-        private readonly List<ExpressionTermToken> tokens = null;
-        ExpressionTermToken convertedToken = null;
+        private readonly List<ExpressionTermToken>? tokens = null;
+        ExpressionTermToken? convertedToken = null;
         private bool tryConvert = false;
         internal bool CanRpnConvert
         {
             get
             {
                 if (convertedToken != null)
+                {
                     return true;
+                }
+
                 if (!tryConvert)
+                {
                     return RpnConvert();
+                }
+
                 return false;
             }
         }
@@ -30,9 +36,15 @@ namespace HspDecompiler.Core.Ax3.Data.Token
         internal bool RpnConvert()
         {
             if (convertedToken != null)
+            {
                 return true;
-            if (tokens.Count == 0)
+            }
+
+            if (tokens!.Count == 0)
+            {
                 return false;
+            }
+
             tryConvert = true;
             if (tokens.Count == 1)
             {
@@ -62,12 +74,21 @@ namespace HspDecompiler.Core.Ax3.Data.Token
                     }
                 }
             }
-            catch (Exception)
+            catch (InvalidCastException)
             {
+                // RPN token list has wrong structure (non-operand/operator in wrong position)
+                return false;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // Stack underflow — malformed RPN expression
                 return false;
             }
             if (stack.Count != 1)
+            {
                 return false;
+            }
+
             convertedToken = stack[0];
             return true;
         }
@@ -77,10 +98,16 @@ namespace HspDecompiler.Core.Ax3.Data.Token
             get
             {
                 if ((tokens == null) || (tokens.Count == 0))
+                {
                     return -1;
+                }
+
                 CodeToken token = tokens[0] as CodeToken;
                 if (token == null)
+                {
                     return -1;
+                }
+
                 return token.TokenOffset;
             }
         }
@@ -88,13 +115,19 @@ namespace HspDecompiler.Core.Ax3.Data.Token
         internal string ToString(bool getRpnConverted)
         {
             if (getRpnConverted && (convertedToken != null))
+            {
                 return convertedToken.ToString();
+            }
+
             StringBuilder builder = new StringBuilder();
             int i = 0;
-            foreach (ExpressionTermToken token in tokens)
+            foreach (ExpressionTermToken token in tokens!)
             {
                 if (i != 0)
+                {
                     builder.Append(' ');
+                }
+
                 builder.Append(token.ToString());
                 i++;
             }
@@ -103,18 +136,20 @@ namespace HspDecompiler.Core.Ax3.Data.Token
 
         public override string ToString()
         {
-            return this.ToString(true);
+            return ToString(true);
         }
 
         internal override void CheckLabel()
         {
-            foreach (CodeToken token in tokens)
+            foreach (CodeToken token in tokens!)
+            {
                 token.CheckLabel();
+            }
         }
 
         internal override bool CheckRpn()
         {
-            return this.CanRpnConvert;
+            return CanRpnConvert;
         }
     }
 }

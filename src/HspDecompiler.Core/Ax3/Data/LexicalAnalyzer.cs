@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.Primitive;
@@ -12,36 +11,41 @@ namespace HspDecompiler.Core.Ax3.Data
         private LexicalAnalyzer() { }
         internal LexicalAnalyzer(Hsp3Dictionary theDic)
         {
-            if (theDic == null)
-                throw new ArgumentNullException();
+            ArgumentNullException.ThrowIfNull(theDic);
+
             dictionary = theDic;
         }
 
-        Hsp3Dictionary dictionary = null;
+        Hsp3Dictionary? dictionary = null;
         int tokenOffset = 0;
 
         internal TokenCollection Analyze(AxData data)
         {
             if (!data.IsStarted)
+            {
                 throw new InvalidOperationException();
+            }
+
             TokenCollection stream = new TokenCollection();
-            BinaryReader reader = data.Reader;
-            long sizeOfCode = data.Header.CodeSize;
+            BinaryReader reader = data.Reader!;
+            long sizeOfCode = data.Header!.CodeSize;
             long startOfCode = data.StartOfCode;
             tokenOffset = 0;
             reader.BaseStream.Seek(startOfCode, SeekOrigin.Begin);
             while (tokenOffset < sizeOfCode)
             {
-                PrimitiveToken code = ReadPrimitive(reader, data);
+                PrimitiveToken? code = ReadPrimitive(reader, data);
                 if (code != null)
+                {
                     stream.Add(code);
+                }
             }
             return stream;
         }
 
         private PrimitiveToken ReadPrimitive(BinaryReader reader, AxData data)
         {
-            PrimitiveToken ret = null;
+            PrimitiveToken? ret = null;
 
             int theTokenOffset = tokenOffset;
             int type = reader.ReadByte();
@@ -64,7 +68,7 @@ namespace HspDecompiler.Core.Ax3.Data
             key.Type = type;
             key.Value = value;
             HspDictionaryValue dicValue;
-            if (dictionary.CodeLookUp(key, out dicValue))
+            if (dictionary!.CodeLookUp(key, out dicValue))
             {
                 if ((dicValue.Extra & HspCodeExtraFlags.HasExtraInt16) == HspCodeExtraFlags.HasExtraInt16)
                 {
@@ -72,26 +76,29 @@ namespace HspDecompiler.Core.Ax3.Data
                     {
                         extraValue = reader.ReadUInt16();
                         tokenOffset += 1;
-                        ret = createPrimitive(data, dicValue, theTokenOffset, type, flag, value, extraValue);
+                        ret = CreatePrimitive(data, dicValue, theTokenOffset, type, flag, value, extraValue);
                     }
                     else
                     {
-                        ret = createPrimitive(data, dicValue, theTokenOffset, type, flag, value, -1);
+                        ret = CreatePrimitive(data, dicValue, theTokenOffset, type, flag, value, -1);
                     }
                 }
                 else
                 {
-                    ret = createPrimitive(data, dicValue, theTokenOffset, type, flag, value, -1);
+                    ret = CreatePrimitive(data, dicValue, theTokenOffset, type, flag, value, -1);
                 }
             }
             else
-                ret = createPrimitive(data, new HspDictionaryValue(), theTokenOffset, type, flag, value, -1);
-            ret.SetName();
+            {
+                ret = CreatePrimitive(data, new HspDictionaryValue(), theTokenOffset, type, flag, value, -1);
+            }
+
+            ret!.SetName();
 
             return ret;
         }
 
-        private PrimitiveToken createPrimitive(AxData data, HspDictionaryValue dicValue, int theTokenOffset, int type, int flag, int value, int extraValue)
+        private PrimitiveToken CreatePrimitive(AxData data, HspDictionaryValue dicValue, int theTokenOffset, int type, int flag, int value, int extraValue)
         {
             PrimitiveTokenDataSet dataset = new PrimitiveTokenDataSet();
             dataset.Parent = data;
@@ -122,9 +129,14 @@ namespace HspDecompiler.Core.Ax3.Data
                 case HspCodeType.IfStatement:
                 case HspCodeType.ElseStatement:
                     if (extraValue >= 0)
+                    {
                         return new IfStatementPrimitive(dataset, extraValue);
+                    }
                     else
+                    {
                         return new HspFunctionPrimitive(dataset);
+                    }
+
                 case HspCodeType.HspFunction:
                     return new HspFunctionPrimitive(dataset);
                 case HspCodeType.OnStatement:

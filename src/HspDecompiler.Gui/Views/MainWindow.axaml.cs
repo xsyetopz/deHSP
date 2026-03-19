@@ -10,6 +10,9 @@ namespace HspDecompiler.Gui.Views
 {
     public partial class MainWindow : Window
     {
+        private static readonly string[] HspFilePatterns = ["*.ax", "*.exe", "*.dpm"];
+        private static readonly string[] AllFilePatterns = ["*"];
+
         public MainWindow()
         {
             InitializeComponent();
@@ -26,17 +29,47 @@ namespace HspDecompiler.Gui.Views
             var menuOpen = this.FindControl<MenuItem>("MenuOpen");
             var menuExit = this.FindControl<MenuItem>("MenuExit");
             var menuAbout = this.FindControl<MenuItem>("MenuAbout");
-            if (menuOpen != null) menuOpen.Click += OnMenuOpen;
-            if (menuExit != null) menuExit.Click += (_, _) => Close();
-            if (menuAbout != null) menuAbout.Click += OnMenuAbout;
+            if (menuOpen != null)
+            {
+                menuOpen.Click += OnMenuOpen;
+            }
+
+            if (menuExit != null)
+            {
+                menuExit.Click += (_, _) => Close();
+            }
+
+            if (menuAbout != null)
+            {
+                menuAbout.Click += OnMenuAbout;
+            }
 
             var menuFile = this.FindControl<MenuItem>("MenuFile");
             var menuHelp = this.FindControl<MenuItem>("MenuHelp");
-            if (menuFile != null) menuFile.Header = Strings.MenuFile;
-            if (menuOpen != null) menuOpen.Header = Strings.MenuOpen;
-            if (menuExit != null) menuExit.Header = Strings.MenuExit;
-            if (menuHelp != null) menuHelp.Header = Strings.MenuHelp;
-            if (menuAbout != null) menuAbout.Header = Strings.MenuAbout;
+            if (menuFile != null)
+            {
+                menuFile.Header = Strings.MenuFile;
+            }
+
+            if (menuOpen != null)
+            {
+                menuOpen.Header = Strings.MenuOpen;
+            }
+
+            if (menuExit != null)
+            {
+                menuExit.Header = Strings.MenuExit;
+            }
+
+            if (menuHelp != null)
+            {
+                menuHelp.Header = Strings.MenuHelp;
+            }
+
+            if (menuAbout != null)
+            {
+                menuAbout.Header = Strings.MenuAbout;
+            }
 
             var dataGrid = this.FindControl<DataGrid>("FileGrid");
             if (dataGrid != null && dataGrid.Columns.Count >= 4)
@@ -48,7 +81,7 @@ namespace HspDecompiler.Gui.Views
             }
         }
 
-        private async void OnMenuOpen(object sender, RoutedEventArgs e)
+        private async void OnMenuOpen(object? sender, RoutedEventArgs e)
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
@@ -56,37 +89,49 @@ namespace HspDecompiler.Gui.Views
                 AllowMultiple = false,
                 FileTypeFilter = new[]
                 {
-                    new FilePickerFileType(Strings.HspFilesFilter) { Patterns = new[] { "*.ax", "*.exe", "*.dpm" } },
-                    new FilePickerFileType(Strings.AllFilesFilter) { Patterns = new[] { "*" } }
+                    new FilePickerFileType(Strings.HspFilesFilter) { Patterns = HspFilePatterns },
+                    new FilePickerFileType(Strings.AllFilesFilter) { Patterns = AllFilePatterns }
                 }
             });
             if (files.Count > 0)
             {
                 var path = files[0].TryGetLocalPath();
                 if (path != null && DataContext is MainWindowViewModel vm)
+                {
                     await vm.ProcessFileAsync(path);
+                }
             }
         }
 
-        private void OnMenuAbout(object sender, RoutedEventArgs e)
+        private void OnMenuAbout(object? sender, RoutedEventArgs e)
         {
             var about = new AboutDialog();
             about.ShowDialog(this);
         }
 
-        private void OnDragOver(object sender, DragEventArgs e)
+        private void OnDragOver(object? sender, DragEventArgs e)
         {
             e.DragEffects = e.Data.Contains(DataFormats.Files) ? DragDropEffects.Copy : DragDropEffects.None;
         }
 
-        private async void OnDrop(object sender, DragEventArgs e)
+        private async void OnDrop(object? sender, DragEventArgs e)
         {
-            if (!e.Data.Contains(DataFormats.Files)) return;
+            if (!e.Data.Contains(DataFormats.Files))
+            {
+                return;
+            }
+
             var files = e.Data.GetFiles()?.ToList();
-            if (files == null || files.Count == 0) return;
+            if (files == null || files.Count == 0)
+            {
+                return;
+            }
+
             var path = files[0].TryGetLocalPath();
             if (path != null && DataContext is MainWindowViewModel vm)
+            {
                 await vm.ProcessFileAsync(path);
+            }
         }
     }
 }

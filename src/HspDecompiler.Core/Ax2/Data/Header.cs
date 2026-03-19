@@ -1,5 +1,3 @@
-using System;
-
 namespace HspDecompiler.Core.Ax2.Data
 {
     internal class Header
@@ -205,12 +203,18 @@ namespace HspDecompiler.Core.Ax2.Data
 
         #endregion
 
-        internal static Header FromIntArray(int[] data)
+        internal static Header? FromIntArray(int[] data)
         {
             if (data == null)
+            {
                 return null;
+            }
+
             if (data.Length < 20)
+            {
                 return null;
+            }
+
             Header ret = new Header();
             ret.allDataByte = data[3];
             ret.scriptOffset = data[4];

@@ -7,20 +7,20 @@ namespace HspDecompiler.Core.Ax3.Data.Line
     internal sealed class OnStatement : LogicalLine
     {
         private OnStatement() { }
-        internal OnStatement(OnFunctionPrimitive theToken, ExpressionToken exp, FunctionToken func)
+        internal OnStatement(OnFunctionPrimitive theToken, ExpressionToken? exp, FunctionToken? func)
         {
-            this.token = theToken;
+            token = theToken;
             this.exp = exp;
             this.func = func;
         }
 
-        private readonly OnFunctionPrimitive token = null;
-        private readonly ExpressionToken exp = null;
-        private readonly FunctionToken func = null;
+        private readonly OnFunctionPrimitive? token = null;
+        private readonly ExpressionToken? exp = null;
+        private readonly FunctionToken? func = null;
 
         internal override int TokenOffset
         {
-            get { return token.TokenOffset; }
+            get { return token!.TokenOffset; }
         }
 
         public override string ToString()
@@ -46,18 +46,29 @@ namespace HspDecompiler.Core.Ax3.Data.Line
         internal override void CheckLabel()
         {
             if (exp != null)
+            {
                 exp.CheckLabel();
+            }
+
             if (func != null)
+            {
                 func.CheckLabel();
+            }
         }
 
         internal override bool CheckRpn()
         {
             bool ret = true;
             if (exp != null)
+            {
                 ret &= exp.CheckRpn();
+            }
+
             if (func != null)
+            {
                 ret &= func.CheckRpn();
+            }
+
             return ret;
         }
     }

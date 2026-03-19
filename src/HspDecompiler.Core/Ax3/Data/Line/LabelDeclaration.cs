@@ -10,7 +10,7 @@ namespace HspDecompiler.Core.Ax3.Data.Line
             this.pp = pp;
         }
 
-        private readonly Preprocessor pp = null;
+        private readonly Preprocessor? pp = null;
 
         internal override int TabCount
         {
@@ -27,7 +27,7 @@ namespace HspDecompiler.Core.Ax3.Data.Line
 
         public override string ToString()
         {
-            return pp.ToString();
+            return pp!.ToString();
         }
     }
 }

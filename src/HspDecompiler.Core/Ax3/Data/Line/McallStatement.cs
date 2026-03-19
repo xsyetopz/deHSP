@@ -7,29 +7,32 @@ namespace HspDecompiler.Core.Ax3.Data.Line
     class McallStatement : LogicalLine
     {
         private McallStatement() { }
-        internal McallStatement(McallFunctionPrimitive theToken, VariablePrimitive var, ExpressionToken exp, ArgumentToken arg)
+        internal McallStatement(McallFunctionPrimitive theToken, VariablePrimitive var, ExpressionToken exp, ArgumentToken? arg)
         {
-            this.token = theToken;
+            token = theToken;
             this.var = var;
             this.exp = exp;
             this.arg = arg;
         }
-        private readonly McallFunctionPrimitive token = null;
-        private readonly VariablePrimitive var = null;
-        private readonly ExpressionToken exp = null;
-        private readonly ArgumentToken arg = null;
+        private readonly McallFunctionPrimitive? token = null;
+        private readonly VariablePrimitive? var = null;
+        private readonly ExpressionToken? exp = null;
+        private readonly ArgumentToken? arg = null;
 
         internal override int TokenOffset
         {
-            get { return token.TokenOffset; }
+            get { return token!.TokenOffset; }
         }
 
         private string ToStringFunctionStyle()
         {
             if (arg == null)
-                return token.ToString();
+            {
+                return token!.ToString();
+            }
+
             StringBuilder builder = new StringBuilder();
-            builder.Append(token.ToString());
+            builder.Append(token!.ToString());
             if (var != null)
             {
                 builder.Append(' ');
@@ -51,19 +54,33 @@ namespace HspDecompiler.Core.Ax3.Data.Line
         internal string ToString(bool convertMcall)
         {
             if (!convertMcall)
+            {
                 return ToStringFunctionStyle();
+            }
+
             if (var == null)
+            {
                 return ToStringFunctionStyle();
+            }
+
             if (exp == null)
+            {
                 return ToStringFunctionStyle();
+            }
+
             if (arg == null)
+            {
                 return ToStringFunctionStyle();
+            }
+
             StringBuilder builder = new StringBuilder();
             builder.Append(var.ToString());
             builder.Append("->");
             builder.Append(exp.ToString());
             if (arg != null)
+            {
                 builder.Append(arg.ToString(true));
+            }
 
             return builder.ToString();
         }
@@ -76,18 +93,29 @@ namespace HspDecompiler.Core.Ax3.Data.Line
         internal override void CheckLabel()
         {
             if (exp != null)
+            {
                 exp.CheckLabel();
+            }
+
             if (arg != null)
+            {
                 arg.CheckLabel();
+            }
         }
 
         internal override bool CheckRpn()
         {
             bool ret = true;
             if (exp != null)
+            {
                 ret &= exp.CheckRpn();
+            }
+
             if (arg != null)
+            {
                 ret &= arg.CheckRpn();
+            }
+
             return ret;
         }
     }

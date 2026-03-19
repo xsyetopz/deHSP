@@ -18,7 +18,9 @@ namespace HspDecompiler.Core.Ax3.Dictionary
             Value = DicParser.StringToInt32(theValue);
             AllValue = false;
             if (Value == -1)
+            {
                 AllValue = true;
+            }
         }
 
         internal int Type;
@@ -28,14 +30,19 @@ namespace HspDecompiler.Core.Ax3.Dictionary
         public override string ToString()
         {
             if (Value == -1)
+            {
                 return "Type:0x" + Type.ToString("X02") + "Value:0xFFFF";
+            }
+
             return "Type:0x" + Type.ToString("X02") + "Value:0x" + Value.ToString("X04");
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            if (obj.GetType() != typeof(HspDictionaryKey))
+            if (obj == null || obj.GetType() != typeof(HspDictionaryKey))
+            {
                 throw new Exception(Strings.UnsupportedType);
+            }
 
             return Equals((HspDictionaryKey)obj);
         }
@@ -54,7 +61,10 @@ namespace HspDecompiler.Core.Ax3.Dictionary
         {
             int ret = Type.CompareTo(other.Type);
             if (ret != 0)
+            {
                 return ret;
+            }
+
             return Value.CompareTo(other.Value);
         }
     }

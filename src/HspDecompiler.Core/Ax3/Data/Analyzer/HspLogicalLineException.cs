@@ -17,7 +17,7 @@ namespace HspDecompiler.Core.Ax3.Data.Analyzer
         internal HspLogicalLineException(string source, string message)
             : base(message)
         {
-            this.Source = source;
+            Source = source;
         }
 
         internal HspLogicalLineException(string message, Exception e)
@@ -28,7 +28,7 @@ namespace HspDecompiler.Core.Ax3.Data.Analyzer
         internal HspLogicalLineException(string source, string message, Exception e)
             : base(message, e)
         {
-            this.Source = source;
+            Source = source;
         }
     }
 }

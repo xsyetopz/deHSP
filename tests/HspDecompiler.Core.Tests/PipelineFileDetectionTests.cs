@@ -10,10 +10,10 @@ namespace HspDecompiler.Core.Tests
         [InlineData("HSP2", true)]
         [InlineData("HSP3", true)]
         [InlineData("JUNK", false)]
-        public void Test_Magic_Bytes_Detection(string magic, bool isRecognized)
+        public void MagicBytesDetection(string magic, bool isRecognized)
         {
-            bool recognized = magic.StartsWith("MZ") || magic.StartsWith("DPM") ||
-                              magic.StartsWith("HSP2") || magic.StartsWith("HSP3");
+            bool recognized = magic.StartsWith("MZ", System.StringComparison.Ordinal) || magic.StartsWith("DPM", System.StringComparison.Ordinal) ||
+                              magic.StartsWith("HSP2", System.StringComparison.Ordinal) || magic.StartsWith("HSP3", System.StringComparison.Ordinal);
             Assert.Equal(isRecognized, recognized);
         }
     }

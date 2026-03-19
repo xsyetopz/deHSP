@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using HspDecompiler.Core.Ax3.Dictionary;
 using HspDecompiler.Core.Encoding;
 
@@ -9,6 +8,10 @@ namespace HspDecompiler.Core.Ax3
 {
     class Hsp3Dictionary
     {
+        private const int ExtendedCommandType = 0x11;
+        private const int ExtendedCommandValueThreshold = 0x1000;
+        private const int PluginFunctionTypeBase = 0x12;
+
         private Hsp3Dictionary()
         {
         }
@@ -16,7 +19,7 @@ namespace HspDecompiler.Core.Ax3
         private Dictionary<HspDictionaryKey, HspDictionaryValue> codeDictionary = new Dictionary<HspDictionaryKey, HspDictionaryValue>();
         private Dictionary<int, string> paramDictionary = new Dictionary<int, string>();
 
-        internal static Hsp3Dictionary FromFile(string filePath)
+        internal static Hsp3Dictionary? FromFile(string filePath)
         {
             try
             {
@@ -32,15 +35,21 @@ namespace HspDecompiler.Core.Ax3
 
         private static IEnumerable<string[]> ReadCsvFields(TextReader reader)
         {
-            string line;
+            string? line;
             while ((line = reader.ReadLine()) != null)
             {
                 int commentIndex = line.IndexOf('#');
                 if (commentIndex >= 0)
+                {
                     line = line.Substring(0, commentIndex);
+                }
+
                 line = line.Trim();
                 if (line.Length == 0)
+                {
                     continue;
+                }
+
                 yield return line.Split(',');
             }
         }
@@ -48,29 +57,23 @@ namespace HspDecompiler.Core.Ax3
         private static Hsp3Dictionary FromReader(TextReader reader)
         {
             Hsp3Dictionary ret = new Hsp3Dictionary();
-            var fields = new List<string[]>();
-            string line;
-            while ((line = reader.ReadLine()) != null)
+            foreach (string[] tokens in ReadCsvFields(reader))
             {
-                int commentIndex = line.IndexOf('#');
-                if (commentIndex >= 0)
-                    line = line.Substring(0, commentIndex);
-                line = line.Trim();
-                if (line.Length == 0)
-                    continue;
-                string[] tokens = line.Split(',');
                 if (tokens.Length == 0)
+                {
                     continue;
+                }
+
                 string first = tokens[0].Trim();
-                if (first.StartsWith("$"))
+                if (first.StartsWith('$'))
                 {
                     switch (first)
                     {
                         case "$Code":
-                            ret.loadCodeDictionaryFromReader(reader);
+                            ret.LoadCodeDictionaryFromReader(reader);
                             break;
                         case "$ParamType":
-                            ret.loadParamDictionaryFromReader(reader);
+                            ret.LoadParamDictionaryFromReader(reader);
                             break;
                     }
                 }
@@ -78,22 +81,20 @@ namespace HspDecompiler.Core.Ax3
             return ret;
         }
 
-        private void loadCodeDictionaryFromReader(TextReader reader)
+        private void LoadCodeDictionaryFromReader(TextReader reader)
         {
-            string line;
-            while ((line = reader.ReadLine()) != null)
+            foreach (string[] tokens in ReadCsvFields(reader))
             {
-                int commentIndex = line.IndexOf('#');
-                if (commentIndex >= 0)
-                    line = line.Substring(0, commentIndex);
-                line = line.Trim();
-                if (line.Length == 0)
-                    continue;
-                string[] tokens = line.Split(',');
                 if (tokens.Length == 0)
+                {
                     continue;
+                }
+
                 if (tokens[0].Trim() == "$End")
+                {
                     return;
+                }
+
                 if (tokens.Length >= 4)
                 {
                     string[] extraFlags = new string[tokens.Length - 4];
@@ -105,22 +106,20 @@ namespace HspDecompiler.Core.Ax3
             }
         }
 
-        private void loadParamDictionaryFromReader(TextReader reader)
+        private void LoadParamDictionaryFromReader(TextReader reader)
         {
-            string line;
-            while ((line = reader.ReadLine()) != null)
+            foreach (string[] tokens in ReadCsvFields(reader))
             {
-                int commentIndex = line.IndexOf('#');
-                if (commentIndex >= 0)
-                    line = line.Substring(0, commentIndex);
-                line = line.Trim();
-                if (line.Length == 0)
-                    continue;
-                string[] tokens = line.Split(',');
                 if (tokens.Length == 0)
+                {
                     continue;
+                }
+
                 if (tokens[0].Trim() == "$End")
+                {
                     return;
+                }
+
                 if (tokens.Length >= 2)
                 {
                     int key = DicParser.StringToInt32(tokens[0].Trim());
@@ -133,23 +132,29 @@ namespace HspDecompiler.Core.Ax3
         internal bool CodeLookUp(HspDictionaryKey key, out HspDictionaryValue value)
         {
             if (codeDictionary.TryGetValue(key, out value))
+            {
                 return true;
+            }
+
             HspDictionaryKey newkey = new HspDictionaryKey(key);
             newkey.Value = -1;
             newkey.AllValue = true;
             if (codeDictionary.TryGetValue(newkey, out value))
+            {
                 return true;
-            if ((key.Type == 0x11) && (key.Value >= 0x1000))
+            }
+
+            if ((key.Type == ExtendedCommandType) && (key.Value >= ExtendedCommandValueThreshold))
             {
                 value.Name = "comfunc";
                 value.Type = HspCodeType.ComFunction;
                 value.Extra = HspCodeExtraFlags.NONE;
                 return true;
             }
-            if (key.Type >= 0x12)
+            if (key.Type >= PluginFunctionTypeBase)
             {
-                value.Name = "pluginFuction";
-                value.OparatorPriority = key.Type - 0x12;
+                value.Name = "pluginFunction";
+                value.OperatorPriority = key.Type - PluginFunctionTypeBase;
                 value.Type = HspCodeType.PlugInFunction;
                 value.Extra = HspCodeExtraFlags.NONE;
                 return true;
@@ -157,7 +162,7 @@ namespace HspDecompiler.Core.Ax3
             return false;
         }
 
-        internal bool ParamLookUp(int paramKey, out string paramTypeName)
+        internal bool ParamLookUp(int paramKey, out string? paramTypeName)
         {
             return paramDictionary.TryGetValue(paramKey, out paramTypeName);
         }

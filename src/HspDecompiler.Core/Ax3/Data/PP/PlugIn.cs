@@ -9,8 +9,8 @@ namespace HspDecompiler.Core.Ax3.Data.PP
         private PlugIn() { }
         private PlugIn(int index) : base(index) { }
         int int_0;
-        string dllName = null;
-        string exportName = null;
+        string? dllName = null;
+        string? exportName = null;
         int int_3;
 
         internal static PlugIn FromBinaryReader(BinaryReader reader, AxData parent, int index)
@@ -35,9 +35,12 @@ namespace HspDecompiler.Core.Ax3.Data.PP
         }
         internal Cmd AddCmd(int methodIndex)
         {
-            Cmd cmd = null;
+            Cmd? cmd = null;
             if (cmds.TryGetValue(methodIndex, out cmd))
+            {
                 return cmd;
+            }
+
             cmd = new Cmd(index, methodIndex);
             cmds.Add(methodIndex, cmd);
             return cmd;

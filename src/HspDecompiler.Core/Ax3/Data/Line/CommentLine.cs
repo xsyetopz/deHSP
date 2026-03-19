@@ -9,7 +9,7 @@ namespace HspDecompiler.Core.Ax3.Data.Line
         {
             comment = str;
         }
-        private readonly string comment = null;
+        private readonly string? comment = null;
         internal override int TokenOffset
         {
             get { return -1; }
@@ -26,7 +26,10 @@ namespace HspDecompiler.Core.Ax3.Data.Line
         public override string ToString()
         {
             if (comment == null)
+            {
                 return string.Empty;
+            }
+
             StringBuilder strbd = new StringBuilder();
             strbd.Append("//");
             strbd.Append(comment);

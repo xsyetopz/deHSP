@@ -17,12 +17,20 @@ namespace HspDecompiler.Core.Ax3.Data.Primitive
             get
             {
                 if (extraValue == -1)
+                {
                     return -1;
+                }
+
                 int ret = extraValue + TokenOffset;
-                if (this.HasLongTypeValue)
+                if (HasLongTypeValue)
+                {
                     ret += 4;
+                }
                 else
+                {
                     ret += 3;
+                }
+
                 return ret;
             }
         }
@@ -38,9 +46,14 @@ namespace HspDecompiler.Core.Ax3.Data.Primitive
                 builder.Append(flag.ToString("X02"));
                 builder.Append(' ');
                 if (HasLongTypeValue)
+                {
                     builder.Append(Value.ToString("X08"));
+                }
                 else
+                {
                     builder.Append(Value.ToString("X04"));
+                }
+
                 builder.Append(' ');
                 builder.Append(extraValue.ToString("X04"));
                 builder.Append("*/");

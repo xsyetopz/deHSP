@@ -27,7 +27,9 @@ namespace HspDecompiler.Cli
             string warning = lineNumber >= 0 ? $"{lineNumber:D6}: {message}" : message;
             _warnings.Add(warning);
             if (_verbose)
+            {
                 Console.Error.WriteLine($"WARNING: {warning}");
+            }
         }
 
         public void Error(string message) => Console.Error.WriteLine($"ERROR: {message}");
