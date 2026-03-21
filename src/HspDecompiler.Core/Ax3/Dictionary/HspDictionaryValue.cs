@@ -1,45 +1,46 @@
 using System;
+using System.Globalization;
 
-namespace HspDecompiler.Core.Ax3.Dictionary
+namespace HspDecompiler.Core.Ax3.Dictionary;
+
+internal struct HspDictionaryValue
 {
-    internal struct HspDictionaryValue
+    internal HspDictionaryValue(string theName, string theType, string[] theExtras)
     {
-        internal HspDictionaryValue(string theName, string theType, string[] theExtras)
+        _name = theName;
+        _type = ParseCodeType(theType);
+        _extra = HspCodeExtraOptions.NONE;
+        _operatorPriority = -1;
+        foreach (string theExtra in theExtras)
         {
-            Name = theName;
-            Type = (HspCodeType)Enum.Parse(typeof(HspCodeType), theType);
-            Extra = HspCodeExtraFlags.NONE;
-            OperatorPriority = -1;
-            foreach (string theExtra in theExtras)
+            string testString = theExtra.Trim();
+            if (testString.Length == 0)
             {
-                string testString = theExtra.Trim();
-                if (testString.Length == 0)
-                {
-                    continue;
-                }
-
-                if (testString.StartsWith("Priority_", StringComparison.Ordinal))
-                {
-                    OperatorPriority = int.Parse(testString.Substring(9));
-                    continue;
-                }
-                Extra |= (HspCodeExtraFlags)Enum.Parse(typeof(HspCodeExtraFlags), testString);
-            }
-        }
-
-        internal string Name;
-        internal HspCodeType Type;
-        internal HspCodeExtraFlags Extra;
-        internal int OperatorPriority;
-
-        public override string ToString()
-        {
-            if (Name.Length == 0)
-            {
-                return Type.ToString();
+                continue;
             }
 
-            return Type.ToString() + "  \"" + Name + "\"";
+            if (testString.StartsWith("Priority_", StringComparison.Ordinal))
+            {
+                _operatorPriority = int.Parse(testString[9..], CultureInfo.InvariantCulture);
+                continue;
+            }
+            _extra |= (HspCodeExtraOptions)Enum.Parse(typeof(HspCodeExtraOptions), testString);
         }
     }
+
+    internal string _name;
+    internal HspCodeType _type;
+    internal HspCodeExtraOptions _extra;
+    internal int _operatorPriority;
+
+    public override readonly string ToString() => _name.Length == 0 ? _type.ToString() : _type.ToString() + "  \"" + _name + "\"";
+
+    private static HspCodeType ParseCodeType(string value) =>
+        value switch
+        {
+            "String" => HspCodeType.StringValue,
+            "Double" => HspCodeType.DoubleValue,
+            "Integer" => HspCodeType.IntegerValue,
+            _ => (HspCodeType)Enum.Parse(typeof(HspCodeType), value),
+        };
 }

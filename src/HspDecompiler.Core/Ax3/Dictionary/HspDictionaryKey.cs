@@ -1,71 +1,48 @@
 using System;
-using HspDecompiler.Core.Resources;
+using System.Globalization;
 
-namespace HspDecompiler.Core.Ax3.Dictionary
+namespace HspDecompiler.Core.Ax3.Dictionary;
+
+internal struct HspDictionaryKey : IComparable<HspDictionaryKey>, IEquatable<HspDictionaryKey>
 {
-    internal struct HspDictionaryKey : IComparable<HspDictionaryKey>, IEquatable<HspDictionaryKey>
+    internal HspDictionaryKey(HspDictionaryKey key)
     {
-        internal HspDictionaryKey(HspDictionaryKey key)
+        _type = key._type;
+        _value = key._value;
+        _allValue = key._allValue;
+    }
+
+    internal HspDictionaryKey(string theType, string theValue)
+    {
+        _type = DicParser.StringToInt32(theType);
+        _value = DicParser.StringToInt32(theValue);
+        _allValue = false;
+        if (_value == -1)
         {
-            Type = key.Type;
-            Value = key.Value;
-            AllValue = key.AllValue;
+            _allValue = true;
         }
+    }
 
-        internal HspDictionaryKey(string theType, string theValue)
-        {
-            Type = DicParser.StringToInt32(theType);
-            Value = DicParser.StringToInt32(theValue);
-            AllValue = false;
-            if (Value == -1)
-            {
-                AllValue = true;
-            }
-        }
+    internal int _type;
+    internal int _value;
+    internal bool _allValue;
 
-        internal int Type;
-        internal int Value;
-        internal bool AllValue;
+    public override readonly string ToString()
+    {
+        return _value == -1
+            ? "Type:0x" + _type.ToString("X02", CultureInfo.InvariantCulture) + "Value:0xFFFF"
+            : "Type:0x" + _type.ToString("X02", CultureInfo.InvariantCulture) + "Value:0x" + _value.ToString("X04", CultureInfo.InvariantCulture);
+    }
 
-        public override string ToString()
-        {
-            if (Value == -1)
-            {
-                return "Type:0x" + Type.ToString("X02") + "Value:0xFFFF";
-            }
+    public override readonly bool Equals(object? obj) => obj is HspDictionaryKey key && Equals(key);
 
-            return "Type:0x" + Type.ToString("X02") + "Value:0x" + Value.ToString("X04");
-        }
+    public override readonly int GetHashCode() => _type.GetHashCode() ^ _value.GetHashCode();
 
-        public override bool Equals(object? obj)
-        {
-            if (obj == null || obj.GetType() != typeof(HspDictionaryKey))
-            {
-                throw new Exception(Strings.UnsupportedType);
-            }
+    public readonly bool Equals(HspDictionaryKey other) => _type.Equals(other._type) && _value.Equals(other._value);
 
-            return Equals((HspDictionaryKey)obj);
-        }
-
-        public override int GetHashCode()
-        {
-            return Type.GetHashCode() ^ Value.GetHashCode();
-        }
-
-        public bool Equals(HspDictionaryKey other)
-        {
-            return Type.Equals(other.Type) && Value.Equals(other.Value);
-        }
-
-        public int CompareTo(HspDictionaryKey other)
-        {
-            int ret = Type.CompareTo(other.Type);
-            if (ret != 0)
-            {
-                return ret;
-            }
-
-            return Value.CompareTo(other.Value);
-        }
+    public readonly int CompareTo(HspDictionaryKey other)
+    {
+        int ret = _type.CompareTo(other._type);
+        return ret != 0 ? ret : _value.CompareTo(other._value);
     }
 }

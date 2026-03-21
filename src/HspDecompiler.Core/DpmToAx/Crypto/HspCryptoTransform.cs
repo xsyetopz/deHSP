@@ -2,132 +2,127 @@ using System;
 using System.Collections.Generic;
 using HspDecompiler.Core.Resources;
 
-namespace HspDecompiler.Core.DpmToAx.Crypto
+namespace HspDecompiler.Core.DpmToAx.Crypto;
+
+internal class HspCryptoTransform
 {
-    internal class HspCryptoTransform
+    private const string Hsp2Magic = "HSP2";
+    private const string Hsp3Magic = "HSP3";
+
+    private XorAddTransform _xorAdd;
+
+    internal XorAddTransform XorAdd
     {
-        XorAddTransform xorAdd;
+        get => _xorAdd;
+        set => _xorAdd = value;
+    }
 
-        internal XorAddTransform XorAdd
+    public override string ToString() => _xorAdd.ToString();
+
+    internal byte[] Encryption(byte[] plain)
+    {
+        byte[] encrypted = new byte[plain.Length];
+        byte prevByte = 0;
+        for (int i = 0; i < encrypted.Length; i++)
         {
-            get { return xorAdd; }
-            set { xorAdd = value; }
+            encrypted[i] = _xorAdd.Encode(XorAddTransform.Dif(plain[i], prevByte));
+            prevByte = plain[i];
+        }
+        return encrypted;
+    }
+
+    internal byte[] Decryption(byte[] encrypted)
+    {
+        byte[] plain = new byte[encrypted.Length];
+        byte prevByte = 0;
+        for (int i = 0; i < encrypted.Length; i++)
+        {
+            byte plainByte = _xorAdd.Decode(encrypted[i]);
+            plain[i] = XorAddTransform.Sum(plainByte, prevByte);
+            prevByte = plain[i];
+        }
+        return plain;
+    }
+
+    internal static HspCryptoTransform? CrackEncryption(byte[] encrypted, Func<byte[], bool> validator)
+    {
+        byte[] plain3 = System.Text.Encoding.ASCII.GetBytes(Hsp3Magic);
+        HspCryptoTransform? hsp3crypto = CrackEncryption(plain3, encrypted, validator);
+        if (hsp3crypto != null)
+        {
+            return hsp3crypto;
         }
 
-        public override string ToString()
+        byte[] plain2 = System.Text.Encoding.ASCII.GetBytes(Hsp2Magic);
+        HspCryptoTransform? hsp2crypto = CrackEncryption(plain2, encrypted, validator);
+        return hsp2crypto;
+    }
+
+    internal static HspCryptoTransform? CrackEncryption(byte[] plain, byte[] encrypted, Func<byte[], bool> validator)
+    {
+        int count = Math.Min(plain.Length, encrypted.Length);
+        if (count < 2)
         {
-            return xorAdd.ToString();
+            throw new InvalidOperationException(Strings.BufferSizeTooSmall);
         }
 
-        internal byte[] Encryption(byte[] plain)
+        byte[] difBuffer = new byte[count];
+        byte prevByte = 0;
+        byte andByte = 0xFF;
+        byte orByte = 0x00;
+        for (int i = 0; i < count; i++)
         {
-            byte[] encrypted = new byte[plain.Length];
-            byte prevByte = 0;
-            for (int i = 0; i < encrypted.Length; i++)
-            {
-                encrypted[i] = xorAdd.Encode(XorAddTransform.Dif(plain[i], prevByte));
-                prevByte = plain[i];
-            }
-            return encrypted;
+            difBuffer[i] = XorAddTransform.Dif(plain[i], prevByte);
+            prevByte = plain[i];
+            andByte &= difBuffer[i];
+            orByte |= difBuffer[i];
+        }
+        if ((andByte != 0x00) || (orByte != 0xFF))
+        {
+            throw new InvalidOperationException(Strings.InsufficientDecryptionInfo);
         }
 
-        internal byte[] Decryption(byte[] encrypted)
+        var transformList = new List<XorAddTransform>();
+        for (int i = 0; i < 0x100; i++)
         {
-            byte[] plain = new byte[encrypted.Length];
-            byte prevByte = 0;
-            for (int i = 0; i < encrypted.Length; i++)
+            XorAddTransform xoradd;
+            bool ok = true;
+            byte add = (byte)(i & 0x7F);
+            xoradd._xorSum = (i >= 0x80);
+            xoradd._addByte = add;
+            xoradd._xorByte = XorAddTransform.GetXorByte(add, difBuffer[0], encrypted[0], xoradd._xorSum);
+            for (int index = 1; index < count; index++)
             {
-                byte plainByte = xorAdd.Decode(encrypted[i]);
-                plain[i] = XorAddTransform.Sum(plainByte, prevByte);
-                prevByte = plain[i];
-            }
-            return plain;
-        }
-
-        internal static HspCryptoTransform? CrackEncryption(byte[] encrypted, Func<byte[], bool> validator)
-        {
-            byte[] plain3 = new byte[4];
-            plain3[0] = 0x48; // H
-            plain3[1] = 0x53; // S
-            plain3[2] = 0x50; // P
-            plain3[3] = 0x33; // 3
-            HspCryptoTransform? hsp3crypto = CrackEncryption(plain3, encrypted, validator);
-            if (hsp3crypto != null)
-            {
-                return hsp3crypto;
-            }
-
-            byte[] plain2 = new byte[4];
-            plain2[0] = 0x48; // H
-            plain2[1] = 0x53; // S
-            plain2[2] = 0x50; // P
-            plain2[3] = 0x32; // 2
-            HspCryptoTransform? hsp2crypto = CrackEncryption(plain2, encrypted, validator);
-            return hsp2crypto;
-        }
-
-        internal static HspCryptoTransform? CrackEncryption(byte[] plain, byte[] encrypted, Func<byte[], bool> validator)
-        {
-            int count = Math.Min(plain.Length, encrypted.Length);
-            if (count < 2)
-            {
-                throw new Exception(Strings.BufferSizeTooSmall);
-            }
-
-            byte[] difBuffer = new byte[count];
-            byte prevByte = 0;
-            byte andByte = 0xFF;
-            byte orByte = 0x00;
-            for (int i = 0; i < count; i++)
-            {
-                difBuffer[i] = XorAddTransform.Dif(plain[i], prevByte);
-                prevByte = plain[i];
-                andByte &= difBuffer[i];
-                orByte |= difBuffer[i];
-            }
-            if ((andByte != 0x00) || (orByte != 0xFF))
-            {
-                throw new Exception(Strings.InsufficientDecryptionInfo);
-            }
-
-            List<XorAddTransform> transformList = new List<XorAddTransform>();
-            for (int i = 0; i < 0x100; i++)
-            {
-                XorAddTransform xoradd;
-                bool ok = true;
-                byte add = (byte)(i & 0x7F);
-                xoradd.XorSum = (i >= 0x80);
-                xoradd.AddByte = add;
-                xoradd.XorByte = XorAddTransform.GetXorByte(add, difBuffer[0], encrypted[0], xoradd.XorSum);
-                for (int index = 1; index < count; index++)
+                if (encrypted[index] != xoradd.Encode(difBuffer[index]))
                 {
-                    if (encrypted[index] != xoradd.Encode(difBuffer[index]))
-                    {
-                        ok = false;
-                        break;
-                    }
-                }
-                if (ok)
-                {
-                    HspCryptoTransform decryptor = new HspCryptoTransform();
-                    decryptor.xorAdd = xoradd;
-                    byte[] buffer = (byte[])encrypted.Clone();
-                    buffer = decryptor.Decryption(buffer);
-
-                    if (validator(buffer))
-                    {
-                        transformList.Add(xoradd);
-                        break;
-                    }
+                    ok = false;
+                    break;
                 }
             }
-            if (transformList.Count == 1)
+            if (ok)
             {
-                HspCryptoTransform ret = new HspCryptoTransform();
-                ret.xorAdd = transformList[0];
-                return ret;
+                var decryptor = new HspCryptoTransform
+                {
+                    _xorAdd = xoradd
+                };
+                byte[] buffer = (byte[])encrypted.Clone();
+                buffer = decryptor.Decryption(buffer);
+
+                if (validator(buffer))
+                {
+                    transformList.Add(xoradd);
+                    break;
+                }
             }
-            return null;
         }
+        if (transformList.Count == 1)
+        {
+            var ret = new HspCryptoTransform
+            {
+                _xorAdd = transformList[0]
+            };
+            return ret;
+        }
+        return null;
     }
 }

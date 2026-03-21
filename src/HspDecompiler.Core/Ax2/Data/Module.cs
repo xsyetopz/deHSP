@@ -1,24 +1,14 @@
-namespace HspDecompiler.Core.Ax2.Data
+namespace HspDecompiler.Core.Ax2.Data;
+
+internal struct Module
 {
-    internal struct Module
+    private string _name;
+
+    internal string Name
     {
-        private string name;
-
-        internal string Name
-        {
-            get
-            {
-                return name;
-            }
-            set
-            {
-                name = value;
-            }
-        }
-
-        public override string ToString()
-        {
-            return "#module " + name;
-        }
+        readonly get => _name;
+        set => _name = value;
     }
+
+    public override readonly string ToString() => "#module " + _name;
 }

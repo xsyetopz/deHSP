@@ -1,29 +1,28 @@
 using System.Text;
 
-namespace HspDecompiler.Core.Encoding
-{
-    public static class ShiftJisHelper
-    {
-        private static System.Text.Encoding? _encoding;
-        private static readonly object _lock = new object();
+namespace HspDecompiler.Core.Encoding;
 
-        public static System.Text.Encoding Encoding
+public static class ShiftJisHelper
+{
+    private static System.Text.Encoding? s_encoding;
+    private static readonly object s_lock = new();
+
+    public static System.Text.Encoding Encoding
+    {
+        get
         {
-            get
+            if (s_encoding == null)
             {
-                if (_encoding == null)
+                lock (s_lock)
                 {
-                    lock (_lock)
+                    if (s_encoding == null)
                     {
-                        if (_encoding == null)
-                        {
-                            System.Text.Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-                            _encoding = System.Text.Encoding.GetEncoding("SHIFT-JIS");
-                        }
+                        System.Text.Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+                        s_encoding = System.Text.Encoding.GetEncoding("SHIFT-JIS");
                     }
                 }
-                return _encoding;
             }
+            return s_encoding;
         }
     }
 }

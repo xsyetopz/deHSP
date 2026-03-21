@@ -1,94 +1,61 @@
 using HspDecompiler.Core.Ax3.Data.PP;
 
-namespace HspDecompiler.Core.Ax3.Data.Primitive
+namespace HspDecompiler.Core.Ax3.Data.Primitive;
+
+internal abstract class FunctionPrimitive : PrimitiveToken
 {
-    internal abstract class FunctionPrimitive : PrimitiveToken
+    protected FunctionPrimitive() { }
+    internal FunctionPrimitive(PrimitiveTokenDataSet dataSet)
+        : base(dataSet)
     {
-        protected FunctionPrimitive() { }
-        internal FunctionPrimitive(PrimitiveTokenDataSet dataSet)
-            : base(dataSet)
-        {
-        }
     }
+}
 
-    internal sealed class UserFunctionPrimitive : FunctionPrimitive
+internal sealed class UserFunctionPrimitive : FunctionPrimitive
+{
+    private UserFunctionPrimitive() { }
+    internal UserFunctionPrimitive(PrimitiveTokenDataSet dataSet)
+        : base(dataSet)
     {
-        private UserFunctionPrimitive() { }
-        internal UserFunctionPrimitive(PrimitiveTokenDataSet dataSet)
-            : base(dataSet)
-        {
-            func = dataSet.Parent!.GetUserFunction(Value);
-        }
-        private readonly Function? func = null;
-        public override string ToString()
-        {
-            if (func == null)
-            {
-                return DefaultName;
-            }
-
-            return func.FunctionName ?? DefaultName;
-        }
+        _func = dataSet._parent!.GetUserFunction(Value);
     }
+    private readonly Function? _func;
+    public override string ToString() => _func == null ? DefaultName : _func.FunctionName ?? DefaultName;
+}
 
-    internal sealed class DllFunctionPrimitive : FunctionPrimitive
+internal sealed class DllFunctionPrimitive : FunctionPrimitive
+{
+    private DllFunctionPrimitive() { }
+    internal DllFunctionPrimitive(PrimitiveTokenDataSet dataSet)
+        : base(dataSet)
     {
-        private DllFunctionPrimitive() { }
-        internal DllFunctionPrimitive(PrimitiveTokenDataSet dataSet)
-            : base(dataSet)
-        {
-            func = dataSet.Parent!.GetDllFunction(Value);
-        }
-        private readonly Function? func = null;
-        public override string ToString()
-        {
-            if (func == null)
-            {
-                return DefaultName;
-            }
-
-            return func.FunctionName ?? DefaultName;
-        }
+        _func = dataSet._parent!.GetDllFunction(Value);
     }
+    private readonly Function? _func;
+    public override string ToString() => _func == null ? DefaultName : _func.FunctionName ?? DefaultName;
+}
 
-    internal sealed class PlugInFunctionPrimitive : FunctionPrimitive
+internal sealed class PlugInFunctionPrimitive : FunctionPrimitive
+{
+    private PlugInFunctionPrimitive() { }
+    internal PlugInFunctionPrimitive(PrimitiveTokenDataSet dataSet)
+        : base(dataSet)
     {
-        private PlugInFunctionPrimitive() { }
-        internal PlugInFunctionPrimitive(PrimitiveTokenDataSet dataSet)
-            : base(dataSet)
-        {
-            int pluginIndex = dataSet.DicValue.OperatorPriority;
-            cmd = dataSet.Parent!.AddCmd(pluginIndex, Value);
-        }
-        private readonly Cmd? cmd = null;
-        public override string ToString()
-        {
-            if (cmd == null)
-            {
-                return DefaultName;
-            }
-
-            return cmd.FunctionName;
-        }
+        int pluginIndex = dataSet._dicValue._operatorPriority;
+        _cmd = dataSet._parent!.AddCmd(pluginIndex, Value);
     }
+    private readonly Cmd? _cmd;
+    public override string ToString() => _cmd == null ? DefaultName : _cmd.FunctionName;
+}
 
-    internal sealed class ComFunctionPrimitive : FunctionPrimitive
+internal sealed class ComFunctionPrimitive : FunctionPrimitive
+{
+    private ComFunctionPrimitive() { }
+    internal ComFunctionPrimitive(PrimitiveTokenDataSet dataSet)
+        : base(dataSet)
     {
-        private ComFunctionPrimitive() { }
-        internal ComFunctionPrimitive(PrimitiveTokenDataSet dataSet)
-            : base(dataSet)
-        {
-            func = dataSet.Parent!.GetDllFunction(Value - 0x1000);
-        }
-        private readonly Function? func = null;
-        public override string ToString()
-        {
-            if (func == null)
-            {
-                return DefaultName;
-            }
-
-            return func.FunctionName ?? DefaultName;
-        }
+        _func = dataSet._parent!.GetDllFunction(Value - 0x1000);
     }
+    private readonly Function? _func;
+    public override string ToString() => _func == null ? DefaultName : _func.FunctionName ?? DefaultName;
 }

@@ -1,16 +1,12 @@
-namespace HspDecompiler.Core.Ax3.Data.Primitive
-{
-    internal sealed class UnknownPrimitive : PrimitiveToken
-    {
-        private UnknownPrimitive() { }
-        internal UnknownPrimitive(PrimitiveTokenDataSet dataSet)
-            : base(dataSet)
-        {
-        }
+namespace HspDecompiler.Core.Ax3.Data.Primitive;
 
-        public override string ToString()
-        {
-            return DefaultName;
-        }
+internal sealed class UnknownPrimitive : PrimitiveToken
+{
+    private UnknownPrimitive() { }
+    internal UnknownPrimitive(PrimitiveTokenDataSet dataSet)
+        : base(dataSet)
+    {
     }
+
+    public override string ToString() => DefaultName;
 }

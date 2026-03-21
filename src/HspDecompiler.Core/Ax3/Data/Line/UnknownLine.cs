@@ -1,46 +1,34 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace HspDecompiler.Core.Ax3.Data.Line
+namespace HspDecompiler.Core.Ax3.Data.Line;
+
+internal sealed class UnknownLine : LogicalLine
 {
-    internal sealed class UnknownLine : LogicalLine
+    private UnknownLine() { }
+    internal UnknownLine(List<PrimitiveToken> primitives)
     {
-        private UnknownLine() { }
-        internal UnknownLine(List<PrimitiveToken> primitives)
+        _tokens = new PrimitiveToken[primitives.Count];
+        primitives.CopyTo(_tokens);
+    }
+
+    private readonly PrimitiveToken[]? _tokens;
+
+    internal override int TokenOffset => (_tokens == null) || (_tokens.Length == 0) ? -1 : _tokens[0].TokenOffset;
+
+    public override string ToString()
+    {
+        if ((_tokens == null) || (_tokens.Length == 0))
         {
-            tokens = new PrimitiveToken[primitives.Count];
-            primitives.CopyTo(tokens);
+            return "//空";
         }
 
-        readonly PrimitiveToken[]? tokens;
-
-        internal override int TokenOffset
+        var builder = new StringBuilder("//");
+        foreach (PrimitiveToken token in _tokens)
         {
-            get
-            {
-                if ((tokens == null) || (tokens.Length == 0))
-                {
-                    return -1;
-                }
-
-                return tokens[0].TokenOffset;
-            }
+            builder.Append(' ');
+            builder.Append(token.ToString());
         }
-
-        public override string ToString()
-        {
-            if ((tokens == null) || (tokens.Length == 0))
-            {
-                return "//空";
-            }
-
-            StringBuilder builder = new StringBuilder("//");
-            foreach (PrimitiveToken token in tokens)
-            {
-                builder.Append(' ');
-                builder.Append(token.ToString());
-            }
-            return builder.ToString();
-        }
+        return builder.ToString();
     }
 }

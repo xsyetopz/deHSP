@@ -2,154 +2,126 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace HspDecompiler.Core.Ax3.Data.Token
+namespace HspDecompiler.Core.Ax3.Data.Token;
+
+internal sealed class ExpressionToken : CodeToken
 {
-    internal sealed class ExpressionToken : CodeToken
+    private ExpressionToken() { }
+    internal ExpressionToken(List<ExpressionTermToken> elements)
     {
-        private ExpressionToken() { }
-        internal ExpressionToken(List<ExpressionTermToken> elements)
+        _tokens = elements;
+    }
+
+    private readonly List<ExpressionTermToken>? _tokens;
+    private ExpressionTermToken? _convertedToken;
+    private bool _tryConvert;
+    internal bool CanRpnConvert => _convertedToken != null ? true : !_tryConvert ? RpnConvert() : false;
+
+    internal bool RpnConvert()
+    {
+        if (_convertedToken != null)
         {
-            tokens = elements;
-        }
-
-        private readonly List<ExpressionTermToken>? tokens = null;
-        ExpressionTermToken? convertedToken = null;
-        private bool tryConvert = false;
-        internal bool CanRpnConvert
-        {
-            get
-            {
-                if (convertedToken != null)
-                {
-                    return true;
-                }
-
-                if (!tryConvert)
-                {
-                    return RpnConvert();
-                }
-
-                return false;
-            }
-        }
-
-        internal bool RpnConvert()
-        {
-            if (convertedToken != null)
-            {
-                return true;
-            }
-
-            if (tokens!.Count == 0)
-            {
-                return false;
-            }
-
-            tryConvert = true;
-            if (tokens.Count == 1)
-            {
-                convertedToken = tokens[0];
-                return true;
-            }
-            List<ExpressionTermToken> stack = new List<ExpressionTermToken>();
-            List<ExpressionTermToken> source = new List<ExpressionTermToken>();
-            try
-            {
-                source.AddRange(tokens);
-                while (source.Count != 0)
-                {
-                    ExpressionTermToken token = source[0];
-                    source.RemoveAt(0);
-                    if (token.IsOperator)
-                    {
-                        OperandToken right = (OperandToken)stack[stack.Count - 1];
-                        stack.RemoveAt(stack.Count - 1);
-                        OperandToken left = (OperandToken)stack[stack.Count - 1];
-                        stack.RemoveAt(stack.Count - 1);
-                        stack.Add((ExpressionTermToken)(new SubExpressionToken(left, right, (OperatorToken)token)));
-                    }
-                    else
-                    {
-                        stack.Add(token);
-                    }
-                }
-            }
-            catch (InvalidCastException)
-            {
-                // RPN token list has wrong structure (non-operand/operator in wrong position)
-                return false;
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                // Stack underflow — malformed RPN expression
-                return false;
-            }
-            if (stack.Count != 1)
-            {
-                return false;
-            }
-
-            convertedToken = stack[0];
             return true;
         }
 
-        internal override int TokenOffset
+        if (_tokens!.Count == 0)
         {
-            get
+            return false;
+        }
+
+        _tryConvert = true;
+        if (_tokens.Count == 1)
+        {
+            _convertedToken = _tokens[0];
+            return true;
+        }
+        var stack = new List<ExpressionTermToken>();
+        var source = new List<ExpressionTermToken>();
+        try
+        {
+            source.AddRange(_tokens);
+            while (source.Count != 0)
             {
-                if ((tokens == null) || (tokens.Count == 0))
+                ExpressionTermToken token = source[0];
+                source.RemoveAt(0);
+                if (token.IsOperator)
                 {
-                    return -1;
+                    var right = (OperandToken)stack[^1];
+                    stack.RemoveAt(stack.Count - 1);
+                    var left = (OperandToken)stack[^1];
+                    stack.RemoveAt(stack.Count - 1);
+                    stack.Add((ExpressionTermToken)(new SubExpressionToken(left, right, (OperatorToken)token)));
                 }
-
-                CodeToken token = tokens[0] as CodeToken;
-                if (token == null)
+                else
                 {
-                    return -1;
+                    stack.Add(token);
                 }
-
-                return token.TokenOffset;
             }
         }
-
-        internal string ToString(bool getRpnConverted)
+        catch (InvalidCastException)
         {
-            if (getRpnConverted && (convertedToken != null))
+            // RPN token list has wrong structure (non-operand/operator in wrong position)
+            return false;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            // Stack underflow — malformed RPN expression
+            return false;
+        }
+        if (stack.Count != 1)
+        {
+            return false;
+        }
+
+        _convertedToken = stack[0];
+        return true;
+    }
+
+    internal override int TokenOffset
+    {
+        get
+        {
+            if ((_tokens == null) || (_tokens.Count == 0))
             {
-                return convertedToken.ToString();
+                return -1;
             }
 
-            StringBuilder builder = new StringBuilder();
-            int i = 0;
-            foreach (ExpressionTermToken token in tokens!)
-            {
-                if (i != 0)
-                {
-                    builder.Append(' ');
-                }
-
-                builder.Append(token.ToString());
-                i++;
-            }
-            return builder.ToString();
-        }
-
-        public override string ToString()
-        {
-            return ToString(true);
-        }
-
-        internal override void CheckLabel()
-        {
-            foreach (CodeToken token in tokens!)
-            {
-                token.CheckLabel();
-            }
-        }
-
-        internal override bool CheckRpn()
-        {
-            return CanRpnConvert;
+            var token = _tokens[0] as CodeToken;
+            return token == null ? -1 : token.TokenOffset;
         }
     }
+
+    internal string ToString(bool getRpnConverted)
+    {
+        if (getRpnConverted && (_convertedToken != null))
+        {
+            return _convertedToken.ToString();
+        }
+
+        var builder = new StringBuilder();
+        int i = 0;
+        foreach (ExpressionTermToken token in _tokens!)
+        {
+            if (i != 0)
+            {
+                builder.Append(' ');
+            }
+
+            builder.Append(token.ToString());
+            i++;
+        }
+        return builder.ToString();
+    }
+
+    public override string ToString() => ToString(true);
+
+    internal override void CheckLabel()
+    {
+        foreach (CodeToken token in _tokens!)
+        {
+            token.CheckLabel();
+        }
+    }
+
+    internal override bool CheckRpn() => CanRpnConvert;
 }

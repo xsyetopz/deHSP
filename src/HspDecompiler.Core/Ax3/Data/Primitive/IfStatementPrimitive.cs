@@ -1,64 +1,64 @@
+using System.Globalization;
 using System.Text;
 
-namespace HspDecompiler.Core.Ax3.Data.Primitive
+namespace HspDecompiler.Core.Ax3.Data.Primitive;
+
+internal sealed class IfStatementPrimitive : HspFunctionPrimitive
 {
-    internal sealed class IfStatementPrimitive : HspFunctionPrimitive
+    private IfStatementPrimitive() { }
+    internal IfStatementPrimitive(PrimitiveTokenDataSet dataSet, int extraValue)
+        : base(dataSet)
     {
-        private IfStatementPrimitive() { }
-        internal IfStatementPrimitive(PrimitiveTokenDataSet dataSet, int extraValue)
-            : base(dataSet)
-        {
-            this.extraValue = extraValue;
-        }
+        _extraValue = extraValue;
+    }
 
-        private readonly int extraValue = -1;
-        internal int JumpToOffset
+    private readonly int _extraValue = -1;
+    internal int JumpToOffset
+    {
+        get
         {
-            get
+            if (_extraValue == -1)
             {
-                if (extraValue == -1)
-                {
-                    return -1;
-                }
-
-                int ret = extraValue + TokenOffset;
-                if (HasLongTypeValue)
-                {
-                    ret += 4;
-                }
-                else
-                {
-                    ret += 3;
-                }
-
-                return ret;
+                return -1;
             }
-        }
 
-        internal override string DefaultName
-        {
-            get
+            int ret = _extraValue + TokenOffset;
+            if (HasLongTypeValue)
             {
-                StringBuilder builder = new StringBuilder();
-                builder.Append("/*");
-                builder.Append(type.ToString("X02"));
-                builder.Append(' ');
-                builder.Append(flag.ToString("X02"));
-                builder.Append(' ');
-                if (HasLongTypeValue)
-                {
-                    builder.Append(Value.ToString("X08"));
-                }
-                else
-                {
-                    builder.Append(Value.ToString("X04"));
-                }
-
-                builder.Append(' ');
-                builder.Append(extraValue.ToString("X04"));
-                builder.Append("*/");
-                return builder.ToString();
+                ret += 4;
             }
+            else
+            {
+                ret += 3;
+            }
+
+            return ret;
+        }
+    }
+
+    internal override string DefaultName
+    {
+        get
+        {
+            var builder = new StringBuilder();
+            builder.Append("/*");
+            builder.Append(_type.ToString("X02", CultureInfo.InvariantCulture));
+            builder.Append(' ');
+            builder.Append(_flag.ToString("X02", CultureInfo.InvariantCulture));
+            builder.Append(' ');
+            if (HasLongTypeValue)
+            {
+                builder.Append(Value.ToString("X08", CultureInfo.InvariantCulture));
+            }
+            else
+            {
+                builder.Append(Value.ToString("X04", CultureInfo.InvariantCulture));
+            }
+
+            builder.Append(' ');
+            builder.Append(_extraValue.ToString("X04", CultureInfo.InvariantCulture));
+            builder.Append("*/");
+            return builder.ToString();
         }
     }
 }

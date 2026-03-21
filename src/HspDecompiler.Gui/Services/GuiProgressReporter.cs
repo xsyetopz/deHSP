@@ -3,23 +3,22 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using HspDecompiler.Core.Abstractions;
 
-namespace HspDecompiler.Gui.Services
-{
-    internal sealed class GuiProgressReporter : IProgressReporter
-    {
-        public void Report(string status) { }
+namespace HspDecompiler.Gui.Services;
 
-        public async Task YieldAsync(CancellationToken ct = default)
+internal sealed class GuiProgressReporter : IProgressReporter
+{
+    public void Report(string status) { }
+
+    public async Task YieldAsync(CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        if (Dispatcher.UIThread.CheckAccess())
         {
-            ct.ThrowIfCancellationRequested();
-            if (Dispatcher.UIThread.CheckAccess())
-            {
-                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background, ct);
-            }
-            else
-            {
-                await Task.Yield();
-            }
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background, ct);
+        }
+        else
+        {
+            await Task.Yield();
         }
     }
 }

@@ -1,17 +1,10 @@
-namespace HspDecompiler.Core.Ax3.Data.Token
+namespace HspDecompiler.Core.Ax3.Data.Token;
+
+internal abstract class OperandToken : ExpressionTermToken
 {
-    abstract class OperandToken : ExpressionTermToken
-    {
-        internal OperandToken() { }
+    internal OperandToken() { }
 
-        internal override bool IsOperand
-        {
-            get { return true; }
-        }
+    internal override bool IsOperand => true;
 
-        internal override bool IsOperator
-        {
-            get { return false; }
-        }
-    }
+    internal override bool IsOperator => false;
 }

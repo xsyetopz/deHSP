@@ -4,84 +4,81 @@ using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.Primitive;
 using HspDecompiler.Core.Ax3.Dictionary;
 
-namespace HspDecompiler.Core.Ax3.Data
+namespace HspDecompiler.Core.Ax3.Data;
+
+internal class LexicalAnalyzer
 {
-    class LexicalAnalyzer
+    private LexicalAnalyzer() { }
+    internal LexicalAnalyzer(Hsp3Dictionary theDic)
     {
-        private LexicalAnalyzer() { }
-        internal LexicalAnalyzer(Hsp3Dictionary theDic)
-        {
-            ArgumentNullException.ThrowIfNull(theDic);
+        ArgumentNullException.ThrowIfNull(theDic);
 
-            dictionary = theDic;
+        _dictionary = theDic;
+    }
+
+    private readonly Hsp3Dictionary? _dictionary;
+    private int _tokenOffset;
+
+    internal TokenCollection Analyze(AxData data)
+    {
+        if (!data.IsStarted)
+        {
+            throw new InvalidOperationException();
         }
 
-        Hsp3Dictionary? dictionary = null;
-        int tokenOffset = 0;
-
-        internal TokenCollection Analyze(AxData data)
+        var stream = new TokenCollection();
+        BinaryReader reader = data.Reader!;
+        long sizeOfCode = data.Header!.CodeSize;
+        long startOfCode = data.StartOfCode;
+        _tokenOffset = 0;
+        reader.BaseStream.Seek(startOfCode, SeekOrigin.Begin);
+        while (_tokenOffset < sizeOfCode)
         {
-            if (!data.IsStarted)
+            PrimitiveToken? code = ReadPrimitive(reader, data);
+            if (code != null)
             {
-                throw new InvalidOperationException();
+                stream.Add(code);
             }
+        }
+        return stream;
+    }
 
-            TokenCollection stream = new TokenCollection();
-            BinaryReader reader = data.Reader!;
-            long sizeOfCode = data.Header!.CodeSize;
-            long startOfCode = data.StartOfCode;
-            tokenOffset = 0;
-            reader.BaseStream.Seek(startOfCode, SeekOrigin.Begin);
-            while (tokenOffset < sizeOfCode)
-            {
-                PrimitiveToken? code = ReadPrimitive(reader, data);
-                if (code != null)
-                {
-                    stream.Add(code);
-                }
-            }
-            return stream;
+    private PrimitiveToken ReadPrimitive(BinaryReader reader, AxData data)
+    {
+        PrimitiveToken? ret = null;
+
+        int theTokenOffset = _tokenOffset;
+        int type = reader.ReadByte();
+        int flag = reader.ReadByte();
+        int value = 0;
+        int extraValue = -1;
+        _tokenOffset += 1;
+        if ((flag & HspTokenFlag.LongTypeValue) == HspTokenFlag.LongTypeValue)
+        {
+            value = reader.ReadInt32();
+            _tokenOffset += 2;
+        }
+        else
+        {
+            value = reader.ReadUInt16();
+            _tokenOffset += 1;
         }
 
-        private PrimitiveToken ReadPrimitive(BinaryReader reader, AxData data)
+        var key = new HspDictionaryKey
         {
-            PrimitiveToken? ret = null;
-
-            int theTokenOffset = tokenOffset;
-            int type = reader.ReadByte();
-            int flag = reader.ReadByte();
-            int value = 0;
-            int extraValue = -1;
-            tokenOffset += 1;
-            if ((flag & 0x80) == 0x80)
+            _type = type,
+            _value = value
+        };
+        HspDictionaryValue dicValue;
+        if (_dictionary!.CodeLookUp(key, out dicValue))
+        {
+            if ((dicValue._extra & HspCodeExtraOptions.HasExtraInt16) == HspCodeExtraOptions.HasExtraInt16)
             {
-                value = reader.ReadInt32();
-                tokenOffset += 2;
-            }
-            else
-            {
-                value = reader.ReadUInt16();
-                tokenOffset += 1;
-            }
-
-            HspDictionaryKey key = new HspDictionaryKey();
-            key.Type = type;
-            key.Value = value;
-            HspDictionaryValue dicValue;
-            if (dictionary!.CodeLookUp(key, out dicValue))
-            {
-                if ((dicValue.Extra & HspCodeExtraFlags.HasExtraInt16) == HspCodeExtraFlags.HasExtraInt16)
+                if ((flag & HspTokenFlag.LineHead) == HspTokenFlag.LineHead)
                 {
-                    if ((flag & 0x20) == 0x20)
-                    {
-                        extraValue = reader.ReadUInt16();
-                        tokenOffset += 1;
-                        ret = CreatePrimitive(data, dicValue, theTokenOffset, type, flag, value, extraValue);
-                    }
-                    else
-                    {
-                        ret = CreatePrimitive(data, dicValue, theTokenOffset, type, flag, value, -1);
-                    }
+                    extraValue = reader.ReadUInt16();
+                    _tokenOffset += 1;
+                    ret = CreatePrimitive(data, dicValue, theTokenOffset, type, flag, value, extraValue);
                 }
                 else
                 {
@@ -90,74 +87,73 @@ namespace HspDecompiler.Core.Ax3.Data
             }
             else
             {
-                ret = CreatePrimitive(data, new HspDictionaryValue(), theTokenOffset, type, flag, value, -1);
+                ret = CreatePrimitive(data, dicValue, theTokenOffset, type, flag, value, -1);
             }
-
-            ret!.SetName();
-
-            return ret;
         }
-
-        private PrimitiveToken CreatePrimitive(AxData data, HspDictionaryValue dicValue, int theTokenOffset, int type, int flag, int value, int extraValue)
+        else
         {
-            PrimitiveTokenDataSet dataset = new PrimitiveTokenDataSet();
-            dataset.Parent = data;
-            dataset.DicValue = dicValue;
-            dataset.TokenOffset = theTokenOffset;
-            dataset.Type = type;
-            dataset.Flag = flag;
-            dataset.Value = value;
-            dataset.Name = dicValue.Name;
-            switch (dicValue.Type)
-            {
-                case HspCodeType.Label:
-                    return new LabelPrimitive(dataset);
-                case HspCodeType.Integer:
-                    return new IntegerPrimitive(dataset);
-                case HspCodeType.Double:
-                    return new DoublePrimitive(dataset, data.ReadDoubleLiteral(value));
-                case HspCodeType.String:
-                    return new StringPrimitive(dataset, data.ReadStringLiteral(value));
-                case HspCodeType.Symbol:
-                    return new SymbolPrimitive(dataset);
-                case HspCodeType.Param:
-                    return new ParameterPrimitive(dataset);
-                case HspCodeType.Variable:
-                    return new GlobalVariablePrimitive(dataset);
-                case HspCodeType.Operator:
-                    return new OperatorPrimitive(dataset);
-                case HspCodeType.IfStatement:
-                case HspCodeType.ElseStatement:
-                    if (extraValue >= 0)
-                    {
-                        return new IfStatementPrimitive(dataset, extraValue);
-                    }
-                    else
-                    {
-                        return new HspFunctionPrimitive(dataset);
-                    }
-
-                case HspCodeType.HspFunction:
-                    return new HspFunctionPrimitive(dataset);
-                case HspCodeType.OnStatement:
-                    return new OnFunctionPrimitive(dataset);
-                case HspCodeType.OnEventStatement:
-                    return new OnEventFunctionPrimitive(dataset);
-                case HspCodeType.McallStatement:
-                    return new McallFunctionPrimitive(dataset);
-                case HspCodeType.UserFunction:
-                    return new UserFunctionPrimitive(dataset);
-                case HspCodeType.DllFunction:
-                    return new DllFunctionPrimitive(dataset);
-                case HspCodeType.PlugInFunction:
-                    return new PlugInFunctionPrimitive(dataset);
-                case HspCodeType.ComFunction:
-                    return new ComFunctionPrimitive(dataset);
-                case HspCodeType.NONE:
-                default:
-                    break;
-            }
-            return new UnknownPrimitive(dataset);
+            ret = CreatePrimitive(data, new HspDictionaryValue(), theTokenOffset, type, flag, value, -1);
         }
+
+        ret!.SetName();
+
+        return ret;
+    }
+
+    private static PrimitiveToken CreatePrimitive(AxData data, HspDictionaryValue dicValue, int theTokenOffset, int type, int flag, int value, int extraValue)
+    {
+        var dataset = new PrimitiveTokenDataSet
+        {
+            _parent = data,
+            _dicValue = dicValue,
+            _tokenOffset = theTokenOffset,
+            _type = type,
+            _flag = flag,
+            _value = value,
+            _name = dicValue._name
+        };
+        switch (dicValue._type)
+        {
+            case HspCodeType.Label:
+                return new LabelPrimitive(dataset);
+            case HspCodeType.IntegerValue:
+                return new IntegerPrimitive(dataset);
+            case HspCodeType.DoubleValue:
+                return new DoublePrimitive(dataset, data.ReadDoubleLiteral(value));
+            case HspCodeType.StringValue:
+                return new StringPrimitive(dataset, data.ReadStringLiteral(value));
+            case HspCodeType.Symbol:
+                return new SymbolPrimitive(dataset);
+            case HspCodeType.Param:
+                return new ParameterPrimitive(dataset);
+            case HspCodeType.Variable:
+                return new GlobalVariablePrimitive(dataset);
+            case HspCodeType.Operator:
+                return new OperatorPrimitive(dataset);
+            case HspCodeType.IfStatement:
+            case HspCodeType.ElseStatement:
+                return extraValue >= 0 ? new IfStatementPrimitive(dataset, extraValue) : (PrimitiveToken)new HspFunctionPrimitive(dataset);
+
+            case HspCodeType.HspFunction:
+                return new HspFunctionPrimitive(dataset);
+            case HspCodeType.OnStatement:
+                return new OnFunctionPrimitive(dataset);
+            case HspCodeType.OnEventStatement:
+                return new OnEventFunctionPrimitive(dataset);
+            case HspCodeType.McallStatement:
+                return new McallFunctionPrimitive(dataset);
+            case HspCodeType.UserFunction:
+                return new UserFunctionPrimitive(dataset);
+            case HspCodeType.DllFunction:
+                return new DllFunctionPrimitive(dataset);
+            case HspCodeType.PlugInFunction:
+                return new PlugInFunctionPrimitive(dataset);
+            case HspCodeType.ComFunction:
+                return new ComFunctionPrimitive(dataset);
+            case HspCodeType.NONE:
+            default:
+                break;
+        }
+        return new UnknownPrimitive(dataset);
     }
 }

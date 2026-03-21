@@ -23,6 +23,12 @@
     <Content Include="..\..\Dictionary.csv" Link="Dictionary.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\dumping\vocalshifter.exe" Link="Fixtures\vocalshifter.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\dumping\start_orig.hsp" Link="Fixtures\start_orig.hsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

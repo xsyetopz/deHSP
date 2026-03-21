@@ -2,121 +2,108 @@ using System.Text;
 using HspDecompiler.Core.Ax3.Data.Primitive;
 using HspDecompiler.Core.Ax3.Data.Token;
 
-namespace HspDecompiler.Core.Ax3.Data.Line
+namespace HspDecompiler.Core.Ax3.Data.Line;
+
+internal class McallStatement : LogicalLine
 {
-    class McallStatement : LogicalLine
+    private McallStatement() { }
+    internal McallStatement(McallFunctionPrimitive theToken, VariablePrimitive var, ExpressionToken exp, ArgumentToken? arg)
     {
-        private McallStatement() { }
-        internal McallStatement(McallFunctionPrimitive theToken, VariablePrimitive var, ExpressionToken exp, ArgumentToken? arg)
+        _token = theToken;
+        _var = var;
+        _exp = exp;
+        _arg = arg;
+    }
+    private readonly McallFunctionPrimitive? _token;
+    private readonly VariablePrimitive? _var;
+    private readonly ExpressionToken? _exp;
+    private readonly ArgumentToken? _arg;
+
+    internal override int TokenOffset => _token!.TokenOffset;
+
+    private string ToStringFunctionStyle()
+    {
+        if (_arg == null)
         {
-            token = theToken;
-            this.var = var;
-            this.exp = exp;
-            this.arg = arg;
+            return _token!.ToString();
         }
-        private readonly McallFunctionPrimitive? token = null;
-        private readonly VariablePrimitive? var = null;
-        private readonly ExpressionToken? exp = null;
-        private readonly ArgumentToken? arg = null;
 
-        internal override int TokenOffset
+        var builder = new StringBuilder();
+        builder.Append(_token!.ToString());
+        if (_var != null)
         {
-            get { return token!.TokenOffset; }
-        }
-
-        private string ToStringFunctionStyle()
-        {
-            if (arg == null)
-            {
-                return token!.ToString();
-            }
-
-            StringBuilder builder = new StringBuilder();
-            builder.Append(token!.ToString());
-            if (var != null)
+            builder.Append(' ');
+            builder.Append(_var.ToString());
+            if (_exp != null)
             {
                 builder.Append(' ');
-                builder.Append(var.ToString());
-                if (exp != null)
-                {
-                    builder.Append(' ');
-                    builder.Append(',');
-                    builder.Append(var.ToString());
-                }
+                builder.Append(',');
+                builder.Append(_var.ToString());
             }
-            if (arg != null)
-            {
-                builder.Append(arg.ToString());
-            }
-            return builder.ToString();
         }
-
-        internal string ToString(bool convertMcall)
+        if (_arg != null)
         {
-            if (!convertMcall)
-            {
-                return ToStringFunctionStyle();
-            }
-
-            if (var == null)
-            {
-                return ToStringFunctionStyle();
-            }
-
-            if (exp == null)
-            {
-                return ToStringFunctionStyle();
-            }
-
-            if (arg == null)
-            {
-                return ToStringFunctionStyle();
-            }
-
-            StringBuilder builder = new StringBuilder();
-            builder.Append(var.ToString());
-            builder.Append("->");
-            builder.Append(exp.ToString());
-            if (arg != null)
-            {
-                builder.Append(arg.ToString(true));
-            }
-
-            return builder.ToString();
+            builder.Append(_arg.ToString());
         }
+        return builder.ToString();
+    }
 
-        public override string ToString()
+    internal string ToString(bool convertMcall)
+    {
+        if (!convertMcall)
         {
-            return ToString(true);
+            return ToStringFunctionStyle();
         }
 
-        internal override void CheckLabel()
+        if (_var == null)
         {
-            if (exp != null)
-            {
-                exp.CheckLabel();
-            }
-
-            if (arg != null)
-            {
-                arg.CheckLabel();
-            }
+            return ToStringFunctionStyle();
         }
 
-        internal override bool CheckRpn()
+        if (_exp == null)
         {
-            bool ret = true;
-            if (exp != null)
-            {
-                ret &= exp.CheckRpn();
-            }
-
-            if (arg != null)
-            {
-                ret &= arg.CheckRpn();
-            }
-
-            return ret;
+            return ToStringFunctionStyle();
         }
+
+        if (_arg == null)
+        {
+            return ToStringFunctionStyle();
+        }
+
+        var builder = new StringBuilder();
+        builder.Append(_var.ToString());
+        builder.Append("->");
+        builder.Append(_exp.ToString());
+        if (_arg != null)
+        {
+            builder.Append(_arg.ToString(true));
+        }
+
+        return builder.ToString();
+    }
+
+    public override string ToString() => ToString(true);
+
+    internal override void CheckLabel()
+    {
+        _exp?.CheckLabel();
+
+        _arg?.CheckLabel();
+    }
+
+    internal override bool CheckRpn()
+    {
+        bool ret = true;
+        if (_exp != null)
+        {
+            ret &= _exp.CheckRpn();
+        }
+
+        if (_arg != null)
+        {
+            ret &= _arg.CheckRpn();
+        }
+
+        return ret;
     }
 }

@@ -1,21 +1,15 @@
-namespace HspDecompiler.Core.Ax3.Data.Token
-{
-    internal sealed class UnknownToken : CodeToken
-    {
-        private UnknownToken() { }
-        internal UnknownToken(PrimitiveToken token)
-        {
-            this.token = token;
-        }
-        PrimitiveToken? token;
-        internal override int TokenOffset
-        {
-            get { return token!.TokenOffset; }
-        }
+namespace HspDecompiler.Core.Ax3.Data.Token;
 
-        public override string ToString()
-        {
-            return " /*" + token!.ToString() + "*/";
-        }
+internal sealed class UnknownToken : CodeToken
+{
+    private UnknownToken() { }
+    internal UnknownToken(PrimitiveToken token)
+    {
+        _token = token;
     }
+
+    private readonly PrimitiveToken? _token;
+    internal override int TokenOffset => _token!.TokenOffset;
+
+    public override string ToString() => " /*" + _token!.ToString() + "*/";
 }

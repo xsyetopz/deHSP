@@ -1,214 +1,132 @@
 using System;
 using System.Collections.Generic;
 
-namespace HspDecompiler.Core.Ax3.Data.Analyzer
+namespace HspDecompiler.Core.Ax3.Data.Analyzer;
+
+internal sealed class TokenCollection
 {
-    internal sealed class TokenCollection
+    private List<PrimitiveToken> _primitives = new();
+
+    internal List<PrimitiveToken> Primitives => _primitives;
+
+    private int _position;
+    internal int Position
     {
-        private List<PrimitiveToken> primitives = new List<PrimitiveToken>();
-
-        internal List<PrimitiveToken> Primitives
+        get => _position;
+        set
         {
-            get { return primitives; }
-        }
-
-        private int position = 0;
-        internal int Position
-        {
-            get
+            if (_position < 0)
             {
-                return position;
+                throw new ArgumentOutOfRangeException(nameof(value));
             }
-            set
+
+            if (_position > _primitives.Count)
             {
-                if (position < 0)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(value));
-                }
-
-                if (position > primitives.Count)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(value));
-                }
-
-                position = value;
+                throw new ArgumentOutOfRangeException(nameof(value));
             }
+
+            _position = value;
         }
+    }
 
-        internal PrimitiveToken this[int i]
-        {
-            get
-            {
-                return primitives[i];
-            }
-        }
+    internal PrimitiveToken this[int i] => _primitives[i];
 
-        internal int Count
-        {
-            get
-            {
-                return primitives.Count;
-            }
-        }
+    internal int Count => _primitives.Count;
 
-        internal PrimitiveToken? NextToken
-        {
-            get
-            {
-                if (NextIsEndOfStream)
-                {
-                    return null;
-                }
-
-                return primitives[position];
-            }
-        }
-        internal bool NextNextTokenIsGotoFunction
-        {
-            get
-            {
-                if (NextIsEndOfStream)
-                {
-                    return false;
-                }
-
-                if ((position + 1) >= primitives.Count)
-                {
-                    return false;
-                }
-
-                PrimitiveToken token = primitives[position + 1];
-                return ((token.CodeExtraFlags & HspCodeExtraFlags.GotoFunction) == HspCodeExtraFlags.GotoFunction);
-            }
-        }
-
-        internal TokenCollection? GetLine()
+    internal PrimitiveToken? NextToken => NextIsEndOfStream ? null : _primitives[_position];
+    internal bool NextNextTokenIsGotoFunction
+    {
+        get
         {
             if (NextIsEndOfStream)
             {
-                return null;
-            }
-
-            List<PrimitiveToken> list = new List<PrimitiveToken>();
-            list.Add(primitives[position]);
-            position++;
-            while (position < primitives.Count)
-            {
-                if (primitives[position].IsLineHead)
-                {
-                    break;
-                }
-
-                list.Add(primitives[position]);
-                position++;
-            }
-            TokenCollection ret = new TokenCollection();
-            ret.primitives = list;
-            return ret;
-        }
-
-        internal PrimitiveToken? GetNextToken()
-        {
-            if (position >= primitives.Count)
-            {
-                return null;
-            }
-
-            PrimitiveToken ret = primitives[position];
-            position++;
-            return ret;
-        }
-
-        internal bool NextIsEndOfStream
-        {
-            get
-            {
-                return (position >= primitives.Count);
-            }
-        }
-
-        internal bool NextIsEndOfLine
-        {
-            get
-            {
-                if (NextIsEndOfStream)
-                {
-                    return true;
-                }
-
-                if (primitives[position].IsLineHead)
-                {
-                    return true;
-                }
-
                 return false;
             }
-        }
 
-        internal bool NextIsEndOfParam
-        {
-            get
+            if ((_position + 1) >= _primitives.Count)
             {
-                if (NextIsEndOfStream)
-                {
-                    return true;
-                }
-
-                if (primitives[position].IsLineHead)
-                {
-                    return true;
-                }
-
-                if (primitives[position].IsParamHead)
-                {
-                    return true;
-                }
-
                 return false;
             }
-        }
 
-        internal bool NextIsBracketStart
-        {
-            get
-            {
-                if (NextIsEndOfStream)
-                {
-                    return false;
-                }
-
-                PrimitiveToken token = primitives[position];
-                if ((token.CodeExtraFlags & HspCodeExtraFlags.BracketStart) == HspCodeExtraFlags.BracketStart)
-                {
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
-        internal bool NextIsBracketEnd
-        {
-            get
-            {
-                if (NextIsEndOfStream)
-                {
-                    return false;
-                }
-
-                PrimitiveToken token = primitives[position];
-                if ((token.CodeExtraFlags & HspCodeExtraFlags.BracketEnd) == HspCodeExtraFlags.BracketEnd)
-                {
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
-        internal void Add(PrimitiveToken token)
-        {
-            primitives.Add(token);
+            PrimitiveToken token = _primitives[_position + 1];
+            return ((token.CodeExtraFlags & HspCodeExtraOptions.GotoFunction) == HspCodeExtraOptions.GotoFunction);
         }
     }
+
+    internal TokenCollection? GetLine()
+    {
+        if (NextIsEndOfStream)
+        {
+            return null;
+        }
+
+        var list = new List<PrimitiveToken>
+        {
+            _primitives[_position]
+        };
+        _position++;
+        while (_position < _primitives.Count)
+        {
+            if (_primitives[_position].IsLineHead)
+            {
+                break;
+            }
+
+            list.Add(_primitives[_position]);
+            _position++;
+        }
+        var ret = new TokenCollection
+        {
+            _primitives = list
+        };
+        return ret;
+    }
+
+    internal PrimitiveToken? GetNextToken()
+    {
+        if (_position >= _primitives.Count)
+        {
+            return null;
+        }
+
+        PrimitiveToken ret = _primitives[_position];
+        _position++;
+        return ret;
+    }
+
+    internal bool NextIsEndOfStream => (_position >= _primitives.Count);
+
+    internal bool NextIsEndOfLine => NextIsEndOfStream ? true : _primitives[_position].IsLineHead;
+
+    internal bool NextIsEndOfParam => NextIsEndOfStream ? true : _primitives[_position].IsLineHead ? true : _primitives[_position].IsParamHead;
+
+    internal bool NextIsBracketStart
+    {
+        get
+        {
+            if (NextIsEndOfStream)
+            {
+                return false;
+            }
+
+            PrimitiveToken token = _primitives[_position];
+            return (token.CodeExtraFlags & HspCodeExtraOptions.BracketStart) == HspCodeExtraOptions.BracketStart;
+        }
+    }
+
+    internal bool NextIsBracketEnd
+    {
+        get
+        {
+            if (NextIsEndOfStream)
+            {
+                return false;
+            }
+
+            PrimitiveToken token = _primitives[_position];
+            return (token.CodeExtraFlags & HspCodeExtraOptions.BracketEnd) == HspCodeExtraOptions.BracketEnd;
+        }
+    }
+
+    internal void Add(PrimitiveToken token) => _primitives.Add(token);
 }

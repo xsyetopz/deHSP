@@ -1,39 +1,29 @@
 using System.Text;
 
-namespace HspDecompiler.Core.Ax3.Data.Line
+namespace HspDecompiler.Core.Ax3.Data.Line;
+
+internal class CommentLine : LogicalLine
 {
-    class CommentLine : LogicalLine
+    internal CommentLine() { }
+    internal CommentLine(string str)
     {
-        internal CommentLine() { }
-        internal CommentLine(string str)
+        _comment = str;
+    }
+    private readonly string? _comment;
+    internal override int TokenOffset => -1;
+
+    internal override int TabCount => 0;
+
+    public override string ToString()
+    {
+        if (_comment == null)
         {
-            comment = str;
-        }
-        private readonly string? comment = null;
-        internal override int TokenOffset
-        {
-            get { return -1; }
+            return string.Empty;
         }
 
-        internal override int TabCount
-        {
-            get
-            {
-                return 0;
-            }
-        }
-
-        public override string ToString()
-        {
-            if (comment == null)
-            {
-                return string.Empty;
-            }
-
-            StringBuilder strbd = new StringBuilder();
-            strbd.Append("//");
-            strbd.Append(comment);
-            return strbd.ToString();
-        }
+        var strbd = new StringBuilder();
+        strbd.Append("//");
+        strbd.Append(_comment);
+        return strbd.ToString();
     }
 }

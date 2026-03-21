@@ -1,25 +1,24 @@
 using System.Text;
 
-namespace HspDecompiler.Core.Ax3.Data.PP
+namespace HspDecompiler.Core.Ax3.Data.PP;
+
+internal class Runtime : Preprocessor
 {
-    class Runtime : Preprocessor
+    private Runtime() { }
+    internal Runtime(string theName)
     {
-        private Runtime() { }
-        internal Runtime(string theName)
-        {
-            name = theName;
-        }
+        _name = theName;
+    }
 
-        string? name;
+    private readonly string? _name;
 
-        public override string ToString()
-        {
-            StringBuilder strbd = new StringBuilder();
-            strbd.Append("#runtime ");
-            strbd.Append(@"""");
-            strbd.Append(name);
-            strbd.Append(@"""");
-            return strbd.ToString();
-        }
+    public override string ToString()
+    {
+        var strbd = new StringBuilder();
+        strbd.Append("#runtime ");
+        strbd.Append('"');
+        strbd.Append(_name);
+        strbd.Append('"');
+        return strbd.ToString();
     }
 }

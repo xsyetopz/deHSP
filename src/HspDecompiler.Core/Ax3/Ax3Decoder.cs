@@ -9,57 +9,56 @@ using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Resources;
 
-namespace HspDecompiler.Core.Ax3
+namespace HspDecompiler.Core.Ax3;
+
+internal class Ax3Decoder : IAxDecoder
 {
-    class Ax3Decoder : IAxDecoder
+    internal Ax3Decoder() { }
+
+    private Hsp3Dictionary? _dictionary;
+
+    internal Hsp3Dictionary? Dictionary
     {
-        internal Ax3Decoder() { }
+        get => _dictionary;
+        set => _dictionary = value;
+    }
 
-        private Hsp3Dictionary? dictionary;
-
-        internal Hsp3Dictionary? Dictionary
+    public async Task<List<string>> DecodeAsync(BinaryReader reader, IDecompilerLogger logger, IProgressReporter progress, CancellationToken ct = default)
+    {
+        var data = new AxData();
+        LexicalAnalyzer? lex = null;
+        TokenCollection? stream = null;
+        SyntacticAnalyzer? synt = null;
+        List<LogicalLine>? lines = null;
+        var stringLines = new List<string>();
+        try
         {
-            get { return dictionary; }
-            set { dictionary = value; }
-        }
-
-        public async Task<List<string>> DecodeAsync(BinaryReader reader, IDecompilerLogger logger, IProgressReporter progress, CancellationToken ct = default)
-        {
-            AxData data = new AxData();
-            LexicalAnalyzer? lex = null;
-            TokenCollection? stream = null;
-            SyntacticAnalyzer? synt = null;
-            List<LogicalLine>? lines = null;
-            List<string> stringLines = new List<string>();
-            try
+            logger.Write(Strings.AnalyzingHeader);
+            data.LoadStart(reader, _dictionary);
+            data.ReadHeader();
+            logger.Write(Strings.AnalyzingPreprocessor);
+            data.ReadPreprocessor(_dictionary);
+            logger.Write(Strings.LexicalAnalysis);
+            lex = new LexicalAnalyzer(_dictionary!);
+            stream = lex.Analyze(data);
+            data.LoadEnd();
+            logger.Write(Strings.SyntacticAnalysis);
+            synt = new SyntacticAnalyzer();
+            lines = await synt.AnalyzeAsync(stream, data, logger, progress, ct).ConfigureAwait(false);
+            logger.Write(Strings.CreatingOutputFile);
+            foreach (LogicalLine line in lines)
             {
-                logger.Write(Strings.AnalyzingHeader);
-                data.LoadStart(reader, dictionary);
-                data.ReadHeader();
-                logger.Write(Strings.AnalyzingPreprocessor);
-                data.ReadPreprocessor(dictionary);
-                logger.Write(Strings.LexicalAnalysis);
-                lex = new LexicalAnalyzer(dictionary!);
-                stream = lex.Analyze(data);
-                data.LoadEnd();
-                logger.Write(Strings.SyntacticAnalysis);
-                synt = new SyntacticAnalyzer();
-                lines = await synt.AnalyzeAsync(stream, data, logger, progress, ct);
-                logger.Write(Strings.CreatingOutputFile);
-                foreach (LogicalLine line in lines)
+                if (line.Visible)
                 {
-                    if (line.Visible)
-                    {
-                        string str = new string('\t', line.TabCount);
-                        stringLines.Add(str + line.ToString());
-                    }
+                    string str = new('\t', line.TabCount);
+                    stringLines.Add(str + line.ToString());
                 }
             }
-            catch (SystemException e)
-            {
-                throw new HspDecoderException("AxData", Strings.UnexpectedError, e);
-            }
-            return stringLines;
         }
+        catch (SystemException e)
+        {
+            throw new HspDecoderException("AxData", Strings.UnexpectedError, e);
+        }
+        return stringLines;
     }
 }

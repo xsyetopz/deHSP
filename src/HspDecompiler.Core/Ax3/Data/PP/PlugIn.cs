@@ -2,75 +2,71 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace HspDecompiler.Core.Ax3.Data.PP
+namespace HspDecompiler.Core.Ax3.Data.PP;
+
+internal class PlugIn : Preprocessor
 {
-    class PlugIn : Preprocessor
+    private PlugIn() { }
+    private PlugIn(int index) : base(index) { }
+
+    private string? _dllName;
+    private string? _exportName;
+    private int _int3;
+
+    internal static PlugIn FromBinaryReader(BinaryReader reader, AxData parent, int index)
     {
-        private PlugIn() { }
-        private PlugIn(int index) : base(index) { }
-        int int_0;
-        string? dllName = null;
-        string? exportName = null;
-        int int_3;
+        _ = reader.ReadInt32();
+        var ret = new PlugIn(index);
+        int dllNameOffset = reader.ReadInt32();
+        int exportNameOffset = reader.ReadInt32();
+        ret._int3 = reader.ReadInt32();
+        ret._dllName = parent.ReadStringLiteral(dllNameOffset);
+        ret._exportName = parent.ReadStringLiteral(exportNameOffset);
+        return ret;
+    }
 
-        internal static PlugIn FromBinaryReader(BinaryReader reader, AxData parent, int index)
+    private readonly Dictionary<int, Cmd> _cmds = new();
+    private int _extendedTypeCount;
+
+    internal int ExtendedTypeCount
+    {
+        get => _extendedTypeCount;
+        set => _extendedTypeCount = value;
+    }
+    internal Cmd AddCmd(int methodIndex)
+    {
+        Cmd? cmd = null;
+        if (_cmds.TryGetValue(methodIndex, out cmd))
         {
-            PlugIn ret = new PlugIn(index);
-            ret.int_0 = reader.ReadInt32();
-            int dllNameOffset = reader.ReadInt32();
-            int exportNameOffset = reader.ReadInt32();
-            ret.int_3 = reader.ReadInt32();
-            ret.dllName = parent.ReadStringLiteral(dllNameOffset);
-            ret.exportName = parent.ReadStringLiteral(exportNameOffset);
-            return ret;
-        }
-
-        Dictionary<int, Cmd> cmds = new Dictionary<int, Cmd>();
-        private int extendedTypeCount = 0;
-
-        internal int ExtendedTypeCount
-        {
-            get { return extendedTypeCount; }
-            set { extendedTypeCount = value; }
-        }
-        internal Cmd AddCmd(int methodIndex)
-        {
-            Cmd? cmd = null;
-            if (cmds.TryGetValue(methodIndex, out cmd))
-            {
-                return cmd;
-            }
-
-            cmd = new Cmd(index, methodIndex);
-            cmds.Add(methodIndex, cmd);
             return cmd;
         }
-        internal Dictionary<int, Cmd> GetCmds()
-        {
-            return cmds;
-        }
 
-        public override string ToString()
+        cmd = new Cmd(_index, methodIndex);
+        _cmds.Add(methodIndex, cmd);
+        return cmd;
+    }
+    internal Dictionary<int, Cmd> GetCmds() => _cmds;
+
+    public override string ToString()
+    {
+        var strbd = new StringBuilder();
+        strbd.Append("#regcmd");
+        strbd.Append(' ');
+        strbd.Append('"');
+        strbd.Append(_exportName);
+        strbd.Append('"');
+        strbd.Append(',');
+        strbd.Append(' ');
+        strbd.Append('"');
+        strbd.Append(_dllName);
+        strbd.Append('"');
+        if (_extendedTypeCount != 0)
         {
-            StringBuilder strbd = new StringBuilder();
-            strbd.Append("#regcmd");
-            strbd.Append(' ');
-            strbd.Append('"');
-            strbd.Append(exportName);
-            strbd.Append('"');
             strbd.Append(',');
             strbd.Append(' ');
-            strbd.Append('"');
-            strbd.Append(dllName);
-            strbd.Append('"');
-            if (extendedTypeCount != 0)
-            {
-                strbd.Append(',');
-                strbd.Append(' ');
-                strbd.Append(extendedTypeCount.ToString());
-            }
-
-            return strbd.ToString();
+            strbd.Append(_extendedTypeCount);
         }
+
+        return strbd.ToString();
     }
 }

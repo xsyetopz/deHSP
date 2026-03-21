@@ -1,38 +1,37 @@
-namespace HspDecompiler.Core.Ax3.Data.Primitive
+namespace HspDecompiler.Core.Ax3.Data.Primitive;
+
+internal class HspFunctionPrimitive : FunctionPrimitive
 {
-    internal class HspFunctionPrimitive : FunctionPrimitive
+    protected HspFunctionPrimitive() { }
+    internal HspFunctionPrimitive(PrimitiveTokenDataSet dataSet)
+        : base(dataSet)
     {
-        protected HspFunctionPrimitive() { }
-        internal HspFunctionPrimitive(PrimitiveTokenDataSet dataSet)
-            : base(dataSet)
-        {
-        }
     }
+}
 
-    internal sealed class OnFunctionPrimitive : HspFunctionPrimitive
+internal sealed class OnFunctionPrimitive : HspFunctionPrimitive
+{
+    private OnFunctionPrimitive() { }
+    internal OnFunctionPrimitive(PrimitiveTokenDataSet dataSet)
+        : base(dataSet)
     {
-        private OnFunctionPrimitive() { }
-        internal OnFunctionPrimitive(PrimitiveTokenDataSet dataSet)
-            : base(dataSet)
-        {
-        }
     }
+}
 
-    internal sealed class OnEventFunctionPrimitive : HspFunctionPrimitive
+internal sealed class OnEventFunctionPrimitive : HspFunctionPrimitive
+{
+    private OnEventFunctionPrimitive() { }
+    internal OnEventFunctionPrimitive(PrimitiveTokenDataSet dataSet)
+        : base(dataSet)
     {
-        private OnEventFunctionPrimitive() { }
-        internal OnEventFunctionPrimitive(PrimitiveTokenDataSet dataSet)
-            : base(dataSet)
-        {
-        }
     }
+}
 
-    internal sealed class McallFunctionPrimitive : HspFunctionPrimitive
+internal sealed class McallFunctionPrimitive : HspFunctionPrimitive
+{
+    private McallFunctionPrimitive() { }
+    internal McallFunctionPrimitive(PrimitiveTokenDataSet dataSet)
+        : base(dataSet)
     {
-        private McallFunctionPrimitive() { }
-        internal McallFunctionPrimitive(PrimitiveTokenDataSet dataSet)
-            : base(dataSet)
-        {
-        }
     }
 }

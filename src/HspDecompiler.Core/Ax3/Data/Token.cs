@@ -1,14 +1,13 @@
-namespace HspDecompiler.Core.Ax3.Data
-{
-    abstract class CodeToken
-    {
-        internal abstract int TokenOffset
-        {
-            get;
-        }
+namespace HspDecompiler.Core.Ax3.Data;
 
-        public abstract override string ToString();
-        internal virtual void CheckLabel() { }
-        internal virtual bool CheckRpn() { return true; }
+internal abstract class CodeToken
+{
+    internal abstract int TokenOffset
+    {
+        get;
     }
+
+    public abstract override string ToString();
+    internal virtual void CheckLabel() { }
+    internal virtual bool CheckRpn() => true;
 }

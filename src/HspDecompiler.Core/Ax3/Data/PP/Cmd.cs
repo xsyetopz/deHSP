@@ -1,39 +1,38 @@
 using System.Text;
 
-namespace HspDecompiler.Core.Ax3.Data.PP
+namespace HspDecompiler.Core.Ax3.Data.PP;
+
+internal sealed class Cmd : Preprocessor
 {
-    internal sealed class Cmd : Preprocessor
+    private Cmd() { }
+    internal Cmd(int pluginIndex, int methodIndex)
     {
-        private Cmd() { }
-        internal Cmd(int pluginIndex, int methodIndex)
-        {
-            this.pluginIndex = pluginIndex;
-            this.methodIndex = methodIndex;
-        }
-        private int pluginIndex;
-        private int methodIndex;
+        _pluginIndex = pluginIndex;
+        _methodIndex = methodIndex;
+    }
+    private readonly int _pluginIndex;
+    private readonly int _methodIndex;
 
-        internal string FunctionName
+    internal string FunctionName
+    {
+        get
         {
-            get
-            {
-                StringBuilder strbd = new StringBuilder();
-                strbd.Append("cmd_");
-                strbd.Append(pluginIndex.ToString());
-                strbd.Append('_');
-                strbd.Append(methodIndex.ToString());
-                return strbd.ToString();
-            }
-        }
-
-        public override string ToString()
-        {
-            StringBuilder strbd = new StringBuilder();
-            strbd.Append("#cmd ");
-            strbd.Append(FunctionName);
-            strbd.Append(' ');
-            strbd.Append(methodIndex.ToString());
+            var strbd = new StringBuilder();
+            strbd.Append("cmd_");
+            strbd.Append(_pluginIndex);
+            strbd.Append('_');
+            strbd.Append(_methodIndex);
             return strbd.ToString();
         }
+    }
+
+    public override string ToString()
+    {
+        var strbd = new StringBuilder();
+        strbd.Append("#cmd ");
+        strbd.Append(FunctionName);
+        strbd.Append(' ');
+        strbd.Append(_methodIndex);
+        return strbd.ToString();
     }
 }

@@ -1,13 +1,12 @@
-namespace HspDecompiler.Core.Ax3.Data.PP
+namespace HspDecompiler.Core.Ax3.Data.PP;
+
+internal abstract class Preprocessor
 {
-    internal abstract class Preprocessor
+    protected Preprocessor() { }
+    protected Preprocessor(int index)
     {
-        protected Preprocessor() { }
-        protected Preprocessor(int index)
-        {
-            this.index = index;
-        }
-        protected readonly int index;
-        public abstract override string ToString();
+        _index = index;
     }
+    protected readonly int _index;
+    public abstract override string ToString();
 }

@@ -1,75 +1,79 @@
-using System;
 using HspDecompiler.Core.DpmToAx.Crypto;
 using Xunit;
 
-namespace HspDecompiler.Core.Tests
+namespace HspDecompiler.Core.Tests;
+
+public class HspCryptoTransformTests
 {
-    public class HspCryptoTransformTests
+    [Fact]
+    public void EncryptionDecryptionRoundtrip()
     {
-        [Fact]
-        public void EncryptionDecryptionRoundtrip()
+        var transform = new HspCryptoTransform
         {
-            var transform = new HspCryptoTransform();
-            transform.XorAdd = new XorAddTransform
+            XorAdd = new XorAddTransform
             {
-                XorByte = 0xAB,
-                AddByte = 0x34,
-                XorSum = false
-            };
-
-            byte[] plaintext = new byte[] { 0x48, 0x53, 0x50, 0x33, 0x00, 0xFF, 0x80 };
-            byte[] encrypted = transform.Encryption(plaintext);
-            byte[] decrypted = transform.Decryption(encrypted);
-
-            Assert.Equal(plaintext, decrypted);
-        }
-
-        [Fact]
-        public void EncryptionProducesDifferentOutput()
-        {
-            var transform = new HspCryptoTransform();
-            transform.XorAdd = new XorAddTransform
-            {
-                XorByte = 0xAB,
-                AddByte = 0x34,
-                XorSum = false
-            };
-
-            byte[] plaintext = new byte[] { 0x48, 0x53, 0x50, 0x33 };
-            byte[] encrypted = transform.Encryption(plaintext);
-
-            bool allSame = true;
-            for (int i = 0; i < plaintext.Length; i++)
-            {
-                if (plaintext[i] != encrypted[i]) { allSame = false; break; }
+                _xorByte = 0xAB,
+                _addByte = 0x34,
+                _xorSum = false
             }
+        };
 
-            Assert.False(allSame);
-        }
+        byte[] plaintext = new byte[] { 0x48, 0x53, 0x50, 0x33, 0x00, 0xFF, 0x80 };
+        byte[] encrypted = transform.Encryption(plaintext);
+        byte[] decrypted = transform.Decryption(encrypted);
 
-        [Fact]
-        public void CrackEncryptionFindsKeyForHsp3Header()
+        Assert.Equal(plaintext, decrypted);
+    }
+
+    [Fact]
+    public void EncryptionProducesDifferentOutput()
+    {
+        var transform = new HspCryptoTransform
         {
-            var originalTransform = new HspCryptoTransform();
-            originalTransform.XorAdd = new XorAddTransform
+            XorAdd = new XorAddTransform
             {
-                XorByte = 0x42,
-                AddByte = 0x17,
-                XorSum = false
-            };
+                _xorByte = 0xAB,
+                _addByte = 0x34,
+                _xorSum = false
+            }
+        };
 
-            byte[] plaintext = new byte[] { 0x48, 0x53, 0x50, 0x33, 0x01, 0x02, 0x03, 0x04 };
-            byte[] encrypted = originalTransform.Encryption(plaintext);
+        byte[] plaintext = "HSP3"u8.ToArray();
+        byte[] encrypted = transform.Encryption(plaintext);
 
-            Func<byte[], bool> validator = data =>
-                data.Length >= 4 && data[0] == 0x48 && data[1] == 0x53 && data[2] == 0x50
-                && (data[3] == 0x33 || data[3] == 0x32);
-
-            var cracked = HspCryptoTransform.CrackEncryption(encrypted, validator);
-
-            Assert.NotNull(cracked);
-            byte[] decrypted = cracked.Decryption(encrypted);
-            Assert.Equal(plaintext, decrypted);
+        bool allSame = true;
+        for (int i = 0; i < plaintext.Length; i++)
+        {
+            if (plaintext[i] != encrypted[i]) { allSame = false; break; }
         }
+
+        Assert.False(allSame);
+    }
+
+    [Fact]
+    public void CrackEncryptionFindsKeyForHsp3Header()
+    {
+        var originalTransform = new HspCryptoTransform
+        {
+            XorAdd = new XorAddTransform
+            {
+                _xorByte = 0x42,
+                _addByte = 0x17,
+                _xorSum = false
+            }
+        };
+
+        byte[] plaintext = new byte[] { 0x48, 0x53, 0x50, 0x33, 0x01, 0x02, 0x03, 0x04 };
+        byte[] encrypted = originalTransform.Encryption(plaintext);
+
+        static bool validator(byte[] data) =>
+            data.Length >= 4 && data[0] == 0x48 && data[1] == 0x53 && data[2] == 0x50
+            && (data[3] == 0x33 || data[3] == 0x32);
+
+        var cracked = HspCryptoTransform.CrackEncryption(encrypted, validator);
+
+        Assert.NotNull(cracked);
+        byte[] decrypted = cracked.Decryption(encrypted);
+        Assert.Equal(plaintext, decrypted);
     }
 }

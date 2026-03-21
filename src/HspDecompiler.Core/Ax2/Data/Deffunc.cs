@@ -1,86 +1,56 @@
-namespace HspDecompiler.Core.Ax2.Data
+namespace HspDecompiler.Core.Ax2.Data;
+
+internal struct Deffunc
 {
-    internal struct Deffunc
+    private string _name;
+    private int _hikiType;
+    private int _hikiCount;
+
+    internal string Name
     {
-        private string name;
-        private int hikiType;
-        private int hikiCount;
+        readonly get => _name;
+        set => _name = value;
+    }
 
-        internal string Name
+    internal int HikiType
+    {
+        readonly get => _hikiType;
+        set => _hikiType = value;
+    }
+
+    internal int HikiCount
+    {
+        readonly get => _hikiCount;
+        set => _hikiCount = value;
+    }
+
+    public override readonly string ToString()
+    {
+        string hiki = "";
+        if (_hikiCount >= 1)
         {
-            get
-            {
-                return name;
-            }
-            set
-            {
-                name = value;
-            }
+            hiki = (_hikiType & 1) != 0 ? "val" : (_hikiType & 2) != 0 ? "str" : "int";
         }
-
-        internal int HikiType
+        if (_hikiCount >= 2)
         {
-            get
+            if ((_hikiType & 0x10) != 0)
             {
-                return hikiType;
+                hiki += ", val";
             }
-            set
+            else if ((_hikiType & 0x20) != 0)
             {
-                hikiType = value;
+                hiki += ", str";
             }
-        }
-
-        internal int HikiCount
-        {
-            get
-            {
-                return hikiCount;
-            }
-            set
-            {
-                hikiCount = value;
-            }
-        }
-
-        public override string ToString()
-        {
-            string hiki = "";
-            if (hikiCount >= 1)
-            {
-                if ((hikiType & 1) != 0)
-                {
-                    hiki = "val";
-                }
-                else if ((hikiType & 2) != 0)
-                {
-                    hiki = "str";
-                }
-                else
-                {
-                    hiki = "int";
-                }
-            }
-            if (hikiCount >= 2)
-            {
-                if ((hikiType & 0x10) != 0)
-                {
-                    hiki += ", val";
-                }
-                else if ((hikiType & 0x20) != 0)
-                {
-                    hiki += ", str";
-                }
-                else
-                {
-                    hiki += ", int";
-                }
-            }
-            for (int i = 0; i < (hikiCount - 2); i++)
+            else
             {
                 hiki += ", int";
             }
-
-            return "#deffunc " + name + " " + hiki;
         }
+        for (int i = 0; i < (_hikiCount - 2); i++)
+        {
+            hiki += ", int";
+        }
+
+        return "#deffunc " + _name + " " + hiki;
     }
 }

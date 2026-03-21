@@ -1,11 +1,10 @@
-namespace HspDecompiler.Core.Ax3.Data.Primitive
+namespace HspDecompiler.Core.Ax3.Data.Primitive;
+
+internal sealed class OperatorPrimitive : PrimitiveToken
 {
-    internal sealed class OperatorPrimitive : PrimitiveToken
+    private OperatorPrimitive() { }
+    internal OperatorPrimitive(PrimitiveTokenDataSet dataSet)
+        : base(dataSet)
     {
-        private OperatorPrimitive() { }
-        internal OperatorPrimitive(PrimitiveTokenDataSet dataSet)
-            : base(dataSet)
-        {
-        }
     }
 }

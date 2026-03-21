@@ -13,7 +13,7 @@ PUBLISH_FLAGS := -c Release \
 	-p:DebugType=none \
 	-p:DebugSymbols=false
 
-.PHONY: all build test format check clean publish $(addprefix publish-,$(RIDS))
+.PHONY: all build test integration-test format check clean publish $(addprefix publish-,$(RIDS))
 
 all: build test
 
@@ -22,6 +22,9 @@ build:
 
 test:
 	dotnet test HspDecompiler.sln --no-build --verbosity normal
+
+integration-test:
+	dotnet test HspDecompiler.sln --no-build --filter "FullyQualifiedName~IntegrationTests"
 
 format:
 	dotnet format HspDecompiler.sln

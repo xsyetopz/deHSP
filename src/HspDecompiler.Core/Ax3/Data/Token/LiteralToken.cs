@@ -1,77 +1,29 @@
 using HspDecompiler.Core.Ax3.Data.Primitive;
 
-namespace HspDecompiler.Core.Ax3.Data.Token
+namespace HspDecompiler.Core.Ax3.Data.Token;
+
+internal sealed class LiteralToken : OperandToken
 {
-    internal sealed class LiteralToken : OperandToken
+    private LiteralToken() { }
+    internal LiteralToken(LiteralPrimitive token)
     {
-        private LiteralToken() { }
-        internal LiteralToken(LiteralPrimitive token)
-        {
-            this.token = token;
-        }
+        _token = token;
+    }
 
-        readonly private LiteralPrimitive? token = null;
-        internal bool IsNegativeNumber
-        {
-            get
-            {
-                if (token == null)
-                {
-                    return false;
-                }
+    private readonly LiteralPrimitive? _token;
+    internal bool IsNegativeNumber => _token == null ? false : _token.IsNegativeNumber;
 
-                return token.IsNegativeNumber;
-            }
-        }
+    internal bool IsMinusOne => _token!.IsMinusOne;
 
-        internal bool IsMinusOne
-        {
-            get { return token!.IsMinusOne; }
-        }
+    internal override int TokenOffset => _token == null ? -1 : _token.TokenOffset;
 
-        internal override int TokenOffset
-        {
-            get
-            {
-                if (token == null)
-                {
-                    return -1;
-                }
+    public override string ToString() => (_token!.CodeType == HspCodeType.Symbol) && (_token.ToString() == "?") ? "" : _token.ToString();
 
-                return token.TokenOffset;
-            }
-        }
+    internal override int Priority => IsNegativeNumber ? -1 : 100;
 
-        public override string ToString()
-        {
-            if ((token!.CodeType == HspCodeType.Symbol) && (token.ToString() == "?"))
-            {
-                return "";
-            }
-
-            return token.ToString();
-        }
-
-        internal override int Priority
-        {
-            get
-            {
-                if (IsNegativeNumber)
-                {
-                    return -1;
-                }
-
-                return 100;
-            }
-        }
-
-        internal override void CheckLabel()
-        {
-            LabelPrimitive? label = token as LabelPrimitive;
-            if (label != null)
-            {
-                label.LabelIsUsed();
-            }
-        }
+    internal override void CheckLabel()
+    {
+        var label = _token as LabelPrimitive;
+        label?.LabelIsUsed();
     }
 }

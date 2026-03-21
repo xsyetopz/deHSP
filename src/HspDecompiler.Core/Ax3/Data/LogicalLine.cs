@@ -1,46 +1,39 @@
 using System.Collections.Generic;
 
-namespace HspDecompiler.Core.Ax3.Data
+namespace HspDecompiler.Core.Ax3.Data;
+
+internal abstract class LogicalLine
 {
-    abstract class LogicalLine
+    internal abstract int TokenOffset
     {
-        internal abstract int TokenOffset
-        {
-            get;
-        }
-
-        protected int tabCount = 0;
-
-        internal virtual int TabCount
-        {
-            get { return tabCount; }
-            set { tabCount = value; }
-        }
-
-        protected List<string> errorMes = new List<string>();
-        internal List<string> GetErrorMes() { return errorMes; }
-        internal void AddError(string error) { errorMes.Add(error); }
-        public override abstract string ToString();
-
-        private bool visible = true;
-        internal bool Visible
-        {
-            get
-            {
-                return visible;
-            }
-            set
-            {
-                visible = value;
-            }
-        }
-
-        internal virtual bool TabIncrement { get { return false; } }
-        internal virtual bool TabDecrement { get { return false; } }
-        internal virtual bool HasFlagGhostGoto { get { return false; } }
-        internal virtual bool HasFlagIsGhost { get { return false; } }
-
-        internal virtual void CheckLabel() { }
-        internal virtual bool CheckRpn() { return true; }
+        get;
     }
+
+    protected int _tabCount;
+
+    internal virtual int TabCount
+    {
+        get => _tabCount;
+        set => _tabCount = value;
+    }
+
+    protected List<string> _errorMes = new();
+    internal List<string> GetErrorMes() => _errorMes;
+    internal void AddError(string error) => _errorMes.Add(error);
+    public abstract override string ToString();
+
+    private bool _visible = true;
+    internal bool Visible
+    {
+        get => _visible;
+        set => _visible = value;
+    }
+
+    internal virtual bool TabIncrement => false;
+    internal virtual bool TabDecrement => false;
+    internal virtual bool HasFlagGhostGoto => false;
+    internal virtual bool HasFlagIsGhost => false;
+
+    internal virtual void CheckLabel() { }
+    internal virtual bool CheckRpn() => true;
 }

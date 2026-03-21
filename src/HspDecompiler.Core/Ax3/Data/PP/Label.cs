@@ -1,77 +1,54 @@
 using System.IO;
 
-namespace HspDecompiler.Core.Ax3.Data.PP
+namespace HspDecompiler.Core.Ax3.Data.PP;
+
+internal class Label : Preprocessor, System.IComparable<Label>
 {
-    class Label : Preprocessor, System.IComparable<Label>
+    private Label() { }
+    private Label(int index) : base(index) { }
+    private int _tokenOffset = -1;
+
+    internal int TokenOffset => _tokenOffset;
+
+    internal static Label FromBinaryReader(BinaryReader reader, AxData _, int index)
     {
-        private Label() { }
-        private Label(int index) : base(index) { }
-        private int tokenOffset = -1;
-
-        internal int TokenOffset
+        var ret = new Label(index)
         {
-            get { return tokenOffset; }
+            _tokenOffset = reader.ReadInt32()
+        };
+        return ret;
+    }
+
+    private bool _visible;
+    internal bool Visible
+    {
+        get => _function != null ? true : _visible;
+        set => _visible = value;
+    }
+    private string _labelName = "*label";
+    internal string LabelName
+    {
+        get => _labelName;
+        set => _labelName = value;
+    }
+
+    public override string ToString() => _function != null ? _function.ToString() : _labelName;
+
+    public int CompareTo(Label? other)
+    {
+        if (other == null)
+        {
+            return 1;
         }
 
-        internal static Label FromBinaryReader(BinaryReader reader, AxData parent, int index)
-        {
-            Label ret = new Label(index);
-            ret.tokenOffset = reader.ReadInt32();
-            return ret;
-        }
+        int ret = _tokenOffset.CompareTo(other._tokenOffset);
+        return ret != 0 ? ret : _index.CompareTo(other._index);
+    }
 
-        private bool visible = false;
-        internal bool Visible
-        {
-            get
-            {
-                if (function != null)
-                {
-                    return true;
-                }
-
-                return visible;
-            }
-            set { visible = value; }
-        }
-        private string labelName = "*label";
-        internal string LabelName
-        {
-            get { return labelName; }
-            set { labelName = value; }
-        }
-
-        public override string ToString()
-        {
-            if (function != null)
-            {
-                return function.ToString();
-            }
-
-            return labelName;
-        }
-
-        public int CompareTo(Label? other)
-        {
-            if (other == null)
-            {
-                return 1;
-            }
-
-            int ret = tokenOffset.CompareTo(other.tokenOffset);
-            if (ret != 0)
-            {
-                return ret;
-            }
-
-            return index.CompareTo(other.index);
-        }
-
-        private Function? function = null;
-        internal void SetFunction(Function f)
-        {
-            function = f;
-            visible = true;
-        }
+    private Function? _function;
+    internal void SetFunction(Function f)
+    {
+        _function = f;
+        _visible = true;
     }
 }

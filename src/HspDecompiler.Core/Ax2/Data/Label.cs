@@ -1,84 +1,50 @@
-namespace HspDecompiler.Core.Ax2.Data
+using System.Globalization;
+
+namespace HspDecompiler.Core.Ax2.Data;
+
+internal class Label
 {
-    internal class Label
+    private Label()
     {
-        private Label()
-        {
-        }
+    }
 
-        internal Label(int p_index, int p_tokenIndex)
-        {
-            index = p_index;
-            tokenIndex = p_tokenIndex;
-            name = "*label_" + index.ToString();
-        }
+    internal Label(int p_index, int p_tokenIndex)
+    {
+        _index = p_index;
+        _tokenIndex = p_tokenIndex;
+        _name = "*label_" + _index.ToString(CultureInfo.InvariantCulture);
+    }
 
-        private int index;
-        private int tokenIndex;
-        private int loadCount = 0;
-        private string name = "";
-        private bool enabled;
-        private int deffunc = -1;
+    private readonly int _index;
+    private readonly int _tokenIndex;
+    private int _loadCount;
+    private string _name = "";
+    private bool _enabled;
+    private int _deffunc = -1;
 
-        internal string Name
-        {
-            get
-            {
-                return name;
-            }
-            set
-            {
-                name = value;
-            }
-        }
+    internal string Name
+    {
+        get => _name;
+        set => _name = value;
+    }
 
-        internal int TokenIndex
-        {
-            get
-            {
-                return tokenIndex;
-            }
-        }
+    internal int TokenIndex => _tokenIndex;
 
-        internal int Deffunc
-        {
-            get
-            {
-                return deffunc;
-            }
-            set
-            {
-                deffunc = value;
-            }
-        }
+    internal int Deffunc
+    {
+        get => _deffunc;
+        set => _deffunc = value;
+    }
 
-        internal int LoadCount
-        {
-            get
-            {
-                return loadCount;
-            }
-            set
-            {
-                loadCount = value;
-            }
-        }
+    internal int LoadCount
+    {
+        get => _loadCount;
+        set => _loadCount = value;
+    }
 
-        internal bool Enabled
-        {
-            get
-            {
-                if (deffunc != -1)
-                {
-                    return true;
-                }
-
-                return enabled;
-            }
-            set
-            {
-                enabled = value;
-            }
-        }
+    internal bool Enabled
+    {
+        get => _deffunc != -1 ? true : _enabled;
+        set => _enabled = value;
     }
 }

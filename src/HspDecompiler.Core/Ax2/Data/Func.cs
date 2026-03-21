@@ -1,50 +1,30 @@
-namespace HspDecompiler.Core.Ax2.Data
+using System.Globalization;
+
+namespace HspDecompiler.Core.Ax2.Data;
+
+internal struct Func
 {
-    internal struct Func
+    private string _name;
+    private int _hikiType;
+    private int _dllIndex;
+
+    internal string Name
     {
-        private string name;
-        private int hikiType;
-        private int dllIndex;
-
-        internal string Name
-        {
-            get
-            {
-                return name;
-            }
-            set
-            {
-                name = value;
-            }
-        }
-
-        internal int HikiType
-        {
-            get
-            {
-                return hikiType;
-            }
-            set
-            {
-                hikiType = value;
-            }
-        }
-
-        internal int DllIndex
-        {
-            get
-            {
-                return dllIndex;
-            }
-            set
-            {
-                dllIndex = value;
-            }
-        }
-
-        public override string ToString()
-        {
-            return "#func func_" + name + " " + name + " $" + hikiType.ToString("x4");
-        }
+        readonly get => _name;
+        set => _name = value;
     }
+
+    internal int HikiType
+    {
+        readonly get => _hikiType;
+        set => _hikiType = value;
+    }
+
+    internal int DllIndex
+    {
+        readonly get => _dllIndex;
+        set => _dllIndex = value;
+    }
+
+    public override readonly string ToString() => "#func func_" + _name + " " + _name + " $" + _hikiType.ToString("x4", CultureInfo.InvariantCulture);
 }

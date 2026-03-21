@@ -1,88 +1,67 @@
 using System.Text;
 using HspDecompiler.Core.Ax3.Data.Token;
 
-namespace HspDecompiler.Core.Ax3.Data.Line
+namespace HspDecompiler.Core.Ax3.Data.Line;
+
+internal sealed class Assignment : LogicalLine
 {
-    internal sealed class Assignment : LogicalLine
+    private Assignment() { }
+    internal Assignment(VariableToken theVar, OperatorToken theOp)
     {
-        private Assignment() { }
-        internal Assignment(VariableToken theVar, OperatorToken theOp)
+        _var = theVar;
+        _op = theOp;
+    }
+    internal Assignment(VariableToken theVar, OperatorToken theOp, ArgumentToken theArg)
+    {
+        _var = theVar;
+        _op = theOp;
+        _arg = theArg;
+    }
+
+    private readonly VariableToken? _var;
+    private readonly OperatorToken? _op;
+    private readonly ArgumentToken? _arg;
+
+    internal override int TokenOffset => _var == null ? -1 : _var.TokenOffset;
+
+    public override string ToString()
+    {
+        var builder = new StringBuilder(_var!.ToString());
+        if (_arg != null)
         {
-            var = theVar;
-            op = theOp;
+            builder.Append(' ');
+            builder.Append(_op!.ToString(true, _arg != null));
+            builder.Append(_arg!.ToString());
         }
-        internal Assignment(VariableToken theVar, OperatorToken theOp, ArgumentToken theArg)
+        else
         {
-            var = theVar;
-            op = theOp;
-            arg = theArg;
+            builder.Append(_op!.ToString(true, _arg != null));
         }
+        return builder.ToString();
+    }
 
-        readonly VariableToken? var = null;
-        readonly OperatorToken? op = null;
-        readonly ArgumentToken? arg = null;
+    internal override void CheckLabel()
+    {
+        _var?.CheckLabel();
 
-        internal override int TokenOffset
+        _op?.CheckLabel();
+
+        _arg?.CheckLabel();
+    }
+
+    internal override bool CheckRpn()
+    {
+        bool ret = true;
+        if (_var != null)
         {
-            get
-            {
-                if (var == null)
-                {
-                    return -1;
-                }
-
-                return var.TokenOffset;
-            }
-        }
-
-        public override string ToString()
-        {
-            StringBuilder builder = new StringBuilder(var!.ToString());
-            if (arg != null)
-            {
-                builder.Append(' ');
-                builder.Append(op!.ToString(true, arg != null));
-                builder.Append(arg!.ToString());
-            }
-            else
-            {
-                builder.Append(op!.ToString(true, arg != null));
-            }
-            return builder.ToString();
-        }
-
-        internal override void CheckLabel()
-        {
-            if (var != null)
-            {
-                var.CheckLabel();
-            }
-
-            if (op != null)
-            {
-                op.CheckLabel();
-            }
-
-            if (arg != null)
-            {
-                arg.CheckLabel();
-            }
+            ret &= _var.CheckRpn();
         }
 
-        internal override bool CheckRpn()
+        if (_arg != null)
         {
-            bool ret = true;
-            if (var != null)
-            {
-                ret &= var.CheckRpn();
-            }
-
-            if (arg != null)
-            {
-                ret &= arg.CheckRpn();
-            }
-
-            return true;
+            ret &= _arg.CheckRpn();
         }
+
+        return true;
     }
 }
