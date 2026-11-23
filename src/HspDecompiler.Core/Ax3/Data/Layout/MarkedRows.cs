@@ -20,6 +20,14 @@ internal enum RowKind
     Directive,
 }
 
+internal static class RowKinds
+{
+    internal static bool TakesJoin(this RowKind kind) => kind is RowKind.Code or RowKind.Close;
+
+    internal static bool LetsJoin(this RowKind kind) =>
+        kind is RowKind.Code or RowKind.Close or RowKind.Label;
+}
+
 internal sealed class MarkedRow(LogicalLine line, RowKind kind, int[] escapes)
 {
     internal LogicalLine Line { get; } = line;
@@ -31,9 +39,9 @@ internal sealed class MarkedRow(LogicalLine line, RowKind kind, int[] escapes)
     // コード行の各 "..." リテラルが持つ "\n" エスケープの数(順序どおり)。
     internal int[] Escapes { get; } = escapes;
 
-    internal bool TakesJoin => Kind is RowKind.Code or RowKind.Close;
+    internal bool TakesJoin => Kind.TakesJoin();
 
-    internal bool LetsJoin => Kind is RowKind.Code or RowKind.Close or RowKind.Label;
+    internal bool LetsJoin => Kind.LetsJoin();
 }
 
 // The rows of a normal build and the fewest source lines each stretch of them needs: blank rows

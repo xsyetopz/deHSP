@@ -80,9 +80,9 @@ internal sealed class MarkedPlacer(ModuleScope scope, List<string> headers)
     {
         internal string Line => new string('\t', Tabs) + Text;
 
-        internal bool TakesJoin => Kind is RowKind.Code or RowKind.Close;
+        internal bool TakesJoin => Kind.TakesJoin();
 
-        internal bool LetsJoin => Kind is RowKind.Code or RowKind.Close or RowKind.Label;
+        internal bool LetsJoin => Kind.LetsJoin();
 
         internal Slot Join(Slot next) =>
             this with
