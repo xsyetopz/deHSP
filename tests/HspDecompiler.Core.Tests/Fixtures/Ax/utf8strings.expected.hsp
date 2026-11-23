@@ -1,0 +1,7 @@
+#cmpopt varname 1
+#cmpopt utf8 1
+	名前 = "café ✓ 日本"
+	mes 名前
+	mes "tab\tq\"x\""
+	await 10
+	stop

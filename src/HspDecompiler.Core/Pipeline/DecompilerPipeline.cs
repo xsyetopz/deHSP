@@ -81,6 +81,12 @@ public sealed class DecompilerPipeline
         Strings.OutputtingTo
     );
 
+    private static readonly CompositeFormat s_lineNotEncodableFormat = CompositeFormat.Parse(
+        Strings.LineNotEncodable
+    );
+
+    private static readonly UTF8Encoding s_utf8 = new(false);
+
     private readonly IDecompilerLogger _logger;
     private readonly IProgressReporter _progress;
     private Hsp3Dictionary? _dictionary;
@@ -325,9 +331,12 @@ public sealed class DecompilerPipeline
             SourceExtension(magic)
         );
         decompilerOutput.OutputPath = outputPath;
-        await DecodeAsync(reader, outputPath, ct).ConfigureAwait(false);
+        await DecodeAsync(reader, outputPath, SourceEncoding(options), ct).ConfigureAwait(false);
         return outputPath + ".log";
     }
+
+    private static System.Text.Encoding SourceEncoding(DecompilerOptions options) =>
+        options.Utf8Output ? s_utf8 : ShiftJisHelper.Encoding;
 
     private static string InputDirectory(DecompilerOptions options) =>
         (Path.GetDirectoryName(options.InputPath) ?? ".") + Path.DirectorySeparatorChar;
@@ -389,7 +398,8 @@ public sealed class DecompilerPipeline
                 Path.GetFileNameWithoutExtension(entry.FileName),
                 SourceExtension(DetectFileFormat(axReader))
             );
-            await DecodeAsync(axReader, outputPath, ct).ConfigureAwait(false);
+            await DecodeAsync(axReader, outputPath, SourceEncoding(options), ct)
+                .ConfigureAwait(false);
         }
 
         return true;
@@ -714,13 +724,57 @@ public sealed class DecompilerPipeline
     /// <para xml:lang="en"><see cref="Initialize()"/> has not been called.</para>
     /// <para xml:lang="ja"><see cref="Initialize()"/> がまだ呼ばれていない。</para>
     /// </exception>
+    public Task DecodeAsync(
+        BinaryReader reader,
+        string outputPath,
+        CancellationToken ct = default
+    ) => DecodeAsync(reader, outputPath, ShiftJisHelper.Encoding, ct);
+
+    /// <summary>
+    /// <para xml:lang="en">
+    /// Decodes the .ax file that <paramref name="reader"/> holds and writes the source to
+    /// <paramref name="outputPath"/> in <paramref name="sourceEncoding"/>. HSP 2 include files go
+    /// beside it. Each line the encoding cannot hold is reported as a warning.
+    /// </para>
+    /// <para xml:lang="ja">
+    /// <paramref name="reader"/> が含む .ax ファイルを復元し、ソースを
+    /// <paramref name="sourceEncoding"/> で <paramref name="outputPath"/> へ書き出す。HSP 2 の
+    /// インクルードファイルはその隣に置く。エンコーディングが表せない行はそれぞれ警告する。
+    /// </para>
+    /// </summary>
+    /// <param name="reader">
+    /// <para xml:lang="en">Reader positioned at the start of the .ax file.</para>
+    /// <para xml:lang="ja">.ax ファイルの先頭を指すリーダー。</para>
+    /// </param>
+    /// <param name="outputPath">
+    /// <para xml:lang="en">Path of the source file to write.</para>
+    /// <para xml:lang="ja">書き出すソースファイルのパス。</para>
+    /// </param>
+    /// <param name="sourceEncoding">
+    /// <para xml:lang="en">Encoding of the source and include files.</para>
+    /// <para xml:lang="ja">ソースとインクルードファイルのエンコーディング。</para>
+    /// </param>
+    /// <param name="ct">
+    /// <para xml:lang="en">Stops the work when cancelled.</para>
+    /// <para xml:lang="ja">キャンセルされると処理を中止する。</para>
+    /// </param>
+    /// <returns>
+    /// <para xml:lang="en">A task that completes when the source is written.</para>
+    /// <para xml:lang="ja">ソースを書き終えると完了するタスク。</para>
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// <para xml:lang="en"><see cref="Initialize()"/> has not been called.</para>
+    /// <para xml:lang="ja"><see cref="Initialize()"/> がまだ呼ばれていない。</para>
+    /// </exception>
     public async Task DecodeAsync(
         BinaryReader reader,
         string outputPath,
+        System.Text.Encoding sourceEncoding,
         CancellationToken ct = default
     )
     {
         ArgumentNullException.ThrowIfNull(reader);
+        ArgumentNullException.ThrowIfNull(sourceEncoding);
 
         if (_dictionary == null)
         {
@@ -747,10 +801,15 @@ public sealed class DecompilerPipeline
             )
         );
 
-        WriteOutputLines(lines, outputPath);
+        WarnUnencodableLines(lines, sourceEncoding);
+        WriteOutputLines(lines, outputPath, sourceEncoding);
         if (decoder is Ax2Decoder ax2)
         {
-            WriteIncludeFiles(ax2.Includes, Path.GetDirectoryName(outputPath) ?? ".");
+            WriteIncludeFiles(
+                ax2.Includes,
+                Path.GetDirectoryName(outputPath) ?? ".",
+                sourceEncoding
+            );
         }
 
         _logger.Write(Strings.OutputComplete);
@@ -777,9 +836,43 @@ public sealed class DecompilerPipeline
         throw new HspDecoderException(Strings.NotHsp2OrHsp3);
     }
 
-    private static void WriteOutputLines(List<string> lines, string outputPath)
+    // A string that UTF-8 AX data decoded to can hold characters Shift_JIS lacks, and the writer
+    // would turn each into '?', so every such line gets a warning instead of a silent change.
+    //
+    // UTF-8 の AX データから復元した文字列には Shift_JIS に無い文字が入り得て、書き出し時に
+    // それぞれ '?' に化けるため、黙って変えずに該当する行ごとに警告する。
+    private void WarnUnencodableLines(List<string> lines, System.Text.Encoding encoding)
     {
-        using var writer = new StreamWriter(outputPath, false, ShiftJisHelper.Encoding);
+        for (int i = 0; i < lines.Count; i++)
+        {
+            string line = lines[i];
+            if (
+                !string.Equals(
+                    encoding.GetString(encoding.GetBytes(line)),
+                    line,
+                    StringComparison.Ordinal
+                )
+            )
+            {
+                _logger.Warning(
+                    string.Format(
+                        CultureInfo.InvariantCulture,
+                        s_lineNotEncodableFormat,
+                        encoding.WebName
+                    ),
+                    i + 1
+                );
+            }
+        }
+    }
+
+    private static void WriteOutputLines(
+        List<string> lines,
+        string outputPath,
+        System.Text.Encoding encoding
+    )
+    {
+        using var writer = new StreamWriter(outputPath, false, encoding);
         foreach (string line in lines)
         {
             writer.WriteLine(line);
@@ -791,7 +884,11 @@ public sealed class DecompilerPipeline
     //
     // 取り込みファイルは hspcmp が記録した名前のままにする必要があるため、同名のファイルが既に
     // あれば名前を変えたり上書きしたりせずに残す。
-    private void WriteIncludeFiles(IReadOnlyList<IncludeFile> includes, string directory)
+    private void WriteIncludeFiles(
+        IReadOnlyList<IncludeFile> includes,
+        string directory,
+        System.Text.Encoding encoding
+    )
     {
         foreach (IncludeFile include in includes)
         {
@@ -811,7 +908,7 @@ public sealed class DecompilerPipeline
             _logger.Write(
                 string.Format(CultureInfo.InvariantCulture, s_outputtingToFormat, include.Name)
             );
-            WriteOutputLines(include.Lines, path);
+            WriteOutputLines(include.Lines, path, encoding);
         }
     }
 

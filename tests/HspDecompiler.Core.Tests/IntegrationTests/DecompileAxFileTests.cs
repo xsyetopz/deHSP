@@ -13,22 +13,25 @@ public class DecompileAxFileTests
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "Ax", name);
 
     [Theory]
-    [InlineData("keywords38b2", ".hsp")]
-    [InlineData("doubleelse", ".hsp")]
-    [InlineData("h2labels", ".as")]
-    [InlineData("optprm", ".hsp")]
-    [InlineData("h2include", ".as")]
-    [InlineData("bootopts", ".hsp")]
-    [InlineData("uncalledfunc", ".hsp")]
-    [InlineData("pooledstrings", ".hsp")]
+    [InlineData("keywords38b2", ".hsp", false)]
+    [InlineData("doubleelse", ".hsp", false)]
+    [InlineData("h2labels", ".as", false)]
+    [InlineData("optprm", ".hsp", false)]
+    [InlineData("h2include", ".as", false)]
+    [InlineData("bootopts", ".hsp", false)]
+    [InlineData("uncalledfunc", ".hsp", false)]
+    [InlineData("pooledstrings", ".hsp", false)]
+    [InlineData("utf8strings", ".hsp", true)]
     public async Task AxFixtureDecompilesToExpectedSourceInMissingOutputDirectory(
         string fixture,
-        string extension
+        string extension,
+        bool utf8Output
     )
     {
         string outputDir = NewOutputDirectory();
         DecompilerPipeline pipeline = NewPipeline();
         DecompilerOptions options = NewOptions(fixture, outputDir);
+        options.Utf8Output = utf8Output;
 
         try
         {

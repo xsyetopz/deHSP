@@ -54,6 +54,7 @@ namespace HspDecompiler.Core.Resources
         internal static string AllFilesEncrypted => ResourceManager.GetString("AllFilesEncrypted", resourceCulture);
         internal static string SomeFilesEncrypted => ResourceManager.GetString("SomeFilesEncrypted", resourceCulture);
         internal static string FileEncrypted => ResourceManager.GetString("FileEncrypted", resourceCulture);
+        internal static string LineNotEncodable => ResourceManager.GetString("LineNotEncodable", resourceCulture);
         internal static string FileAlreadyExists => ResourceManager.GetString("FileAlreadyExists", resourceCulture);
         internal static string FileSeekFailed => ResourceManager.GetString("FileSeekFailed", resourceCulture);
         internal static string FileSaveFailed => ResourceManager.GetString("FileSaveFailed", resourceCulture);

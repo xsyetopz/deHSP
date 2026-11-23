@@ -47,6 +47,7 @@
   <data name="AllFilesEncrypted" xml:space="preserve"><value>すべてのファイルが暗号化されています</value></data>
   <data name="SomeFilesEncrypted" xml:space="preserve"><value>一部のファイルが暗号化されています。復号を許可するか、暗号化されたファイルを飛ばしてください</value></data>
   <data name="FileEncrypted" xml:space="preserve"><value>{0}は暗号化されています</value></data>
+  <data name="LineNotEncodable" xml:space="preserve"><value>この行には {0} で表せない文字があるため、? に置き換えました。UTF-8 で出力すれば残ります</value></data>
   <data name="FileAlreadyExists" xml:space="preserve"><value>{0}と同名のファイルが既に存在します</value></data>
   <data name="FileSeekFailed" xml:space="preserve"><value>{0}の開始位置に移動できませんでした</value></data>
   <data name="FileSaveFailed" xml:space="preserve"><value>{0}の保存に失敗しました</value></data>

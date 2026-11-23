@@ -38,6 +38,12 @@ internal sealed class DecompileCommand : RootCommand
         Description = "Extract only non-encrypted files",
     };
 
+    private readonly Option<bool> _utf8 = new("--utf8")
+    {
+        Description =
+            "Write UTF-8 without a BOM instead of Shift_JIS; recompile with hspcmp -i or -j",
+    };
+
     private readonly Option<bool> _verbose = new("--verbose", "-v")
     {
         Description = "Verbose logging",
@@ -51,6 +57,7 @@ internal sealed class DecompileCommand : RootCommand
         Options.Add(_dictionary);
         Options.Add(_noDecrypt);
         Options.Add(_skipEncrypted);
+        Options.Add(_utf8);
         Options.Add(_verbose);
         SetAction(RunAsync);
     }
@@ -79,6 +86,7 @@ internal sealed class DecompileCommand : RootCommand
             OutputDirectory = parseResult.GetValue(_output)?.FullName,
             AllowDecryption = !parseResult.GetValue(_noDecrypt),
             SkipEncrypted = parseResult.GetValue(_skipEncrypted),
+            Utf8Output = parseResult.GetValue(_utf8),
         };
 
         DecompilerResult result = await pipeline.RunAsync(options, ct).ConfigureAwait(false);

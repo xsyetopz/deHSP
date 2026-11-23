@@ -1,6 +1,7 @@
 using System;
 using System.CommandLine;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -75,8 +76,23 @@ public sealed class DecompileCommandTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_workDir, "doubleelse.hsp")));
     }
 
-    private static string Fixture() =>
-        Path.Combine(AppContext.BaseDirectory, "Fixtures", "doubleelse.ax");
+    [Fact]
+    public async Task Utf8OptionWritesUtf8WithoutByteOrderMark()
+    {
+        int exitCode = await InvokeAsync(Fixture("utf8strings.ax"), "--output", _workDir, "--utf8");
+
+        Assert.Equal(0, exitCode);
+        byte[] bytes = await File.ReadAllBytesAsync(Path.Combine(_workDir, "utf8strings.hsp"));
+        Assert.False(bytes is [0xEF, 0xBB, 0xBF, ..]);
+        Assert.Contains(
+            "\"café ✓ 日本\"",
+            Encoding.UTF8.GetString(bytes),
+            StringComparison.Ordinal
+        );
+    }
+
+    private static string Fixture(string name = "doubleelse.ax") =>
+        Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
 
     private Task<int> InvokeAsync(params string[] args) =>
         new DecompileCommand()

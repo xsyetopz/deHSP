@@ -49,4 +49,20 @@ public sealed class DecompilerOptions
     /// </para>
     /// </summary>
     public bool SkipEncrypted { get; set; }
+
+    /// <summary>
+    /// <para xml:lang="en">
+    /// Write the sources as UTF-8 without a byte order mark instead of Shift_JIS. hspcmp reads
+    /// such a file only with its -i or -j switch, so this suits programs whose strings are UTF-8
+    /// (the output then holds <c>#cmpopt utf8 1</c>); for Shift_JIS programs, Shift_JIS output
+    /// is the one that recompiles to the same bytes.
+    /// </para>
+    /// <para xml:lang="ja">
+    /// ソースを Shift_JIS ではなく BOM 無しの UTF-8 で書き出す。hspcmp はこのファイルを -i か
+    /// -j スイッチ付きでしか読めないため、文字列が UTF-8 のプログラム(出力に
+    /// <c>#cmpopt utf8 1</c> が入る)に向く。Shift_JIS のプログラムを同じバイト列に再コンパイル
+    /// できるのは Shift_JIS の出力である。
+    /// </para>
+    /// </summary>
+    public bool Utf8Output { get; set; }
 }
