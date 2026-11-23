@@ -8,7 +8,6 @@ using HspDecompiler.Core.Abstractions;
 using HspDecompiler.Core.Ax3.Data;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.Layout;
-using HspDecompiler.Core.Ax3.Data.Line;
 using HspDecompiler.Core.Ax3.Data.PP;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Pipeline;
@@ -92,46 +91,18 @@ internal class Ax3Decoder : ISourceDecoder
         }
     }
 
-    // A debug build places each line by its record. A normal build from hspcmp 3.1 to 3.32
-    // records only its #module, #global and {"..."} lines, which MarkedLayout rebuilds when they
-    // fit; other builds write the lines in order.
-    //
-    // デバッグビルドは各行を記録に従って置く。hspcmp 3.1〜3.32 の通常ビルドは #module・
-    // #global・{"..."} の行だけを記録し、収まれば MarkedLayout がそれを組み直す。それ以外の
-    // ビルドは行を順に書く。
     private DecodedSource Write(
         List<LogicalLine> lines,
         AxData data,
         AxEvidence evidence,
         IncludeNames? names,
         HashSet<int> restored
-    )
-    {
-        if (names != null)
-        {
-            bool unused = lines.Exists(line => line is ModuleStart { Used: false });
-            return SourceLayout.Build(
-                lines,
-                CompileDirectives(data, evidence, unused),
-                data,
-                names,
-                restored
-            );
-        }
-
-        return Marked(lines, data, evidence)
-            ?? DecodedSource.Single([
-                .. CompileDirectives(data, evidence, false),
-                .. Indented(lines, data),
-            ]);
-    }
-
-    private DecodedSource? Marked(List<LogicalLine> lines, AxData data, AxEvidence evidence) =>
-        data.DebugInfo.Marks.Count > 0
-        && data.Release.MayWriteNormalBuildRecords
-        && MarkedLayout.Match(lines, data, evidence.UncalledImport) is { } marked
-            ? marked.Write(CompileDirectives(data, evidence, marked.HasUnusedModule), MainFileName)
-            : null;
+    ) =>
+        LayoutStrategies.Layout(
+            new LayoutInput(lines, data, evidence, names, restored, MainFileName, unused =>
+                DirectivePlanner.Plan(DirectivePlanner.FactsOf(data, evidence, unused))
+            )
+        );
 
     // The warning names the written line, which exists only once a layout has placed every
     // line, so the scan reads the output. A rebuilt #module writes the members itself and leaves
@@ -157,17 +128,6 @@ internal class Ax3Decoder : ISourceDecoder
         }
     }
 
-    private static IEnumerable<string> Indented(List<LogicalLine> lines, AxData data) =>
-        lines
-            .Where(line => line.Visible)
-            .Select(line => new string('\t', line.TabCount) + data.Scope.Render(line));
-
     private IncludeNames IncludeNamesOf(AxData data) =>
         new([.. data.DebugInfo.FileNames.Select(data.DecodeName)], MainFileName);
-
-    private static List<string> CompileDirectives(
-        AxData data,
-        AxEvidence evidence,
-        bool unusedModule
-    ) => DirectivePlanner.Plan(DirectivePlanner.FactsOf(data, evidence, unusedModule));
 }
