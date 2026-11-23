@@ -1,7 +1,6 @@
 using System;
 using System.CommandLine;
 using System.IO;
-using System.Threading;
 using HspDecompiler.Cli;
 using HspDecompiler.Core.Pipeline;
 
@@ -19,7 +18,7 @@ var outputOpt = new Option<DirectoryInfo>("--output", OutputAliases)
 };
 var dictOpt = new Option<FileInfo>("--dictionary", DictAliases)
 {
-    Description = "Dictionary.csv path",
+    Description = "Dictionary JSON path (default: built-in HSP 3.8beta2 table)",
 };
 var noDecryptOpt = new Option<bool>("--no-decrypt")
 {
@@ -55,47 +54,40 @@ rootCommand.SetAction(
         var progress = new CliProgressReporter();
         var pipeline = new DecompilerPipeline(logger, progress);
 
-        string dictPath =
-            dict?.FullName ?? Path.Combine(AppContext.BaseDirectory, "Dictionary.csv");
-        if (!pipeline.Initialize(dictPath))
+        string? dictPath = dict?.FullName;
+        if (!(dictPath == null ? pipeline.Initialize() : pipeline.Initialize(dictPath)))
         {
             Console.Error.WriteLine("Failed to load dictionary: " + dictPath);
-            Environment.ExitCode = 1;
-            return;
+            return 1;
         }
 
         var options = new DecompilerOptions
         {
             InputPath = input.FullName,
-            OutputDirectory = output?.FullName ?? Path.GetDirectoryName(input.FullName) ?? ".",
+            OutputDirectory = output?.FullName,
             DictionaryPath = dictPath,
             AllowDecryption = !noDecrypt,
             SkipEncrypted = skipEnc,
             Verbose = verbose,
         };
 
-        DecompilerResult result = await pipeline
-            .RunAsync(options, CancellationToken.None)
-            .ConfigureAwait(false);
+        DecompilerResult result = await pipeline.RunAsync(options, ct).ConfigureAwait(false);
         if (!result.Success)
         {
             Console.Error.WriteLine("Error: " + result.ErrorMessage);
-            Environment.ExitCode = 1;
+            return 1;
         }
-        else
-        {
-            if (result.Warnings.Count > 0)
-            {
-                Console.Error.WriteLine(
-                    $"{result.Warnings.Count} warning(s) during decompilation."
-                );
-            }
 
-            if (result.OutputPath != null)
-            {
-                Console.WriteLine("Output: " + result.OutputPath);
-            }
+        if (result.Warnings.Count > 0)
+        {
+            Console.Error.WriteLine($"{result.Warnings.Count} warning(s) during decompilation.");
         }
+
+        if (result.OutputPath != null)
+        {
+            Console.WriteLine("Output: " + result.OutputPath);
+        }
+        return 0;
     }
 );
 

@@ -2,11 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using HspDecompiler.Core.Abstractions;
 using HspDecompiler.Core.Ax2;
+using HspDecompiler.Core.Ax2.Data;
 using HspDecompiler.Core.Ax3;
 using HspDecompiler.Core.DpmToAx;
 using HspDecompiler.Core.DpmToAx.Crypto;
@@ -24,33 +27,43 @@ public sealed class DecompilerPipeline
     private static readonly CompositeFormat s_dictionaryLoadSuccessFormat = CompositeFormat.Parse(
         Strings.DictionaryLoadSuccess
     );
+
     private static readonly CompositeFormat s_dictionaryLoadFailedFormat = CompositeFormat.Parse(
         Strings.DictionaryLoadFailed
     );
+
     private static readonly CompositeFormat s_readingFileFormat = CompositeFormat.Parse(
         Strings.ReadingFile
     );
+
     private static readonly CompositeFormat s_directoryCreateFailedFormat = CompositeFormat.Parse(
         Strings.DirectoryCreateFailed
     );
+
     private static readonly CompositeFormat s_fileEncryptedFormat = CompositeFormat.Parse(
         Strings.FileEncrypted
     );
+
     private static readonly CompositeFormat s_fileAlreadyExistsFormat = CompositeFormat.Parse(
         Strings.FileAlreadyExists
     );
+
     private static readonly CompositeFormat s_fileSeekFailedFormat = CompositeFormat.Parse(
         Strings.FileSeekFailed
     );
+
     private static readonly CompositeFormat s_fileSaveFailedFormat = CompositeFormat.Parse(
         Strings.FileSaveFailed
     );
+
     private static readonly CompositeFormat s_decryptingFileFormat = CompositeFormat.Parse(
         Strings.DecryptingFile
     );
+
     private static readonly CompositeFormat s_decryptionFailedFormat = CompositeFormat.Parse(
         Strings.DecryptionFailed
     );
+
     private static readonly CompositeFormat s_outputtingToFormat = CompositeFormat.Parse(
         Strings.OutputtingTo
     );
@@ -67,38 +80,42 @@ public sealed class DecompilerPipeline
         _progress = progress;
     }
 
-    public bool Initialize(string dictionaryPath)
+    /// <summary>
+    /// Loads the HSP keyword dictionary built into the library.
+    /// </summary>
+    /// <returns><see langword="true"/> once the dictionary is ready.</returns>
+    public bool Initialize()
     {
-        try
-        {
-            _dictionary = Hsp3Dictionary.FromFile(dictionaryPath);
-        }
-        catch (Exception ex)
-        {
-            _logger.Warning(ex.Message);
-            _dictionary = null;
-        }
-
-        if (_dictionary != null)
-        {
-            _logger.Write(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    s_dictionaryLoadSuccessFormat,
-                    Path.GetFileName(dictionaryPath)
-                )
-            );
-            return true;
-        }
-
+        _dictionary = Hsp3Dictionary.BuiltIn;
         _logger.Write(
             string.Format(
                 CultureInfo.InvariantCulture,
-                s_dictionaryLoadFailedFormat,
+                s_dictionaryLoadSuccessFormat,
+                "Dictionary.json " + _dictionary.Version
+            )
+        );
+        return true;
+    }
+
+    /// <summary>
+    /// Loads an HSP keyword dictionary from a JSON file in the format of the built-in one.
+    /// </summary>
+    /// <param name="dictionaryPath">Path of the dictionary JSON file.</param>
+    /// <returns>
+    /// <see langword="true"/> when the file loaded; <see langword="false"/> when it is missing
+    /// or malformed, after logging the failure.
+    /// </returns>
+    public bool Initialize(string dictionaryPath)
+    {
+        _dictionary = Hsp3Dictionary.FromFile(dictionaryPath);
+        _logger.Write(
+            string.Format(
+                CultureInfo.InvariantCulture,
+                _dictionary != null ? s_dictionaryLoadSuccessFormat : s_dictionaryLoadFailedFormat,
                 Path.GetFileName(dictionaryPath)
             )
         );
-        return false;
+        return _dictionary != null;
     }
 
     public async Task<DecompilerResult> RunAsync(
@@ -109,7 +126,6 @@ public sealed class DecompilerPipeline
         ArgumentNullException.ThrowIfNull(options);
 
         var decompilerOutput = new DecompilerResult();
-        string errorLogPath = options.InputPath + ".log";
 
         try
         {
@@ -120,112 +136,18 @@ public sealed class DecompilerPipeline
                     Path.GetFileName(options.InputPath)
                 )
             );
-            using var stream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read);
+            var stream = new FileStream(options.InputPath, FileMode.Open, FileAccess.Read);
+            await using ConfiguredAsyncDisposable streamScope = stream.ConfigureAwait(false);
             using var reader = new BinaryReader(stream, ShiftJisHelper.Encoding);
 
-            string magic = DetectFileFormat(reader);
-
-            string inputDir =
-                (Path.GetDirectoryName(options.InputPath) ?? ".") + Path.DirectorySeparatorChar;
-            string inputBaseName = Path.GetFileNameWithoutExtension(options.InputPath);
-
-            if (
-                magic.StartsWith("MZ", StringComparison.Ordinal)
-                || magic.StartsWith("DPM", StringComparison.Ordinal)
-            )
+            string? errorLogPath = await DecompileInputAsync(reader, options, decompilerOutput, ct)
+                .ConfigureAwait(false);
+            if (errorLogPath == null)
             {
-                string outputDir = BuildAutoIncrementDirName(inputDir, inputBaseName);
-                errorLogPath = outputDir.TrimEnd(Path.DirectorySeparatorChar) + ".log";
-                outputDir += Path.DirectorySeparatorChar;
-
-                DpmExtractionResult dpmResult = await DecompressDpmAsync(
-                        reader,
-                        outputDir,
-                        options,
-                        ct
-                    )
-                    .ConfigureAwait(false);
-                decompilerOutput.DpmFiles.AddRange(dpmResult.Files);
-                decompilerOutput.OutputPath = outputDir;
-
-                if (dpmResult.AllEncrypted || dpmResult.Cancelled)
-                {
-                    decompilerOutput.Success = !dpmResult.AllEncrypted;
-                    if (dpmResult.AllEncrypted)
-                    {
-                        decompilerOutput.ErrorMessage = Strings.AllFilesEncrypted;
-                    }
-
-                    return decompilerOutput;
-                }
-
-                foreach (DpmFileEntry entry in dpmResult.Files)
-                {
-                    if (entry.IsEncrypted)
-                    {
-                        continue;
-                    }
-
-                    string axPath = Path.Combine(outputDir, entry.FileName ?? "");
-                    if (!File.Exists(axPath))
-                    {
-                        continue;
-                    }
-
-                    if (
-                        entry.FileName == null
-                        || !entry.FileName.EndsWith(".ax", StringComparison.OrdinalIgnoreCase)
-                    )
-                    {
-                        continue;
-                    }
-
-                    using var axStream = new FileStream(axPath, FileMode.Open, FileAccess.Read);
-                    using var axReader = new BinaryReader(axStream, ShiftJisHelper.Encoding);
-                    char[] axMagicChars = axReader.ReadChars(4);
-                    string axMagic = new(axMagicChars);
-                    axReader.BaseStream.Seek(0, SeekOrigin.Begin);
-
-                    string ext = axMagic.StartsWith("HSP2", StringComparison.Ordinal)
-                        ? ".as"
-                        : ".hsp";
-                    string axBaseName = Path.GetFileNameWithoutExtension(entry.FileName);
-                    string outputPath = BuildAutoIncrementFileName(outputDir, axBaseName, ext);
-
-                    await DecodeAsync(axReader, outputPath, ct).ConfigureAwait(false);
-                }
-            }
-            else if (
-                magic.StartsWith(Hsp2Magic, StringComparison.Ordinal)
-                || magic.StartsWith(Hsp3Magic, StringComparison.Ordinal)
-            )
-            {
-                string ext = magic.StartsWith(Hsp2Magic, StringComparison.Ordinal) ? ".as" : ".hsp";
-                string outputPath = BuildAutoIncrementFileName(inputDir, inputBaseName, ext);
-                errorLogPath = outputPath + ".log";
-                decompilerOutput.OutputPath = outputPath;
-
-                await DecodeAsync(reader, outputPath, ct).ConfigureAwait(false);
-            }
-            else
-            {
-                throw new HspDecoderException(Strings.UnrecognizedFileFormat);
+                return decompilerOutput;
             }
 
-            if (_logger.Warnings.Count > 0)
-            {
-                using (
-                    var errorLog = new StreamWriter(errorLogPath, false, ShiftJisHelper.Encoding)
-                )
-                {
-                    foreach (string warning in _logger.Warnings)
-                    {
-                        errorLog.WriteLine(warning);
-                    }
-                }
-                decompilerOutput.Warnings.AddRange(_logger.Warnings);
-            }
-
+            WriteWarningLog(errorLogPath, decompilerOutput);
             decompilerOutput.Success = true;
         }
         catch (Exception ex)
@@ -236,6 +158,159 @@ public sealed class DecompilerPipeline
         }
 
         return decompilerOutput;
+    }
+
+    // Returns the warning log path, or null when an archive leaves nothing to decompile.
+    // ---
+    // 警告ログのパスを返す。アーカイブにデコンパイル対象が残らない場合は null を返す。
+    private async Task<string?> DecompileInputAsync(
+        BinaryReader reader,
+        DecompilerOptions options,
+        DecompilerResult decompilerOutput,
+        CancellationToken ct
+    )
+    {
+        string magic = DetectFileFormat(reader);
+        string? explicitDir = string.IsNullOrEmpty(options.OutputDirectory)
+            ? null
+            : Path.TrimEndingDirectorySeparator(options.OutputDirectory)
+                + Path.DirectorySeparatorChar;
+
+        if (
+            magic.StartsWith(Hsp2Magic, StringComparison.Ordinal)
+            || magic.StartsWith(Hsp3Magic, StringComparison.Ordinal)
+        )
+        {
+            return await DecompileAxAsync(reader, magic, explicitDir, options, decompilerOutput, ct)
+                .ConfigureAwait(false);
+        }
+
+        if (
+            !magic.StartsWith("MZ", StringComparison.Ordinal)
+            && !magic.StartsWith("DPM", StringComparison.Ordinal)
+        )
+        {
+            throw new HspDecoderException(Strings.UnrecognizedFileFormat);
+        }
+
+        string outputDir = explicitDir
+            ?? BuildAutoIncrementDirName(InputDirectory(options), InputBaseName(options));
+        bool decompiled = await DecompileArchiveAsync(
+                reader,
+                outputDir,
+                options,
+                decompilerOutput,
+                ct
+            )
+            .ConfigureAwait(false);
+        return decompiled ? outputDir.TrimEnd(Path.DirectorySeparatorChar) + ".log" : null;
+    }
+
+    // Returns the warning log path for the decompiled source.
+    // ---
+    // デコンパイルしたソースの警告ログのパスを返す。
+    private async Task<string> DecompileAxAsync(
+        BinaryReader reader,
+        string magic,
+        string? explicitDir,
+        DecompilerOptions options,
+        DecompilerResult decompilerOutput,
+        CancellationToken ct
+    )
+    {
+        if (explicitDir != null)
+        {
+            Directory.CreateDirectory(explicitDir);
+        }
+
+        string outputPath = BuildAutoIncrementFileName(
+            explicitDir ?? InputDirectory(options),
+            InputBaseName(options),
+            SourceExtension(magic)
+        );
+        decompilerOutput.OutputPath = outputPath;
+        await DecodeAsync(reader, outputPath, ct).ConfigureAwait(false);
+        return outputPath + ".log";
+    }
+
+    private static string InputDirectory(DecompilerOptions options) =>
+        (Path.GetDirectoryName(options.InputPath) ?? ".") + Path.DirectorySeparatorChar;
+
+    private static string InputBaseName(DecompilerOptions options) =>
+        Path.GetFileNameWithoutExtension(options.InputPath);
+
+    private static string SourceExtension(string axMagic) =>
+        axMagic.StartsWith(Hsp2Magic, StringComparison.Ordinal) ? ".as" : ".hsp";
+
+    // Returns false when nothing past the extraction is left to decompile.
+    // 展開後にデコンパイルするものが無い場合は false を返す。
+    private async Task<bool> DecompileArchiveAsync(
+        BinaryReader reader,
+        string outputDir,
+        DecompilerOptions options,
+        DecompilerResult decompilerOutput,
+        CancellationToken ct
+    )
+    {
+        outputDir = Path.TrimEndingDirectorySeparator(outputDir) + Path.DirectorySeparatorChar;
+        DpmExtractionResult dpmResult = await DecompressDpmAsync(reader, outputDir, options, ct)
+            .ConfigureAwait(false);
+        decompilerOutput.DpmFiles.AddRange(dpmResult.Files);
+        decompilerOutput.OutputPath = outputDir;
+
+        if (dpmResult.AllEncrypted || dpmResult.Cancelled)
+        {
+            decompilerOutput.Success = !dpmResult.AllEncrypted;
+            if (dpmResult.AllEncrypted)
+            {
+                decompilerOutput.ErrorMessage = Strings.AllFilesEncrypted;
+            }
+
+            return false;
+        }
+
+        foreach (DpmFileEntry entry in dpmResult.Files)
+        {
+            string axPath = Path.Combine(outputDir, entry.FileName ?? "");
+            if (
+                entry.FileName == null
+                || !entry.FileName.EndsWith(".ax", StringComparison.OrdinalIgnoreCase)
+                || !File.Exists(axPath)
+            )
+            {
+                continue;
+            }
+
+            var axStream = new FileStream(axPath, FileMode.Open, FileAccess.Read);
+            await using ConfiguredAsyncDisposable axScope = axStream.ConfigureAwait(false);
+            using var axReader = new BinaryReader(axStream, ShiftJisHelper.Encoding);
+            string outputPath = BuildAutoIncrementFileName(
+                outputDir,
+                Path.GetFileNameWithoutExtension(entry.FileName),
+                SourceExtension(DetectFileFormat(axReader))
+            );
+            await DecodeAsync(axReader, outputPath, ct).ConfigureAwait(false);
+        }
+
+        return true;
+    }
+
+    private void WriteWarningLog(string errorLogPath, DecompilerResult decompilerOutput)
+    {
+        if (_logger.Warnings.Count == 0)
+        {
+            return;
+        }
+
+        using (var errorLog = new StreamWriter(errorLogPath, false, ShiftJisHelper.Encoding))
+        {
+            foreach (string warning in _logger.Warnings)
+            {
+                errorLog.WriteLine(warning);
+            }
+        }
+
+        decompilerOutput.Warnings.AddRange(_logger.Warnings);
     }
 
     private static string DetectFileFormat(BinaryReader reader)
@@ -258,59 +333,33 @@ public sealed class DecompilerPipeline
         var dpmResult = new DpmExtractionResult();
 
         _logger.Write(Strings.SearchingDpmHeader);
-        DpmExtractor? extractor =
-            DpmExtractor.FromBinaryReader(reader)
+        DpmExtractor extractor = DpmExtractor.FromBinaryReader(reader)
             ?? throw new HspDecoderException(Strings.DpmHeaderNotFound);
         if (extractor.FileList == null || extractor.FileList.Count == 0)
         {
             throw new HspDecoderException(Strings.DpmNoFiles);
         }
 
-        int encryptedCount = 0;
-        foreach (DpmFileEntry file in extractor.FileList)
-        {
-            dpmResult.Files.Add(file);
-            if (file.IsEncrypted)
-            {
-                encryptedCount++;
-            }
-        }
-
+        dpmResult.Files.AddRange(extractor.FileList);
+        int encryptedCount = extractor.FileList.Count(file => file.IsEncrypted);
         dpmResult.EncryptedCount = encryptedCount;
 
         int totalCount = extractor.FileList.Count;
-        if (totalCount - encryptedCount <= 0)
+        if (totalCount == encryptedCount && !options.AllowDecryption)
         {
             dpmResult.AllEncrypted = true;
             _logger.Write(Strings.ExtractionCancelled);
             return dpmResult;
         }
 
-        if (encryptedCount > 0 && !options.SkipEncrypted && !options.AllowDecryption)
+        if (encryptedCount > 0 && options is { SkipEncrypted: false, AllowDecryption: false })
         {
             dpmResult.Cancelled = true;
             _logger.Write(Strings.ExtractionCancelled);
             return dpmResult;
         }
 
-        if (!Directory.Exists(outputDir))
-        {
-            try
-            {
-                Directory.CreateDirectory(outputDir);
-            }
-            catch (Exception ex)
-            {
-                throw new HspDecoderException(
-                    string.Format(
-                        CultureInfo.InvariantCulture,
-                        s_directoryCreateFailedFormat,
-                        outputDir
-                    ),
-                    ex
-                );
-            }
-        }
+        CreateOutputDirectory(outputDir);
 
         Dpm2CryptoTransform? dpm2Crypto = null;
         if (extractor.IsDpm2 && extractor.CrcSeed != 0)
@@ -326,6 +375,25 @@ public sealed class DecompilerPipeline
 
         _logger.Write(Strings.ExtractionComplete);
         return dpmResult;
+    }
+
+    private static void CreateOutputDirectory(string outputDir)
+    {
+        try
+        {
+            Directory.CreateDirectory(outputDir);
+        }
+        catch (Exception ex)
+        {
+            throw new HspDecoderException(
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    s_directoryCreateFailedFormat,
+                    outputDir
+                ),
+                ex
+            );
+        }
     }
 
     private async Task WriteDpmEntryAsync(
@@ -376,71 +444,75 @@ public sealed class DecompilerPipeline
 
         if (file.IsEncrypted)
         {
-            await CrackDpmEncryptionAsync(fileData, file, outputDir, outputPath, ct)
-                .ConfigureAwait(false);
+            byte[]? decrypted = CrackDpmEncryption(fileData, file);
+            if (decrypted == null)
+            {
+                return;
+            }
+            fileData = decrypted;
         }
-        else
+
+        await SaveDpmEntryAsync(fileData, file, outputPath, ct).ConfigureAwait(false);
+    }
+
+    private async Task SaveDpmEntryAsync(
+        byte[] fileData,
+        DpmFileEntry file,
+        string outputPath,
+        CancellationToken ct
+    )
+    {
+        try
         {
-            try
+            string? dir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(dir))
             {
-                string? dir = Path.GetDirectoryName(outputPath);
-                if (dir != null && !Directory.Exists(dir))
-                {
-                    Directory.CreateDirectory(dir);
-                }
-                using var saveStream = new FileStream(
-                    outputPath,
-                    FileMode.CreateNew,
-                    FileAccess.Write
-                );
-                saveStream.Write(fileData, 0, fileData.Length);
+                Directory.CreateDirectory(dir);
             }
-            catch (IOException ex)
+
+            var saveStream = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write);
+            await using (saveStream.ConfigureAwait(false))
             {
-                _logger.Warning(
-                    string.Format(
-                        CultureInfo.InvariantCulture,
-                        s_fileSaveFailedFormat,
-                        file.FileName
-                    )
-                        + " "
-                        + ex.Message
-                );
+                await saveStream.WriteAsync(fileData, ct).ConfigureAwait(false);
             }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.Warning(
+                string.Format(CultureInfo.InvariantCulture, s_fileSaveFailedFormat, file.FileName)
+                    + " "
+                    + ex.Message
+            );
         }
     }
 
-    private Task CrackDpmEncryptionAsync(
-        byte[] fileData,
-        DpmFileEntry file,
-        string outputDir,
-        string outputPath,
-        CancellationToken _
-    )
+    private byte[]? CrackDpmEncryption(byte[] fileData, DpmFileEntry file)
     {
         _logger.Write(
             string.Format(CultureInfo.InvariantCulture, s_decryptingFileFormat, file.FileName)
         );
 
-        string decryptedBaseName =
-            Path.GetFileNameWithoutExtension(file.FileName) ?? file.FileName ?? "";
-        string resolvedOutputPath = BuildAutoIncrementFileName(
-            outputDir,
-            decryptedBaseName,
-            ".hsp"
-        );
-        bool decryptionSucceeded = false;
+        var decryptor = HspCryptoTransform.CrackEncryption(fileData, Validator);
+        if (decryptor != null)
+        {
+            return decryptor.Decryption(fileData);
+        }
 
-        bool validator(byte[] decryptedData)
+        _logger.Write(
+            string.Format(CultureInfo.InvariantCulture, s_decryptionFailedFormat, file.FileName)
+        );
+        return null;
+
+        // A key counts only when the whole AX decodes; the magic alone matches many wrong keys.
+        // ---
+        // マジックだけでは誤った鍵も多く一致するため、AX 全体を解析できた鍵だけを採用する。
+        bool Validator(byte[] decryptedData)
         {
             try
             {
                 using var ms = new MemoryStream(decryptedData);
                 using var br = new BinaryReader(ms, ShiftJisHelper.Encoding);
-                char[] magicChars = br.ReadChars(4);
-                string fileMagic = new(magicChars);
-                br.BaseStream.Seek(0, SeekOrigin.Begin);
-
+                string fileMagic = DetectFileFormat(br);
                 if (
                     !fileMagic.StartsWith(Hsp2Magic, StringComparison.Ordinal)
                     && !fileMagic.StartsWith(Hsp3Magic, StringComparison.Ordinal)
@@ -449,25 +521,18 @@ public sealed class DecompilerPipeline
                     return false;
                 }
 
-                string resolvedExt = fileMagic.StartsWith(Hsp2Magic, StringComparison.Ordinal)
-                    ? ".as"
-                    : ".hsp";
-                string candidatePath = BuildAutoIncrementFileName(
-                    outputDir,
-                    decryptedBaseName,
-                    resolvedExt
-                );
-
-                IAxDecoder decoder = CreateDecoder(br);
-                // CrackEncryption is synchronous; validator must be synchronous too.
-                // Blocking here is unavoidable given the HspCryptoTransform.CrackEncryption API contract.
-                List<string> lines = decoder
-                    .DecodeAsync(br, _logger, _progress, CancellationToken.None)
+                // CrackEncryption takes a synchronous validator, so the decode blocks here.
+                // ---
+                // CrackEncryption は同期の検証関数を受け取るため、ここでは解析を同期で待つ。
+                CreateDecoder(br)
+                    .DecodeAsync(
+                        br,
+                        NullDecompilerLogger.Instance,
+                        _progress,
+                        CancellationToken.None
+                    )
                     .GetAwaiter()
                     .GetResult();
-                WriteOutputLines(lines, candidatePath);
-                resolvedOutputPath = candidatePath;
-                decryptionSucceeded = true;
                 return true;
             }
             catch (Exception ex) when (ex is HspDecoderException or IOException or FormatException)
@@ -475,37 +540,6 @@ public sealed class DecompilerPipeline
                 return false;
             }
         }
-
-        var decryptor = HspCryptoTransform.CrackEncryption(fileData, validator);
-        if (decryptor == null || !decryptionSucceeded)
-        {
-            _logger.Write(
-                string.Format(CultureInfo.InvariantCulture, s_decryptionFailedFormat, file.FileName)
-            );
-            return Task.CompletedTask;
-        }
-
-        byte[] decryptedBytes = decryptor.Decryption(fileData);
-        try
-        {
-            string? dir = Path.GetDirectoryName(outputPath);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
-            using var saveStream = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write);
-            saveStream.Write(decryptedBytes, 0, decryptedBytes.Length);
-        }
-        catch (IOException ex)
-        {
-            _logger.Warning(
-                string.Format(CultureInfo.InvariantCulture, s_fileSaveFailedFormat, file.FileName)
-                    + " "
-                    + ex.Message
-            );
-        }
-
-        return Task.CompletedTask;
     }
 
     public async Task DecodeAsync(
@@ -525,7 +559,7 @@ public sealed class DecompilerPipeline
         _logger.Write(Strings.Decompiling);
         _logger.StartSection();
 
-        IAxDecoder decoder = CreateDecoder(reader);
+        IAxDecoder decoder = CreateDecoder(reader, Path.GetFileName(outputPath));
         List<string> lines = await decoder
             .DecodeAsync(reader, _logger, _progress, ct)
             .ConfigureAwait(false);
@@ -542,10 +576,15 @@ public sealed class DecompilerPipeline
         );
 
         WriteOutputLines(lines, outputPath);
+        if (decoder is Ax2Decoder ax2)
+        {
+            WriteIncludeFiles(ax2.Includes, Path.GetDirectoryName(outputPath) ?? ".");
+        }
+
         _logger.Write(Strings.OutputComplete);
     }
 
-    private IAxDecoder CreateDecoder(BinaryReader reader)
+    private IAxDecoder CreateDecoder(BinaryReader reader, string? mainFileName = null)
     {
         long startPosition = reader.BaseStream.Position;
         char[] buffer = reader.ReadChars(4);
@@ -554,7 +593,7 @@ public sealed class DecompilerPipeline
 
         if (magic.Equals(Hsp2Magic, StringComparison.Ordinal))
         {
-            return new Ax2Decoder();
+            return new Ax2Decoder { MainFileName = mainFileName };
         }
 
         if (magic.Equals(Hsp3Magic, StringComparison.Ordinal))
@@ -572,6 +611,35 @@ public sealed class DecompilerPipeline
         foreach (string line in lines)
         {
             writer.WriteLine(line);
+        }
+    }
+
+    // An include keeps the exact name hspcmp recorded, so an existing file of that name is left
+    // alone rather than renamed or overwritten.
+    // ---
+    // 取り込みファイルは hspcmp が記録した名前のままにする必要があるため、同名のファイルが既に
+    // あれば名前を変えたり上書きしたりせずに残す。
+    private void WriteIncludeFiles(IReadOnlyList<IncludeFile> includes, string directory)
+    {
+        foreach (IncludeFile include in includes)
+        {
+            string path = Path.Combine(directory, include.Name);
+            if (File.Exists(path))
+            {
+                _logger.Warning(
+                    string.Format(
+                        CultureInfo.InvariantCulture,
+                        s_fileAlreadyExistsFormat,
+                        include.Name
+                    )
+                );
+                continue;
+            }
+
+            _logger.Write(
+                string.Format(CultureInfo.InvariantCulture, s_outputtingToFormat, include.Name)
+            );
+            WriteOutputLines(include.Lines, path);
         }
     }
 
