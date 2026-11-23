@@ -1,4 +1,6 @@
-using System.Linq;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -68,9 +70,55 @@ public partial class MainWindow : Window
         dataGrid.Columns[3].Header = Strings.ColumnFileSize;
     }
 
-    private async void OnMenuOpen(object? sender, RoutedEventArgs e)
+    // Avalonia raises these handlers as async void, so an exception escaping one would end the
+    // process. Each body runs through HandleFileAsync, which logs the failure instead.
+    // ---
+    // Avalonia はこれらのハンドラーを async void として呼ぶため、例外が漏れるとプロセスが終了する。
+    // 各処理は HandleFileAsync を通し、失敗はログへ書く。
+    private async void OnMenuOpen(object? sender, RoutedEventArgs e) =>
+        await HandleFileAsync(PickFileAsync).ConfigureAwait(true);
+
+    private async void OnDrop(object? sender, DragEventArgs e) =>
+        await HandleFileAsync(() => Task.FromResult(e.DataTransfer.TryGetFile()))
+            .ConfigureAwait(true);
+
+    private async void OnMenuAbout(object? sender, RoutedEventArgs e)
     {
-        System.Collections.Generic.IReadOnlyList<IStorageFile> files = await StorageProvider
+        try
+        {
+            await new AboutDialog().ShowDialog(this).ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            (DataContext as MainWindowViewModel)?.ReportError(ex);
+        }
+    }
+
+    private async Task HandleFileAsync(Func<Task<IStorageItem?>> selectFile)
+    {
+        if (DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        try
+        {
+            IStorageItem? file = await selectFile().ConfigureAwait(true);
+            string? path = file?.TryGetLocalPath();
+            if (path != null)
+            {
+                await vm.ProcessFileAsync(path).ConfigureAwait(true);
+            }
+        }
+        catch (Exception ex)
+        {
+            vm.ReportError(ex);
+        }
+    }
+
+    private async Task<IStorageItem?> PickFileAsync()
+    {
+        IReadOnlyList<IStorageFile> files = await StorageProvider
             .OpenFilePickerAsync(
                 new FilePickerOpenOptions
                 {
@@ -90,39 +138,11 @@ public partial class MainWindow : Window
                 }
             )
             .ConfigureAwait(true);
-        if (files.Count > 0)
-        {
-            string? path = files[0].TryGetLocalPath();
-            if (path != null && DataContext is MainWindowViewModel vm)
-            {
-                await vm.ProcessFileAsync(path).ConfigureAwait(true);
-            }
-        }
-    }
-
-    private void OnMenuAbout(object? sender, RoutedEventArgs e)
-    {
-        var about = new AboutDialog();
-        about.ShowDialog(this);
+        return files.Count > 0 ? files[0] : null;
     }
 
     private void OnDragOver(object? sender, DragEventArgs e) =>
         e.DragEffects = e.DataTransfer.Contains(DataFormat.File)
             ? DragDropEffects.Copy
             : DragDropEffects.None;
-
-    private async void OnDrop(object? sender, DragEventArgs e)
-    {
-        IStorageItem? file = e.DataTransfer.TryGetFile();
-        if (file == null)
-        {
-            return;
-        }
-
-        string? path = file.TryGetLocalPath();
-        if (path != null && DataContext is MainWindowViewModel vm)
-        {
-            await vm.ProcessFileAsync(path).ConfigureAwait(true);
-        }
-    }
 }

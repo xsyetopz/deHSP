@@ -108,13 +108,16 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            AppendLog(string.Format(CultureInfo.InvariantCulture, s_errorFormat, ex.Message));
+            ReportError(ex);
         }
         finally
         {
             IsProcessing = false;
         }
     }
+
+    internal void ReportError(Exception ex) =>
+        AppendLog(string.Format(CultureInfo.InvariantCulture, s_errorFormat, ex.Message));
 
     internal void AppendLog(string line) => LogText += line + Environment.NewLine;
 }
