@@ -44,6 +44,10 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
   - Variables, labels and parameters get their recorded names.
   - `#module` and `#global` blocks come back, with `#modinit`, `#modfunc`, `#modcfunc`,
     `#modterm`, `#deffunc local`, nameless `#module` and names written for the block's scope.
+- Normal builds from hspcmp 3.1 to 3.32 decompile to the lines their records name. Those
+  releases record each `#module` and `#global` line and, from 3.3, the line each `{"..."}`
+  string ends on. The output puts each on its line and splits into `<name>_N.hsp` includes
+  where the line numbers restart, so a recompile without `-d` gives back the same AX.
 - `--common <dir>` (`DecompilerOptions.CommonDirectory`) points at the HSP `common` directory.
   A debug build gets back the `#include` of a common header that left only definitions, and
   the imports that header declares leave the output.
@@ -94,5 +98,8 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
   decorated as `_name@16` comes back bare.
 - `#func onexit` and `#cfunc onexit` are no longer dropped from the output.
 - `thismod` decompiles as `thismod` instead of a comment that does not compile.
+- A `#module` used only through `newmod` counts as used, so its output no longer gets a
+  needless `#cmpopt optcode 0`.
+- The `#struct` warning is logged only for a `#struct` line the output holds, with its line.
 - The GUI logs errors from Open, drag and drop, and About instead of crashing, and keeps
   decompile continuations on the UI thread.

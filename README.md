@@ -121,6 +121,27 @@ Recompile the output with `hspcmp -d` to get the same debug segment. The debug f
   hspcmp needs both lines. The two lines go into the first gap without code. When a source has
   no such gap, they go after the last line, and a recompile records those extra lines.
 
+### Normal builds from hspcmp 3.1 to 3.32
+
+hspcmp 3.1 to 3.32 write line records even without `-d`: one for each `#module` and `#global`
+line, and from 3.3 one for the line each `{"..."}` string ends on. The records hold no file
+names, and their line numbers restart inside each included file. deHSP matches each record to
+a module block or a string and rebuilds the source around them:
+
+- The `#module` and `#global` blocks come back on their recorded lines. A normal build keeps
+  no module names, so a block is named after its `#modinit` or `#modfunc` members or a
+  `local` function where it has them, and is written as a nameless `#module` otherwise.
+- `{"..."}` strings end on their recorded lines.
+- The other lines keep a line each where they fit. Otherwise blank lines drop, then a
+  statement joins the line before it with ` : `.
+- Where the line numbers restart, the rest of the source goes to `<name>_1.hsp`,
+  `<name>_2.hsp` and so on, each included at the end of the file before it.
+
+Recompiled without `-d` by the same hspcmp, the output gives back the same AX, records
+included; the normal-build fixtures and 80 probe programs checked on hspcmp 3.1, 3.21, 3.3
+and 3.32 do. hspcmp 3.4 and later write no such records. When no layout fits the records,
+deHSP writes the lines in order without the records.
+
 ### Source style
 
 Some constructs compile to the same bytes however they are spelled. The style options pick
