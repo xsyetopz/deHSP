@@ -9,12 +9,18 @@ namespace HspDecompiler.Gui.ViewModels;
 /// </summary>
 public class AboutViewModel : ViewModelBase
 {
+    private static readonly Assembly s_assembly = typeof(AboutViewModel).Assembly;
+
     /// <summary>
-    /// <para xml:lang="en">Assembly version of the application.</para>
-    /// <para xml:lang="ja">アプリケーションのアセンブリバージョン。</para>
+    /// <para xml:lang="en">Release version of the application, such as 3.0.0, without build metadata.</para>
+    /// <para xml:lang="ja">アプリケーションのリリースバージョン (例: 3.0.0)。ビルドメタデータは含まない。</para>
     /// </summary>
     public static string Version =>
-        Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
+        s_assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion.Split('+')[0]
+        ?? s_assembly.GetName().Version?.ToString(3)
+        ?? "";
 
     /// <summary>
     /// <para xml:lang="en">Localized application title.</para>
@@ -23,8 +29,9 @@ public class AboutViewModel : ViewModelBase
     public static string Title => Strings.WindowTitle;
 
     /// <summary>
-    /// <para xml:lang="en">Copyright line.</para>
-    /// <para xml:lang="ja">著作権表示。</para>
+    /// <para xml:lang="en">Copyright line, crediting Kitsutsuki as the original author.</para>
+    /// <para xml:lang="ja">著作権表示。原作者として Kitsutsuki 氏を記載する。</para>
     /// </summary>
-    public static string Copyright => "Kitsutsuki (Original) / HSP Decompiler Contributors";
+    public static string Copyright =>
+        s_assembly.GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright ?? "";
 }
