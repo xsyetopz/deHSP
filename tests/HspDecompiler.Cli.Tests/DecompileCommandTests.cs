@@ -117,6 +117,22 @@ public sealed class DecompileCommandTests : IDisposable
         Assert.Contains("poke var_5, 0, 0xEF", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task CompilerHintTheAxContradictsWarnsAndStillDecompiles()
+    {
+        int exitCode = await InvokeAsync(
+            Fixture("styles.ax"),
+            "--output",
+            _workDir,
+            "--compiler",
+            "3.1"
+        );
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("warning(s)", _error.ToString(), StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(_workDir, "styles.hsp")));
+    }
+
     private static string Fixture(string name = "doubleelse.ax") =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
 

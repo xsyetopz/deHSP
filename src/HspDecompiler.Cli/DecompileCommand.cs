@@ -52,6 +52,12 @@ internal sealed class DecompileCommand : RootCommand
             "HSP common directory; restores the #include of a matching common header in a debug build",
     };
 
+    private readonly Option<string> _compiler = new("--compiler")
+    {
+        Description =
+            "hspcmp release that wrote the program, such as 3.32 or 3.8b2; a hint the AX contradicts is ignored with a warning",
+    };
+
     private readonly Option<IfParentheses> _ifParens = new("--if-parens")
     {
         Description = "Parentheses around an if condition: none, tight '(x)', spaced '( x )'",
@@ -106,6 +112,7 @@ internal sealed class DecompileCommand : RootCommand
         Options.Add(_skipEncrypted);
         Options.Add(_utf8);
         Options.Add(_common);
+        Options.Add(_compiler);
         Options.Add(_ifParens);
         Options.Add(_oneLineIf);
         Options.Add(_parenNegatives);
@@ -143,6 +150,7 @@ internal sealed class DecompileCommand : RootCommand
             SkipEncrypted = parseResult.GetValue(_skipEncrypted),
             Utf8Output = parseResult.GetValue(_utf8),
             CommonDirectory = parseResult.GetValue(_common)?.FullName,
+            CompilerRelease = parseResult.GetValue(_compiler),
             Style = Style(parseResult),
         };
 
