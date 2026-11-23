@@ -20,8 +20,6 @@ internal class SyntacticAnalyzer
         Strings.AnalysisFailedScopeEndMidLine
     );
 
-    private int _readingLine;
-
     internal async Task<List<LogicalLine>> AnalyzeAsync(
         TokenCollection stream,
         AxData data,
@@ -32,11 +30,9 @@ internal class SyntacticAnalyzer
     {
         var ret = new List<LogicalLine>();
         int importAnchor = SubAnalyzePreprocessor(ret, data);
-        _readingLine = ret.Count;
         while (!stream.NextIsEndOfStream)
         {
             await progress.YieldAsync(ct).ConfigureAwait(false);
-            _readingLine++;
             LogicalLine? line = LogicalLineFactory.GetCodeToken(stream.GetLine());
             if (line != null)
             {
@@ -215,10 +211,10 @@ internal class SyntacticAnalyzer
     // else が開いたスコープで同じ配置になる。Elona の start.hsp に実例がある。同じ飛び先へ
     // 飛ぶ else はブロック末尾に入れ子になった空の "else {}" であり、兄弟ではない。
     private static bool EndsAtElse(IfStatement scopeStart, IfStatement? before, int jumpToOffset) =>
-        before is { isElseStatement: true }
+        before is { IsElseStatement: true }
         && (
-            scopeStart.isIfStatement
-            || (scopeStart.isElseStatement && (before.JumpToOffset != jumpToOffset))
+            scopeStart.IsIfStatement
+            || (scopeStart.IsElseStatement && (before.JumpToOffset != jumpToOffset))
         );
 
     private static void SubAnalyzeLabel(List<LogicalLine> ret, AxData data)
@@ -249,13 +245,12 @@ internal class SyntacticAnalyzer
             if ((i > 0) && (i < ret.Count) && (ret[i] is IfStatement))
             {
                 var ifStatement = ret[i] as IfStatement;
-                if ((ret[i - 1] is ScopeEnd) && (ifStatement?.isElseStatement == true))
+                if ((ret[i - 1] is ScopeEnd) && (ifStatement?.IsElseStatement == true))
                 {
                     i--;
                 }
             }
             ret.Insert(i, new PreprocessorDeclaration(label));
-            continue;
         }
     }
 

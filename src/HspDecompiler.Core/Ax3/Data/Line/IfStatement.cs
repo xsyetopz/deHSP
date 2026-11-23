@@ -6,8 +6,6 @@ namespace HspDecompiler.Core.Ax3.Data.Line;
 
 internal sealed class IfStatement : LogicalLine
 {
-    private IfStatement() { }
-
     internal IfStatement(IfStatementPrimitive token)
     {
         _ifToken = token;
@@ -26,11 +24,9 @@ internal sealed class IfStatement : LogicalLine
 
     internal int JumpToOffset => _ifToken!.JumpToOffset;
 
-    internal bool isIfStatement =>
-        (_ifToken!.CodeType & HspCodeType.IfStatement) == HspCodeType.IfStatement;
+    internal bool IsIfStatement => _ifToken!.CodeType == HspCodeType.IfStatement;
 
-    internal bool isElseStatement =>
-        (_ifToken!.CodeType & HspCodeType.ElseStatement) == HspCodeType.ElseStatement;
+    internal bool IsElseStatement => _ifToken!.CodeType == HspCodeType.ElseStatement;
 
     private bool _scopeEndIsDefined;
     internal bool ScopeEndIsDefined
@@ -46,7 +42,7 @@ internal sealed class IfStatement : LogicalLine
         if (_arg != null)
         {
             builder.Append(" (");
-            builder.Append(_arg.ToString());
+            builder.Append(_arg);
             builder.Append(" )");
         }
         builder.Append(" {");

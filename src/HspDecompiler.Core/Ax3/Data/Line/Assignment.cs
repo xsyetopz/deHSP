@@ -5,8 +5,6 @@ namespace HspDecompiler.Core.Ax3.Data.Line;
 
 internal sealed class Assignment : LogicalLine
 {
-    private Assignment() { }
-
     internal Assignment(VariableToken theVar, OperatorToken theOp)
     {
         _var = theVar;
@@ -33,7 +31,7 @@ internal sealed class Assignment : LogicalLine
         {
             builder.Append(' ');
             builder.Append(_op!.ToString(true, _arg != null));
-            builder.Append(_arg!.ToString());
+            builder.Append(_arg);
         }
         else
         {
@@ -51,19 +49,6 @@ internal sealed class Assignment : LogicalLine
         _arg?.CheckLabel();
     }
 
-    internal override bool CheckRpn()
-    {
-        bool ret = true;
-        if (_var != null)
-        {
-            ret &= _var.CheckRpn();
-        }
-
-        if (_arg != null)
-        {
-            ret &= _arg.CheckRpn();
-        }
-
-        return true;
-    }
+    internal override bool CheckRpn() =>
+        (_var == null || _var.CheckRpn()) && (_arg == null || _arg.CheckRpn());
 }
