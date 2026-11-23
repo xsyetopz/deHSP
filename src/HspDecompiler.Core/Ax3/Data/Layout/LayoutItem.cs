@@ -49,6 +49,11 @@ internal sealed class LayoutItem
 
     internal int Continues { get; set; } = -1;
 
+    // True for an else statement, which follows the closing brace before it on that line.
+    //
+    // else 文なら true。直前の閉じ括弧と同じ行に続ける。
+    internal bool IsElse { get; init; }
+
     // The items a joined line was built from, such as a label and the statement it names.
     //
     // つないだ行の元になった項目。ラベルとそれが指す文など。

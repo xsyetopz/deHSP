@@ -23,6 +23,24 @@ public class FilePlacerTests
     }
 
     [Fact]
+    public void ElseStatementTakesTheBraceBeforeIt()
+    {
+        var placer = new FilePlacer();
+
+        List<string> lines = placer.Place(
+            [
+                Item(LineKind.Code, "if x {", 1),
+                Item(LineKind.Code, "mes 1", 2),
+                Item(LineKind.Close, "}"),
+                new(LineKind.Code, "else {", 0, 1, 3) { IsElse = true },
+            ],
+            3
+        );
+
+        Assert.Equal(["if x {", "mes 1", "} else {"], lines);
+    }
+
+    [Fact]
     public void ModuleStartNeverJoinsCodeOnItsLine()
     {
         var placer = new FilePlacer();

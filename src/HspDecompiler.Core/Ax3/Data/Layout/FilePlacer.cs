@@ -173,11 +173,7 @@ internal sealed class FilePlacer
     private static bool JoinsNext(List<LayoutItem> items, LayoutItem anchor) =>
         items.Count > 0
         && (
-            items[^1].Kind == LineKind.Label
-            || (
-                items[^1].Kind == LineKind.Close
-                && anchor.Text.StartsWith("else", System.StringComparison.Ordinal)
-            )
+            items[^1].Kind == LineKind.Label || (items[^1].Kind == LineKind.Close && anchor.IsElse)
         );
 
     private static LayoutItem Prefixed(LayoutItem? prefix, LayoutItem anchor) =>
@@ -283,9 +279,17 @@ internal sealed class FilePlacer
         }
     }
 
-    // hspcmp reads "{" and "}" as statements of their own, so they need no ':' beside them.
+    // hspcmp reads "{" and "}" as statements of their own, so they need no ':' beside them, and
+    // an else must follow its brace with no ':' between: hspcmp 3.7 rejects "} : else {" with
+    // error 14. The rule reads rendered text because the marked placer and ColonIfs join text
+    // that has no item behind it; an identifier such as "elsewhere" also matches, and hspcmp
+    // compiles "} elsewhere = 2" and "} : elsewhere = 2" to the same bytes.
     //
-    // hspcmp は "{" と "}" をそれ自体で文として読むため、その隣に ':' は要らない。
+    // hspcmp は "{" と "}" をそれ自体で文として読むため、その隣に ':' は要らない。else は
+    // 閉じ括弧の後に ':' を挟まずに続ける必要がある。hspcmp 3.7 は "} : else {" を error 14
+    // で拒む。印による配置と ColonIfs は項目を持たないテキストをつなぐため、この規則は書き出した
+    // テキストを読む。"elsewhere" のような識別子も当てはまるが、hspcmp は "} elsewhere = 2" と
+    // "} : elsewhere = 2" を同じバイト列にする。
     internal static string Join(string first, string second) =>
         first.EndsWith('{')
         || second.StartsWith('}')

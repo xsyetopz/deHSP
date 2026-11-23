@@ -133,7 +133,10 @@ internal static class SourceLayout
             text = LongStrings.Render(text, pending);
             return line is ModuleStart
                 ? new LayoutItem(LineKind.ModuleStart, text, 0, record.File, record.Line)
-                : new LayoutItem(LineKind.Code, text, line.TabCount, record.File, record.Line);
+                : new LayoutItem(LineKind.Code, text, line.TabCount, record.File, record.Line)
+                {
+                    IsElse = line is IfStatement { IsElseStatement: true },
+                };
         }
 
         if (line is EndOfModule end)
