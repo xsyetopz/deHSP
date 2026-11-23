@@ -150,4 +150,11 @@ internal class Param : Preprocessor
             "modvar" or "modinit" or "modterm" or "struct" => true,
             _ => false,
         };
+
+    // The tag a module's struct opens with. Code names it only where it names the module, as in
+    // "newmod v, name".
+    //
+    // モジュールの構造体の先頭にあるタグ。コードがこれを指すのは "newmod v, 名前" のように
+    // モジュールの名前を書く所だけである。
+    internal bool IsStructTag => _paramTypeName == "struct";
 }

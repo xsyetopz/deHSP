@@ -48,6 +48,10 @@ internal sealed class ParameterPrimitive : VariablePrimitive
     {
         _param = dataSet._parent!.GetParam(Value);
         _param?.ParamNameIsUsed = true;
+        if (_param is { IsStructTag: true, Module: { } module })
+        {
+            module.MarkUsedAt(TokenOffset);
+        }
     }
 
     private readonly Param? _param;
