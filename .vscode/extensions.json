@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "JetBrains.resharper-code", // C# by ReSharper
-        "nefrob.vscode-just-syntax" // vscode-just
+        "nefrob.vscode-just-syntax", // vscode-just
+        "redhat.vscode-xml" // XML: checks Dictionary.xml against Dictionary.xsd
     ]
 }

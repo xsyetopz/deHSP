@@ -1,9 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
+using System.Text;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.Schema;
 using HspDecompiler.Core.Ax3.Dictionary;
+using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax3;
 
@@ -18,7 +23,11 @@ internal class Hsp3Dictionary
     private readonly Dictionary<HspDictionaryKey, HspDictionaryValue> _codeDictionary = [];
     private readonly Dictionary<int, string> _paramDictionary = [];
 
-    private const string EmbeddedResourceName = "HspDecompiler.Core.Ax3.Dictionary.json";
+    private const string ResourcePrefix = "HspDecompiler.Core.Ax3.";
+
+    private static readonly XNamespace s_ns = "urn:dehsp:dictionary";
+
+    private static readonly Lazy<XmlSchemaSet> s_schemas = new(LoadSchemas);
 
     private static readonly Lazy<Hsp3Dictionary> s_builtIn = new(LoadBuiltIn);
 
@@ -26,23 +35,15 @@ internal class Hsp3Dictionary
 
     internal string Version { get; private set; } = "";
 
-    internal static Hsp3Dictionary? FromFile(string filePath)
+    // Throws IOException, UnauthorizedAccessException, XmlException, XmlSchemaException or
+    // InvalidDataException, each naming what is wrong and, for XML errors, the line.
+    //
+    // IOException・UnauthorizedAccessException・XmlException・XmlSchemaException・
+    // InvalidDataException を投げる。どれも原因を示し、XML の誤りなら行番号も含む。
+    internal static Hsp3Dictionary FromFile(string filePath)
     {
-        try
-        {
-            using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            return FromStream(stream);
-        }
-        catch (Exception ex)
-            when (ex
-                    is IOException
-                        or UnauthorizedAccessException
-                        or JsonException
-                        or ArgumentException
-            )
-        {
-            return null;
-        }
+        using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        return FromStream(stream);
     }
 
     // The table ships inside the assembly so the decompiler runs without a file beside it.
@@ -50,46 +51,120 @@ internal class Hsp3Dictionary
     // 表はアセンブリに埋め込まれているため、隣にファイルが無くても動作する。
     private static Hsp3Dictionary LoadBuiltIn()
     {
-        using Stream stream = typeof(Hsp3Dictionary).Assembly.GetManifestResourceStream(
-            EmbeddedResourceName
-        ) ?? throw new InvalidOperationException(EmbeddedResourceName);
+        using Stream stream = OpenResource("Dictionary.xml");
         return FromStream(stream);
+    }
+
+    private static Stream OpenResource(string name) =>
+        typeof(Hsp3Dictionary).Assembly.GetManifestResourceStream(ResourcePrefix + name)
+        ?? throw new InvalidOperationException(ResourcePrefix + name);
+
+    private static XmlSchemaSet LoadSchemas()
+    {
+        using Stream stream = OpenResource("Dictionary.xsd");
+        using var reader = XmlReader.Create(stream, SafeSettings());
+        var schemas = new XmlSchemaSet { XmlResolver = null };
+        schemas.Add(null, reader);
+        schemas.Compile();
+        return schemas;
+    }
+
+    // DTDs and external resolution stay off because a custom dictionary is user input.
+    //
+    // 独自の辞書は利用者の入力なので、DTD と外部参照の解決は無効にしておく。
+    private static XmlReaderSettings SafeSettings() =>
+        new() { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
+
+    // Warnings count as errors: a root element outside the dictionary namespace raises only a
+    // "no schema information" warning and would otherwise pass unchecked.
+    //
+    // 警告もエラーとして扱う。辞書の名前空間に無いルート要素は「スキーマ情報が無い」という
+    // 警告しか出さず、そのままでは検証されずに通ってしまうため。
+    private static XDocument LoadValidated(Stream stream)
+    {
+        XmlReaderSettings settings = SafeSettings();
+        settings.ValidationType = ValidationType.Schema;
+        settings.ValidationFlags |= XmlSchemaValidationFlags.ReportValidationWarnings;
+        settings.Schemas = s_schemas.Value;
+        settings.ValidationEventHandler += (_, e) => throw e.Exception;
+        using var reader = XmlReader.Create(stream, settings);
+        return XDocument.Load(reader, LoadOptions.SetLineInfo);
     }
 
     private static Hsp3Dictionary FromStream(Stream stream)
     {
-        DictionaryDocument document = JsonSerializer.Deserialize(
-            stream,
-            DictionaryJsonContext.Default.DictionaryDocument
-        ) ?? throw new JsonException(EmbeddedResourceName);
-        var dictionary = new Hsp3Dictionary { Version = document.Version };
-        foreach (
-            HspDictionaryKey key in from entry in document.Codes
-            let key = new HspDictionaryKey(entry.Type, entry.Value)
-            let value = new HspDictionaryValue(
-                entry.Name,
-                entry.Kind,
-                entry.Flags,
-                entry.Priority ?? -1
-            )
-            where !dictionary._codeDictionary.TryAdd(key, value)
-            select key
-        )
+        XElement root = LoadValidated(stream).Root!;
+        var dictionary = new Hsp3Dictionary { Version = (string)root.Attribute("version")! };
+        foreach (XElement code in root.Element(s_ns + "codes")!.Elements(s_ns + "code"))
         {
-            throw new JsonException(key.ToString());
+            HspDictionaryKey key = ReadKey(code);
+            if (!dictionary._codeDictionary.TryAdd(key, ReadValue(code)))
+            {
+                throw Duplicate(code, key.ToString());
+            }
         }
 
-        foreach (
-            ParamTypeEntry entry in document.ParamTypes.Where(entry =>
-                !dictionary._paramDictionary.TryAdd(entry.Code, entry.Name)
-            )
-        )
+        foreach (XElement param in root.Element(s_ns + "paramTypes")!.Elements(s_ns + "paramType"))
         {
-            throw new JsonException(entry.Name);
+            if (
+                !dictionary._paramDictionary.TryAdd(
+                    ReadHex(param, "code")!.Value,
+                    (string)param.Attribute("name")!
+                )
+            )
+            {
+                throw Duplicate(param, (string)param.Attribute("code")!);
+            }
         }
 
         return dictionary;
     }
+
+    private static HspDictionaryKey ReadKey(XElement code) =>
+        new(ReadHex(code, "type")!.Value, ReadHex(code, "value"));
+
+    private static HspDictionaryValue ReadValue(XElement code) =>
+        new(
+            (string?)code.Attribute("name") ?? "",
+            Enum.Parse<HspCodeType>((string)code.Attribute("kind")!),
+            ReadFlags((string?)code.Attribute("flags")),
+            (int?)code.Attribute("priority") ?? -1
+        );
+
+    private static int? ReadHex(XElement element, string name) =>
+        element.Attribute(name) is { } attribute
+            ? int.Parse(
+                attribute.Value.AsSpan(2),
+                NumberStyles.AllowHexSpecifier,
+                CultureInfo.InvariantCulture
+            )
+            : null;
+
+    private static HspCodeExtraOptions ReadFlags(string? flags) =>
+        (flags ?? "")
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Aggregate(HspCodeExtraOptions.None, (all, flag) =>
+                all | Enum.Parse<HspCodeExtraOptions>(flag)
+            );
+
+    // The schema's xs:unique rules catch most duplicates; this check also catches two entries
+    // without a value for the same type, which xs:unique skips because a field is missing.
+    //
+    // 重複の大半はスキーマの xs:unique が検出する。ここでは同じ型で value の無い項目が 2 つある
+    // 場合も検出する。フィールドが欠けた項目を xs:unique は対象外にするため。
+    private static InvalidDataException Duplicate(XElement element, string key) =>
+        new(
+            string.Format(
+                CultureInfo.InvariantCulture,
+                s_duplicateEntryFormat,
+                key,
+                ((IXmlLineInfo)element).LineNumber
+            )
+        );
+
+    private static readonly CompositeFormat s_duplicateEntryFormat = CompositeFormat.Parse(
+        Strings.DictionaryDuplicateEntry
+    );
 
     internal bool CodeLookUp(HspDictionaryKey key, out HspDictionaryValue value)
     {

@@ -35,7 +35,8 @@
 
   <!-- Dictionary -->
   <data name="DictionaryLoadSuccess" xml:space="preserve"><value>load {0}: succeeded</value></data>
-  <data name="DictionaryLoadFailed" xml:space="preserve"><value>load {0}: failed</value></data>
+  <data name="DictionaryLoadFailed" xml:space="preserve"><value>load {0}: failed ({1})</value></data>
+  <data name="DictionaryDuplicateEntry" xml:space="preserve"><value>Duplicate dictionary entry {0} on line {1}</value></data>
   <data name="DictionaryLoadError" xml:space="preserve"><value>Failed to read {0}</value></data>
   <data name="DictionaryNotInitialized" xml:space="preserve"><value>Dictionary not initialized. Call Initialize() first.</value></data>
 

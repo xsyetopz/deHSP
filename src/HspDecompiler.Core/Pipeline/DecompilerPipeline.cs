@@ -7,6 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Schema;
 using HspDecompiler.Core.Abstractions;
 using HspDecompiler.Core.Ax2;
 using HspDecompiler.Core.Ax2.Data;
@@ -122,41 +124,68 @@ public sealed class DecompilerPipeline
             string.Format(
                 CultureInfo.InvariantCulture,
                 s_dictionaryLoadSuccessFormat,
-                "Dictionary.json " + _dictionary.Version
+                "Dictionary.xml " + _dictionary.Version
             )
         );
         return true;
     }
 
     /// <summary>
-    /// <para xml:lang="en">Loads an HSP keyword dictionary from a JSON file in the format of the built-in one.</para>
-    /// <para xml:lang="ja">組み込みの辞書と同じ形式の JSON ファイルから HSP のキーワード辞書を読み込む。</para>
+    /// <para xml:lang="en">
+    /// Loads an HSP keyword dictionary from an XML file that follows Dictionary.xsd, the schema
+    /// of the built-in dictionary.
+    /// </para>
+    /// <para xml:lang="ja">
+    /// 組み込みの辞書のスキーマ Dictionary.xsd に従う XML ファイルから HSP のキーワード辞書を
+    /// 読み込む。
+    /// </para>
     /// </summary>
     /// <param name="dictionaryPath">
-    /// <para xml:lang="en">Path of the dictionary JSON file.</para>
-    /// <para xml:lang="ja">辞書の JSON ファイルのパス。</para>
+    /// <para xml:lang="en">Path of the dictionary XML file.</para>
+    /// <para xml:lang="ja">辞書の XML ファイルのパス。</para>
     /// </param>
     /// <returns>
     /// <para xml:lang="en">
-    /// <see langword="true"/> when the file loaded; <see langword="false"/> when it is missing or
-    /// malformed, after logging the failure.
+    /// <see langword="true"/> when the file loaded; <see langword="false"/> when it is missing,
+    /// unreadable, or fails the schema, after logging the reason.
     /// </para>
     /// <para xml:lang="ja">
-    /// 読み込めれば <see langword="true"/>。ファイルが無いか形式が不正なら、失敗を記録した上で
-    /// <see langword="false"/>。
+    /// 読み込めれば <see langword="true"/>。ファイルが無い、読めない、またはスキーマに合わない
+    /// 場合は、理由を記録した上で <see langword="false"/>。
     /// </para>
     /// </returns>
     public bool Initialize(string dictionaryPath)
     {
-        _dictionary = Hsp3Dictionary.FromFile(dictionaryPath);
-        _logger.Write(
-            string.Format(
-                CultureInfo.InvariantCulture,
-                _dictionary != null ? s_dictionaryLoadSuccessFormat : s_dictionaryLoadFailedFormat,
-                Path.GetFileName(dictionaryPath)
+        string name = Path.GetFileName(dictionaryPath);
+        try
+        {
+            _dictionary = Hsp3Dictionary.FromFile(dictionaryPath);
+        }
+        catch (Exception ex)
+            when (ex
+                    is IOException
+                        or UnauthorizedAccessException
+                        or XmlException
+                        or XmlSchemaException
+                        or InvalidDataException
             )
+        {
+            _dictionary = null;
+            _logger.Write(
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    s_dictionaryLoadFailedFormat,
+                    name,
+                    ex.Message
+                )
+            );
+            return false;
+        }
+
+        _logger.Write(
+            string.Format(CultureInfo.InvariantCulture, s_dictionaryLoadSuccessFormat, name)
         );
-        return _dictionary != null;
+        return true;
     }
 
     /// <summary>

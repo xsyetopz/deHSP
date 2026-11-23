@@ -18,7 +18,7 @@ var outputOpt = new Option<DirectoryInfo>("--output", OutputAliases)
 };
 var dictOpt = new Option<FileInfo>("--dictionary", DictAliases)
 {
-    Description = "Dictionary JSON path (default: built-in HSP 3.8beta2 table)",
+    Description = "Custom dictionary XML (default: built-in HSP 3.8beta2 table)",
 };
 var noDecryptOpt = new Option<bool>("--no-decrypt")
 {

@@ -35,7 +35,8 @@
 
   <!-- Dictionary -->
   <data name="DictionaryLoadSuccess" xml:space="preserve"><value>load {0}: 成功</value></data>
-  <data name="DictionaryLoadFailed" xml:space="preserve"><value>load {0}: 失敗</value></data>
+  <data name="DictionaryLoadFailed" xml:space="preserve"><value>load {0}: 失敗({1})</value></data>
+  <data name="DictionaryDuplicateEntry" xml:space="preserve"><value>辞書の項目 {0} が重複しています({1} 行目)</value></data>
   <data name="DictionaryLoadError" xml:space="preserve"><value>{0}の読込に失敗しました</value></data>
   <data name="DictionaryNotInitialized" xml:space="preserve"><value>辞書が初期化されていません。Initialize()を先に呼び出してください。</value></data>
 

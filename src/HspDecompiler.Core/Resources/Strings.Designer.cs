@@ -43,6 +43,7 @@ namespace HspDecompiler.Core.Resources
         // Dictionary
         internal static string DictionaryLoadSuccess => ResourceManager.GetString("DictionaryLoadSuccess", resourceCulture);
         internal static string DictionaryLoadFailed => ResourceManager.GetString("DictionaryLoadFailed", resourceCulture);
+        internal static string DictionaryDuplicateEntry => ResourceManager.GetString("DictionaryDuplicateEntry", resourceCulture);
         internal static string DictionaryLoadError => ResourceManager.GetString("DictionaryLoadError", resourceCulture);
         internal static string DictionaryNotInitialized => ResourceManager.GetString("DictionaryNotInitialized", resourceCulture);
 

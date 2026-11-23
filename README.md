@@ -43,13 +43,13 @@ Options:
 
 ```text
 dehsp <input-file> [options]
-  -o, --output <dir>       Output directory (default: input file's directory)
-  -d, --dictionary <path>  Dictionary.csv path (default: alongside executable)
-  --no-decrypt             Skip encrypted file decryption
-  --skip-encrypted         Extract only non-encrypted files from DPM
-  -v, --verbose            Verbose logging
-  --version                Show version
-  -h, --help               Show help
+  -o, --output <output>          Output directory
+  -d, --dictionary <dictionary>  Custom dictionary XML (default: built-in HSP 3.8beta2 table)
+  --no-decrypt                   Skip encrypted file decryption
+  --skip-encrypted               Extract only non-encrypted files
+  -v, --verbose                  Verbose logging
+  -?, -h, --help                 Show help and usage information
+  --version                      Show version information
 ```
 
 ### GUI
@@ -68,9 +68,17 @@ Or drag-and-drop files onto the application window.
 | `HspDecompiler.Cli` | Command-line interface |
 | `HspDecompiler.Gui` | Avalonia cross-platform GUI |
 
-## Dictionary.csv
+## Dictionary
 
-`Dictionary.csv` must be present alongside the executable. It defines HSP3 built-in commands, functions, and parameter types used during decompilation.
+The HSP 3 keyword table is built into the decompiler, so no file has to sit next to it. It
+covers HSP 3.8beta2: the built-in commands, functions, and parameter types. The source is
+[`Dictionary.xml`](src/HspDecompiler.Core/Ax3/Dictionary.xml).
+
+To use your own table, copy `Dictionary.xml`, edit it, and pass it with `--dictionary`.
+[`Dictionary.xsd`](src/HspDecompiler.Core/Ax3/Dictionary.xsd) defines the format, and an
+editor with XML schema support checks your file as you type. Numbers are fixed-width uppercase
+hex (`0x0F`, `0x001E`). The decompiler validates the file before it reads it and stops with the
+line of the first error.
 
 ## History
 

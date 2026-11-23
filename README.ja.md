@@ -43,13 +43,13 @@ dotnet run --project src/HspDecompiler.Cli -- game.exe -o ./extracted
 
 ```text
 dehsp <入力ファイル> [オプション]
-  -o, --output <dir>       出力ディレクトリ（デフォルト: 入力ファイルと同じディレクトリ）
-  -d, --dictionary <path>  Dictionary.csvのパス（デフォルト: 実行ファイルと同じディレクトリ）
-  --no-decrypt             暗号化ファイルの復号をスキップ
-  --skip-encrypted         DPMから非暗号化ファイルのみ抽出
-  -v, --verbose            詳細ログ出力
-  --version                バージョン表示
-  -h, --help               ヘルプ表示
+  -o, --output <output>          出力ディレクトリ
+  -d, --dictionary <dictionary>  独自の辞書 XML（デフォルト: 組み込みの HSP 3.8beta2 の表）
+  --no-decrypt                   暗号化ファイルを復号しない
+  --skip-encrypted               暗号化されていないファイルだけを取り出す
+  -v, --verbose                  詳細なログを出す
+  -?, -h, --help                 ヘルプと使い方を表示
+  --version                      バージョンを表示
 ```
 
 ### GUI
@@ -68,9 +68,16 @@ dotnet run --project src/HspDecompiler.Gui
 | `HspDecompiler.Cli` | コマンドラインインターフェース |
 | `HspDecompiler.Gui` | Avalonia クロスプラットフォームGUI |
 
-## Dictionary.csv
+## 辞書
 
-`Dictionary.csv`は実行ファイルと同じディレクトリに置く必要があります。デコンパイル時に使用するHSP3の組み込みコマンド、関数、パラメータ型を定義するファイルです。
+HSP 3 のキーワード表はデコンパイラーに組み込まれているため、隣にファイルを置く必要はありません。
+HSP 3.8beta2 の組み込み命令・関数・引数の型を収録しています。元データは
+[`Dictionary.xml`](src/HspDecompiler.Core/Ax3/Dictionary.xml) です。
+
+独自の表を使うには、`Dictionary.xml` をコピーして編集し、`--dictionary` で渡します。形式は
+[`Dictionary.xsd`](src/HspDecompiler.Core/Ax3/Dictionary.xsd) で定義しており、XML スキーマに
+対応したエディターなら入力中に検査できます。数値は桁数固定の大文字 16 進数(`0x0F`、`0x001E`)
+です。デコンパイラーは読む前にファイルを検証し、最初の誤りの行番号を示して止まります。
 
 ## 歴史
 

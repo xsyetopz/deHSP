@@ -7,10 +7,13 @@ namespace HspDecompiler.Core.Tests.IntegrationTests;
 internal sealed class NullLogger : IDecompilerLogger
 {
     private readonly List<string> _warnings = [];
+    private readonly List<string> _messages = [];
 
     public IReadOnlyList<string> Warnings => _warnings;
 
-    public void Write(string message) { }
+    public IReadOnlyList<string> Messages => _messages;
+
+    public void Write(string message) => _messages.Add(message);
 
     public void Warning(string message, int lineNumber = -1) => _warnings.Add(message);
 

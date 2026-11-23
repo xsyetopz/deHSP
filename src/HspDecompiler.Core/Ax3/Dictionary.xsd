@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Format of the deHSP keyword dictionary. The decompiler validates every dictionary against
+  this schema before it reads one, so a custom dictionary fails with the line of its first
+  error. Numbers are fixed-width uppercase hex, which lets xs:unique catch duplicates.
+
+  deHSP のキーワード辞書の形式。デコンパイラーは辞書を読む前に必ずこのスキーマで検証するため、
+  独自の辞書は最初の誤りの行番号とともに失敗する。数値は桁数固定の大文字 16 進数で、これにより
+  xs:unique が重複を検出できる。
+-->
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:d="urn:dehsp:dictionary"
+  targetNamespace="urn:dehsp:dictionary"
+  elementFormDefault="qualified"
+>
+  <xs:element name="dictionary">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="codes">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="code" type="d:code" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+          <xs:unique name="uniqueCode">
+            <xs:selector xpath="d:code" />
+            <xs:field xpath="@type" />
+            <xs:field xpath="@value" />
+          </xs:unique>
+        </xs:element>
+        <xs:element name="paramTypes">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="paramType" type="d:paramType" maxOccurs="unbounded" />
+            </xs:sequence>
+          </xs:complexType>
+          <xs:unique name="uniqueParamType">
+            <xs:selector xpath="d:paramType" />
+            <xs:field xpath="@code" />
+          </xs:unique>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <!--
+    One HSP 3 code: the type and value fields of an AX code segment word. Without a value the
+    entry matches every value of the type.
+
+    HSP 3 のコード 1 つ。AX のコードセグメントにある語の型と値のフィールド。value が無ければ
+    その型のすべての値に一致する。
+  -->
+  <xs:complexType name="code">
+    <xs:attribute name="type" type="d:hex8" use="required" />
+    <xs:attribute name="value" type="d:hexValue" />
+    <xs:attribute name="name" type="xs:string" />
+    <xs:attribute name="kind" type="d:kind" use="required" />
+    <xs:attribute name="priority" type="xs:int" />
+    <xs:attribute name="flags" type="d:flags" />
+  </xs:complexType>
+
+  <xs:complexType name="paramType">
+    <xs:attribute name="code" type="d:hex16" use="required" />
+    <xs:attribute name="name" type="xs:string" use="required" />
+  </xs:complexType>
+
+  <xs:simpleType name="hex8">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="0x[0-9A-F]{2}" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="hex16">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="0x[0-9A-F]{4}" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!--
+    Four digits, or five for the values above 0xFFFF that mark a second meaning of a name,
+    such as button as a function.
+
+    4 桁。名前の 2 つ目の意味(関数としての button など)を表す 0xFFFF より大きい値だけ 5 桁。
+  -->
+  <xs:simpleType name="hexValue">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="0x([0-9A-F]{4}|[1-9A-F][0-9A-F]{4})" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="kind">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Operator" />
+      <xs:enumeration value="Symbol" />
+      <xs:enumeration value="Variable" />
+      <xs:enumeration value="StringValue" />
+      <xs:enumeration value="DoubleValue" />
+      <xs:enumeration value="IntegerValue" />
+      <xs:enumeration value="Param" />
+      <xs:enumeration value="Label" />
+      <xs:enumeration value="HspFunction" />
+      <xs:enumeration value="IfStatement" />
+      <xs:enumeration value="UserFunction" />
+      <xs:enumeration value="DllFunction" />
+      <xs:enumeration value="ComFunction" />
+      <xs:enumeration value="PlugInFunction" />
+      <xs:enumeration value="OnEventStatement" />
+      <xs:enumeration value="OnStatement" />
+      <xs:enumeration value="ElseStatement" />
+      <xs:enumeration value="McallStatement" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="flags">
+    <xs:list>
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="HasExtraInt16" />
+          <xs:enumeration value="HasGhostLabel" />
+          <xs:enumeration value="HasGhostGoto" />
+          <xs:enumeration value="AddTab" />
+          <xs:enumeration value="RemoveTab" />
+          <xs:enumeration value="IsGhost" />
+          <xs:enumeration value="BracketStart" />
+          <xs:enumeration value="BracketEnd" />
+          <xs:enumeration value="GotoFunction" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:list>
+  </xs:simpleType>
+</xs:schema>
