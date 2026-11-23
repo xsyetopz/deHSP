@@ -1,0 +1,22 @@
+version: 2
+updates:
+
+# >>> bedrock
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
+# <<< bedrock
+
+# >>> dotnet-bedrock
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      nuget:
+        patterns: ["*"]
+# <<< dotnet-bedrock

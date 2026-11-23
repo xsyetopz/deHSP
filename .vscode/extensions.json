@@ -1,0 +1,6 @@
+{
+    "recommendations": [
+        "JetBrains.resharper-code", // C# by ReSharper
+        "nefrob.vscode-just-syntax" // vscode-just
+    ]
+}

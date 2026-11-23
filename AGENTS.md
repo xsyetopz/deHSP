@@ -47,3 +47,19 @@
 - Don't pad with preamble or recap
 - Don't praise or filler
 - Don't present a single option as the only way for non-trivial decisions
+
+<!-- bedrock -->
+- Run each task through `just`. `just` lists the recipes. Check each change with the narrowest one, such as `just rust::test` or `just lint`, and run `just verify` once before you finish a change that alters behavior.
+- Fix the cause of each lint, type, or guard error in the code. Keep the shared configs as they are; the bedrock that wrote them owns them.
+- Put project recipes in `project.just`. The `justfile` and `.just/` are shared and get replaced on the next adopt. A recipe there named `project-<task>`, such as `project-verify` or `project-test`, runs after the languages' `<task>`, so a project extends `just verify` there. `project-pre-typecheck` runs before the TypeScript type check, for a build the types import.
+- Write commit messages as Conventional Commits; the commit-msg hook checks them.
+- When a recipe reports a missing tool, run `just setup`, which installs the pinned ones. Install any it can't, such as `just`, Bun, rustup, or Xcode, with the system's package manager, then rerun the recipe. Tell the user what you installed, and keep the check instead of skipping it.
+<!-- /bedrock -->
+
+<!-- dotnet-bedrock -->
+- Check C# and F# through `just`: `just dotnet::format`, `just dotnet::lint`, `just dotnet::typecheck`, and `just dotnet::test`. `just dotnet::setup` restores the pinned CSharpier, Fantomas, and FSharpLint from the tool manifest, and the NuGet packages.
+- Build on .NET 10, the LTS release `global.json` pins. Target `net10.0`, and keep `netstandard2.0` or a .NET Framework target only where a library's callers need it.
+- Keep the C# style and analyzer rules in `.editorconfig`: `just dotnet::lint` builds with `EnforceCodeStyleInBuild` and warnings as errors, so each rule set to `warning` there fails it. Fix the cause of each finding in the code.
+- Suppress a finding only with `#pragma warning disable <id> // <reason>` or `[SuppressMessage(..., Justification = "<reason>")]`, and in F# with `#nowarn "<id>" // <reason>`; `just dotnet::guard` rejects one without a reason.
+- `Directory.Build.props` is the project's own once written, but keep `Nullable`, `AnalysisLevel`, and `TreatWarningsAsErrors` as they are unless the user approves.
+<!-- /dotnet-bedrock -->

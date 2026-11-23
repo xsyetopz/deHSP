@@ -14,3 +14,38 @@
 *.png binary
 *.bmp binary
 *.zip binary
+
+# >>> bedrock
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+*.md diff=markdown
+*.sh diff=bash
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.wasm binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+# <<< bedrock
+
+# >>> dotnet-bedrock
+*.cs diff=csharp
+*.fs diff=fsharp
+*.fsi diff=fsharp
+*.fsx diff=fsharp
+*.dll binary
+*.exe binary
+*.snk binary
+# <<< dotnet-bedrock
