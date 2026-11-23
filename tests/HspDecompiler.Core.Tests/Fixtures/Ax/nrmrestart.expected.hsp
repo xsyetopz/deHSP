@@ -1,0 +1,9 @@
+	mes "a"
+	mes "b"
+	mes "c"
+	mes "d"
+#module
+#deffunc f1
+	return
+#global
+#include "nrmrestart_1.hsp"

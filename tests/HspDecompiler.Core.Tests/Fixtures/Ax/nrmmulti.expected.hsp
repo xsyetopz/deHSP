@@ -1,0 +1,15 @@
+#module
+#deffunc fa
+	mes "a"
+	return
+#global
+
+#module
+#deffunc fb
+*label_3@
+	mes "b"
+	goto *label_3@
+#global
+	fa
+	fb
+	stop

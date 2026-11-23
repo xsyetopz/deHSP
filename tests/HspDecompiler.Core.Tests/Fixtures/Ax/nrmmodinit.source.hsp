@@ -1,0 +1,7 @@
+#module m2 a
+#modinit
+a=1
+return
+#global
+newmod v, m2
+stop

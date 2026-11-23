@@ -1,0 +1,9 @@
+#module
+#deffunc f
+	mes {"s
+t"}
+	return
+#global
+	f1
+	f
+	stop

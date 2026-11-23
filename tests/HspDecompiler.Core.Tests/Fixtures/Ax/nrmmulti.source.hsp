@@ -1,0 +1,15 @@
+#module a
+#deffunc fa
+mes "a"
+return
+#global
+
+#module b
+#deffunc fb
+*here
+mes "b"
+goto *here
+#global
+fa
+fb
+stop

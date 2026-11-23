@@ -1,0 +1,10 @@
+#module m
+#deffunc f
+return
+#deffunc g
+s = {"x
+y"}
+return
+#global
+f
+stop

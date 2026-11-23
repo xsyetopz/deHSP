@@ -1,0 +1,10 @@
+#module used
+#deffunc uf
+return
+#global
+#module gone
+#deffunc gf
+return
+#global
+uf
+stop

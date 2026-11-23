@@ -1,0 +1,10 @@
+#module
+#deffunc f
+	return
+#deffunc g
+	var_0 = {"x
+y"}
+	return
+#global
+	f
+	stop

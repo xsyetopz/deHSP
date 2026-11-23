@@ -1,0 +1,11 @@
+mes "a"
+mes "b"
+mes "c"
+mes "d"
+#module m1
+#deffunc f1
+return
+#global
+#include "sub.hsp"
+f1 : f
+stop

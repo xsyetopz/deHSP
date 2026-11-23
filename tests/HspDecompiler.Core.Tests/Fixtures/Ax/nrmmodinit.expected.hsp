@@ -1,0 +1,7 @@
+#module m2 m2_prm_1
+#modinit
+	m2_prm_1 = 1
+	return
+#global
+	newmod var_0, m2
+	stop

@@ -1,0 +1,10 @@
+#module
+#deffunc uf
+	return
+#global
+#module
+
+
+#global
+	uf
+	stop

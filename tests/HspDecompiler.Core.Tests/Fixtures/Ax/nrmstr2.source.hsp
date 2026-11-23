@@ -1,0 +1,4 @@
+s = {"one
+two"} : t = {"x
+y"}
+stop
