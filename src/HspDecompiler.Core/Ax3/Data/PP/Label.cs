@@ -36,7 +36,13 @@ internal class Label : Preprocessor, System.IComparable<Label>
         set => _visible = value;
     }
 
-    internal bool IsReferenced { get; set; }
+    internal bool IsReferenced => References > 0;
+
+    // The code tokens that refer to the label.
+    //
+    // ラベルを参照するコードトークンの数。
+    internal int References { get; set; }
+
     private string _labelName = "*label";
     internal string LabelName
     {

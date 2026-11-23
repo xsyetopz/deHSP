@@ -21,7 +21,7 @@ internal sealed class LabelPrimitive : LiteralPrimitive
         : base(dataSet)
     {
         _label = dataSet._parent!.Labels[Value];
-        _label.IsReferenced = true;
+        _label.References++;
     }
 
     private readonly Label? _label;

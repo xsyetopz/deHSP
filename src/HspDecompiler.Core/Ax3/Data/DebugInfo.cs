@@ -85,6 +85,15 @@ internal sealed class DebugInfo
 
     internal IReadOnlyList<byte[]> FileNames => _fileNames;
 
+    // The line of every 254 record, in segment order. hspcmp 3.1 to 3.32 write a "##N" record
+    // for each #module and #global and the end line of each {"..."} string (3.3 and later) even
+    // without debug mode, where no size bytes give the records a code line.
+    //
+    // セグメント順に並べた各 254 レコードの行。hspcmp 3.1〜3.32 はデバッグモードでなくても
+    // #module と #global ごとの "##N" レコードと、各 {"..."} 文字列の終わりの行(3.3 以降)を
+    // 書く。そこではコード量バイトが無く、レコードはコード行に結び付かない。
+    internal List<int> Marks { get; } = [];
+
     internal bool HasLines => Lines.Count != 0;
 
     // The file hspcmp compiled; hspdef.as comes before it.
@@ -152,6 +161,7 @@ internal sealed class DebugInfo
         }
         else if (marker == MarkerFile)
         {
+            Marks.Add(value);
             SetFile(offset, value, i < d.Length && d[i] != 0, readLiteral);
         }
 
