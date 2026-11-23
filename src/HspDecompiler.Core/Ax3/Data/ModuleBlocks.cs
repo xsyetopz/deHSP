@@ -28,7 +28,7 @@ internal static class ModuleBlocks
         var exits = new Dictionary<Label, string>();
         foreach (Label label in data.Labels)
         {
-            if (DebugNames.ExitModule(data, label) is string name)
+            if (DebugNames.ExitModule(data, label) is { } name)
             {
                 exits[label] = name;
             }
@@ -46,7 +46,7 @@ internal static class ModuleBlocks
             if (
                 lines[i] is PreprocessorDeclaration { Declared: Label { Function: null } exit }
                 && exits.TryGetValue(exit, out string? name)
-                && FindStart(lines, from, i, exit) is int start
+                && FindStart(lines, from, i, exit) is { } start
             )
             {
                 blocks.Add(new Block(name, start, i, lines[start].TokenOffset, exit.TokenOffset));
@@ -78,10 +78,7 @@ internal static class ModuleBlocks
     {
         foreach (Function function in data.Functions.Where(f => f.IsUserFunction))
         {
-            if (
-                function.FunctionName is string name
-                && !name.Contains('@', StringComparison.Ordinal)
-            )
+            if (function.FunctionName is { } name && !name.Contains('@', StringComparison.Ordinal))
             {
                 data.Scope.AddGlobalFunction(name);
             }
@@ -130,7 +127,7 @@ internal static class ModuleBlocks
         || data.Functions.Exists(f =>
             f.IsUserFunction
             && f.FirstUseOffset >= 0
-            && f.Label is Label label
+            && f.Label is { } label
             && block.Holds(label.TokenOffset)
         );
 

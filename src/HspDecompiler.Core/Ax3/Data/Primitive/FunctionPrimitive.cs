@@ -24,7 +24,7 @@ internal sealed class UserFunctionPrimitive : FunctionPrimitive
     private readonly ModuleScope _scope;
 
     public override string ToString() =>
-        _func?.FunctionName is string name ? _scope.Function(name) : DefaultName;
+        _func?.FunctionName is { } name ? _scope.Function(name) : DefaultName;
 }
 
 internal sealed class DllFunctionPrimitive : FunctionPrimitive

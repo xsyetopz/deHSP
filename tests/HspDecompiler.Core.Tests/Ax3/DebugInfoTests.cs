@@ -10,7 +10,7 @@ public class DebugInfoTests
     private const byte End = 255;
 
     private static DebugInfo Read(params byte[] segment) =>
-        DebugInfo.Read(segment, _ => [], _ => System.Text.Encoding.ASCII.GetBytes("start.hsp"));
+        DebugInfo.Read(segment, _ => [], _ => "start.hsp"u8.ToArray());
 
     [Fact]
     public void RewindPutsExpandedModuleGotoOnTheModuleLine()

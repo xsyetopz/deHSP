@@ -64,7 +64,7 @@ internal static class CommonIncludes
             Function function in data.Functions.Where(f => f.IsDllFunction && !f.DeclaredByInclude)
         )
         {
-            if (function.Dll?.Name is not string dll || !header.Dlls.Contains(dll))
+            if (function.Dll?.Name is not { } dll || !header.Dlls.Contains(dll))
             {
                 continue;
             }

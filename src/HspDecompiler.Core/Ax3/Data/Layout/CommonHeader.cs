@@ -67,12 +67,12 @@ internal sealed class CommonHeader
             return;
         }
 
-        if (ReadImport(tokens) is ImportDeclaration import)
+        if (ReadImport(tokens) is { } import)
         {
             Imports.Add(import);
         }
 
-        if (keyword.StartsWith('#') && DefinedName(tokens) is string name)
+        if (keyword.StartsWith('#') && DefinedName(tokens) is { } name)
         {
             Names.Add(name.ToLowerInvariant());
         }

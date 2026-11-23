@@ -49,7 +49,7 @@ internal static class DebugNames
     // Returns the recovered label names by object-table index, for labels whose name is unique.
     //
     // 名前が一意なラベルについて、オブジェクトテーブル番号ごとの復元名を返す。
-    internal static Dictionary<int, string> LabelNames(AxData data, IEnumerable<Label> labels)
+    internal static Dictionary<int, string> LabelNames(AxData data, IReadOnlyList<Label> labels)
     {
         var names = new Dictionary<int, string>();
         var keys = new Dictionary<int, string>();
@@ -125,7 +125,7 @@ internal static class DebugNames
         // A module variable is written bare inside its module, so its bare name is taken too.
         //
         // モジュール変数はそのモジュール内では裸で書くため、裸の名前も使用済みにする。
-        for (int i = 0; data.GetVariableName(i) is string variable; i++)
+        for (int i = 0; data.GetVariableName(i) is { } variable; i++)
         {
             taken.Add(Key(variable));
             int at = variable.IndexOf('@', StringComparison.Ordinal);
@@ -134,7 +134,7 @@ internal static class DebugNames
 
         foreach (Function function in data.Functions)
         {
-            if (function.FunctionName is string name)
+            if (function.FunctionName is { } name)
             {
                 taken.Add(Key(name));
             }
