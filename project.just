@@ -31,3 +31,19 @@ integration-test:
 clean:
     dotnet clean HspDecompiler.sln -v q
     rm -rf {{ artifacts }}
+
+# Fail on any ReSharper InspectCode warning in the build that `just lint` made.
+inspect:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    report="${TMPDIR:-/tmp}/dehsp-inspectcode.txt"
+    dotnet jb inspectcode HspDecompiler.sln --no-build --severity=WARNING --format=Text \
+        --output="$report" --no-updates --caches-home="${TMPDIR:-/tmp}/dehsp-inspectcode-cache" \
+        --verbosity=WARN
+    findings=$(grep -E '^ {6}[^ ]' "$report" || true)
+    if [ -n "$findings" ]; then
+        printf '%s\n' "$findings"
+        exit 1
+    fi
+
+project-lint: inspect
