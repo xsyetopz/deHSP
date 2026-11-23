@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace HspDecompiler.Core.Ax3.Data.PP;
@@ -34,11 +35,19 @@ internal class Function : Preprocessor
     private const int DllIndexDeffunc = -1;
     private const int DllIndexDefcfunc = -2;
     private const int DllIndexModule = -3;
+    private const int FuncIndexOldDll = -5;
     private const int FuncIndexComfunc = -7;
-    private const int LabelIndexFunc1 = 2;
-    private const int LabelIndexOnExit = 3;
-    private const int LabelIndexCfunc = 4;
-    private const int LabelIndexFunc2 = 6;
+
+    // A DLL entry keeps STRUCTDAT_OT flags in the label index field: #func sets the statement
+    // bit (hspcmp 3.7 and 3.8β2 also set the function bit), #cfunc only the function bit, and
+    // onexit adds the cleanup bit.
+    //
+    // DLL のエントリはラベル番号欄に STRUCTDAT_OT のフラグを持つ。#func は文のビットを立て
+    // （hspcmp 3.7 と 3.8β2 は関数のビットも立てる）、#cfunc は関数のビットだけ、onexit は後始末の
+    // ビットを足す。
+    private const int OtCleanup = 0x01;
+    private const int OtStatement = 0x02;
+    private const int OtFunction = 0x04;
 
     private Function(int index)
         : base(index) { }
@@ -172,17 +181,12 @@ internal class Function : Preprocessor
                     return FunctionType.ComFunc;
                 }
 
-                if (_labelIndex is LabelIndexFunc1 or LabelIndexFunc2)
+                if ((_labelIndex & OtStatement) != 0)
                 {
                     return FunctionType.Func;
                 }
 
-                if (_labelIndex == LabelIndexOnExit)
-                {
-                    return FunctionType.Func;
-                }
-
-                if (_labelIndex == LabelIndexCfunc)
+                if ((_labelIndex & OtFunction) != 0)
                 {
                     return FunctionType.CFunc;
                 }
@@ -192,7 +196,7 @@ internal class Function : Preprocessor
     }
     internal FunctionFlags Flags =>
         (_flags == 1) && (_dllIndex == DllIndexDeffunc) ? FunctionFlags.OnExit
-        : (_dllIndex >= 0) && (_labelIndex == LabelIndexOnExit) ? FunctionFlags.OnExit
+        : IsDllFunction && ((_labelIndex & OtCleanup) != 0) ? FunctionFlags.OnExit
         : FunctionFlags.None;
 
     internal void SetName(string name) => _name = name;
@@ -317,6 +321,49 @@ internal class Function : Preprocessor
         return strBld.ToString();
     }
 
+    // A declaration hspcmp marked as the old form gets the old form back: the numeric type code
+    // where the parameters fit it, otherwise the bare name that hspcmp 3.7 and earlier decorate
+    // as _name@16. Either spelling sets the mark again.
+    //
+    // hspcmp が古い形式の印を付けた宣言は古い形式に戻す。引数が合えば数値の型コード、合わなければ
+    // hspcmp 3.7 以前が _name@16 に飾る裸の名前を使う。どちらの書き方でも印が付き直す。
+    private string ImportText()
+    {
+        string quotedName = "\"" + _defaultName + "\"";
+        return _functionIndex != FuncIndexOldDll ? quotedName + ParamsText(0)
+            : OldFuncTypeCode.TryEncode(_functionParams, out int code)
+                ? quotedName + " " + code.ToString(CultureInfo.InvariantCulture)
+            : (TryUndecorate(_defaultName, out string bareName) ? bareName : quotedName)
+                + ParamsText(0);
+    }
+
+    private static bool TryUndecorate(string? name, out string bareName)
+    {
+        const string prefix = "_";
+        const string suffix = "@16";
+        bareName = string.Empty;
+        if (
+            name is null
+            || name.Length <= prefix.Length + suffix.Length
+            || !name.StartsWith(prefix, StringComparison.Ordinal)
+            || !name.EndsWith(suffix, StringComparison.Ordinal)
+        )
+        {
+            return false;
+        }
+
+        string inner = name[prefix.Length..^suffix.Length];
+        if (
+            char.IsAsciiDigit(inner[0]) || !inner.All(c => char.IsAsciiLetterOrDigit(c) || c == '_')
+        )
+        {
+            return false;
+        }
+
+        bareName = inner;
+        return true;
+    }
+
     private string OnExit(string text) =>
         (Flags & FunctionFlags.OnExit) == FunctionFlags.OnExit ? text : string.Empty;
 
@@ -330,20 +377,8 @@ internal class Function : Preprocessor
                     && _functionParams[0].IsModuleType => ModFunctionToString(),
             FunctionType.DefCFunc => "#defcfunc " + FunctionName + ParamsText(0),
             FunctionType.DefFunc => "#deffunc " + FunctionName + OnExit(" onexit") + ParamsText(0),
-            FunctionType.Func => "#func "
-                + FunctionName
-                + " "
-                + OnExit("onexit ")
-                + "\""
-                + _defaultName
-                + "\""
-                + ParamsText(0),
-            FunctionType.CFunc => "#cfunc "
-                + FunctionName
-                + " \""
-                + _defaultName
-                + "\""
-                + ParamsText(0),
+            FunctionType.Func => "#func " + FunctionName + " " + OnExit("onexit ") + ImportText(),
+            FunctionType.CFunc => "#cfunc " + FunctionName + " " + OnExit("onexit ") + ImportText(),
             FunctionType.ComFunc => "#comfunc "
                 + FunctionName
                 + " "

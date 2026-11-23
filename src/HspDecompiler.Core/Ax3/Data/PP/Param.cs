@@ -38,6 +38,8 @@ internal class Param : Preprocessor
     private Function? _module;
 
     internal Function? Module => _module;
+
+    internal short TypeCode => unchecked((short)_paramType);
     private bool _isStructParameter;
 
     internal void SetFunction(AxData parent)

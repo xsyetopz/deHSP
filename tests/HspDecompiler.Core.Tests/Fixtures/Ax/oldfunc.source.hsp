@@ -1,0 +1,25 @@
+#uselib "x.dll"
+#func f0 "f0" 0
+#func f1 "f1" 1
+#func f6 "f6" 6
+#func f10 "f10" $10
+#func f83 "f83" $83
+#func f202 "f202" $202
+#func f212 "f212" $212
+#func fz "fz" $106
+#func fo onexit "fo" int
+#cfunc c1 "c1" 1
+#cfunc co onexit "co" int
+#func g2 g2 int, int
+	f0 1
+	f1 a
+	f6 "s"
+	f10 1
+	f83 a
+	f202
+	f212
+	fz "s"
+	fo 1
+	b = c1(a) + co(1)
+	g2 1, 2
+	stop

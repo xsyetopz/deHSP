@@ -1,0 +1,28 @@
+#uselib "x.dll"
+#func f0 "f0" 0
+
+	f0 1
+#func f1 "f1" 1
+
+	f1 var_0
+#func f6 "f6" 6
+#func f10 "f10" 16
+#func f83 "f83" 131
+#func f202 "f202" 514
+#func f212 "f212" 530
+#func fz onexit "fz" 6
+#func fo onexit "fo" int
+#cfunc c1 "c1" 1
+#cfunc co onexit "co" int
+#func g2 g2 int, int
+
+	f6 "s"
+	f10 1
+	f83 var_0
+	f202
+	f212
+	fz "s"
+	fo 1
+	var_1 = c1(var_0) + co(1)
+	g2 1, 2
+	stop

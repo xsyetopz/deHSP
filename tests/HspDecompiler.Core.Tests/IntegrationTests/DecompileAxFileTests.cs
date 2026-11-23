@@ -24,6 +24,8 @@ public class DecompileAxFileTests
     [InlineData("labels", ".hsp", false)]
     [InlineData("utf8strings", ".hsp", true)]
     [InlineData("hsp64strings", ".hsp", true)]
+    [InlineData("oldfunc", ".hsp", false)]
+    [InlineData("int64params", ".hsp", false)]
     public async Task AxFixtureDecompilesToExpectedSourceInMissingOutputDirectory(
         string fixture,
         string extension,

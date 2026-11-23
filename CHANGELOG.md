@@ -58,5 +58,11 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
   declared count, not up to the first all-zero entry.
 - An executable with an `e_lfanew` of zero is rejected instead of being misread.
 - Assignment RPN checks report failures, and `if`/`else` code types are compared exactly.
+- `int64` parameters from hspcmp 3.8β2 decompile as `int64` instead of an invalid-type comment
+  that does not compile.
+- `#func` and `#cfunc` declared in the old numeric form (`#func name "name" 6`) come back in
+  that form, because only it rebuilds the same AX. A bare name that hspcmp 3.7 and earlier
+  decorated as `_name@16` comes back bare.
+- `#func onexit` and `#cfunc onexit` are no longer dropped from the output.
 - The GUI logs errors from Open, drag and drop, and About instead of crashing, and keeps
   decompile continuations on the UI thread.

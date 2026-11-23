@@ -1,0 +1,19 @@
+#bootopt hsp64 1
+#runtime "hsp3_64"
+
+	goto *label_1
+#uselib "x.dll"
+#func f "f" int64
+#func g "g" 6
+#func h "h" int, int64
+#cfunc c "c" var, int64
+
+#deffunc d int64
+	return
+*label_1
+	f 1
+	g "a"
+	h 1, 2
+	var_0 = c(var_1, 3)
+	d 1
+	stop

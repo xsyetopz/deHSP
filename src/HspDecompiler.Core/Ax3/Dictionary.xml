@@ -329,6 +329,14 @@
     <paramType code="0x0003" name="double" />
     <paramType code="0x0004" name="int" />
     <paramType code="0x0007" name="label" />
+    <!--
+      hspcmp 3.8β2 stores int64 as 8, and also writes 8 for each int slot of the old numeric
+      #func form (#func name name 6).
+
+      hspcmp 3.8β2 は int64 を 8 として格納し、古い数値形式の #func（#func name name 6）の
+      int の枠にも 8 を書く。
+    -->
+    <paramType code="0x0008" name="int64" />
     <paramType code="0xFFFF" name="local" />
     <paramType code="0xFFFE" name="array" />
     <paramType code="0xFFFD" name="var" />
