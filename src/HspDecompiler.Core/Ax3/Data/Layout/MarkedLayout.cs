@@ -49,24 +49,27 @@ internal sealed class MarkedLayout
 {
     private readonly List<MarkedItem> _items;
     private readonly List<LogicalLine> _headers;
-    private readonly ModuleScope _scope;
+    private readonly AxData _data;
+    private readonly IReadOnlyList<MarkedModules.ModuleRange>? _modules;
 
-    private MarkedLayout(List<MarkedItem> items, List<LogicalLine> headers, ModuleScope scope)
+    private MarkedLayout(MarkedModules.Rebuilt rebuilt, List<LogicalLine> headers, AxData data)
     {
-        _items = items;
+        _items = rebuilt.Items;
+        _modules = rebuilt.Modules;
         _headers = headers;
-        _scope = scope;
+        _data = data;
     }
 
     internal bool HasUnusedModule =>
         _items.Exists(item => item.Line is ModuleStart { Used: false });
 
-    // Matches the records and rebuilds the chosen blocks in the data, or returns null when no
-    // layout fits them. keepsImports says optcode was off, so no module was dropped. Free
+    // Matches the records and rebuilds the chosen blocks, or returns null when no layout fits
+    // them. The data stays as it was until Write places the lines. keepsImports says optcode was off, so no module was dropped. Free
     // records, which a macro of the original source wrote, are tried only when no layout fits
     // without them, since they cost a line for the macro's definition.
     //
-    // 記録を照合し、選んだブロックをデータの中で組み直す。収まる配置が無ければ null を返す。
+    // 記録を照合し、選んだブロックを組み直す。収まる配置が無ければ null を返す。データは
+    // Write が行を置くまで元のままである。
     // keepsImports は optcode が切られていたことを示し、その時はモジュールは削られていない。
     // 元のソースのマクロが書いた自由な記録は、マクロの定義に 1 行を要するため、それ無しでは
     // 収まる配置が無い時だけ試す。
@@ -88,14 +91,14 @@ internal sealed class MarkedLayout
                     && IsConsistent(events, choices)
                 )
                 {
-                    List<MarkedItem> items = MarkedModules.Apply(
+                    MarkedModules.Rebuilt rebuilt = MarkedModules.Apply(
                         table,
                         events,
                         choices,
                         marks,
                         data
                     );
-                    return new MarkedLayout(items, headers, data.Scope);
+                    return new MarkedLayout(rebuilt, headers, data);
                 }
             }
         }
@@ -120,23 +123,45 @@ internal sealed class MarkedLayout
     }
 
     // Writes the source and the files its later parts went to, or returns null when the lines
-    // do not fit the records after all.
+    // do not fit the records after all. The labels take the rebuilt blocks as their modules only
+    // while the lines are placed, and get their old modules back on null, because the in-order
+    // output that follows has no blocks and would spell a label "*label_1@name" otherwise.
     //
-    // ソースと後の部分を入れたファイルを書く。結局行が記録に収まらなければ null を返す。
+    // ソースと後の部分を入れたファイルを書く。結局行が記録に収まらなければ null を返す。ラベルは
+    // 行を置く間だけ組み直したブロックをモジュールとし、null の時は元のモジュールに戻る。続く
+    // 順のままの出力にはブロックが無く、そうしなければラベルを "*label_1@名前" と書くためである。
     internal DecodedSource? Write(List<string> directives, string mainFile)
     {
-        List<string> headers = [.. directives, .. _headers.Select(_scope.Render)];
+        var before = ScopeSnapshot.Take(_data);
+        if (_modules != null)
+        {
+            MarkedModules.Rescope(_data, _modules);
+        }
+
+        if (Place(directives, mainFile) is { } source)
+        {
+            return source;
+        }
+
+        before.Restore(_data);
+        return null;
+    }
+
+    private DecodedSource? Place(List<string> directives, string mainFile)
+    {
+        ModuleScope scope = _data.Scope;
+        List<string> headers = [.. directives, .. _headers.Select(scope.Render)];
         string stem = Path.GetFileNameWithoutExtension(mainFile);
         string extension = Path.GetExtension(mainFile);
         string PartName(int part) => $"{stem}_{part}{extension}";
-        List<List<string>>? parts = new MarkedPlacer(_scope, headers).Place(
+        List<List<string>>? parts = new MarkedPlacer(scope, headers).Place(
             LabelsAfterGlobal(_items),
             PartName
         );
         if (parts == null)
         {
-            _scope.Leave();
-            parts = new MarkedPlacer(_scope, headers).Place(_items, PartName);
+            scope.Leave();
+            parts = new MarkedPlacer(scope, headers).Place(_items, PartName);
         }
 
         if (parts == null)
@@ -196,7 +221,12 @@ internal sealed class MarkedLayout
 // 選んだブロックを #module と #global に戻し、出力行を守るべき記録の行と共に並べる。
 internal static class MarkedModules
 {
-    internal static List<MarkedItem> Apply(
+    // The output lines, and the #module blocks they rebuild, or null when they rebuild none.
+    //
+    // 出力行と、それが組み直す #module ブロック。組み直すものが無ければ null。
+    internal sealed record Rebuilt(List<MarkedItem> Items, IReadOnlyList<ModuleRange>? Modules);
+
+    internal static Rebuilt Apply(
         RowTable table,
         MarkEvents events,
         MarkChoice[] choices,
@@ -247,12 +277,8 @@ internal static class MarkedModules
             AddMacroUses(macros, row, items);
         }
 
-        if (lineOf.Keys.Any(e => events.Events[e].Kind == MarkKind.Start))
-        {
-            Rescope(data, rebuild.Modules);
-        }
-
-        return items;
+        bool rebuilds = lineOf.Keys.Any(e => events.Events[e].Kind == MarkKind.Start);
+        return new Rebuilt(items, rebuilds ? rebuild.Modules : null);
     }
 
     private static void AddMacroUses(
@@ -365,7 +391,7 @@ internal static class MarkedModules
     // The code a rebuilt #module block holds, from its goto to its exit label.
     //
     // 組み直した #module ブロックが持つコード。goto から出口のラベルまで。
-    private sealed record ModuleRange(string Name, int Start, int Exit)
+    internal sealed record ModuleRange(string Name, int Start, int Exit)
     {
         internal bool Holds(int offset) => offset >= Start && offset < Exit;
     }
@@ -400,12 +426,12 @@ internal static class MarkedModules
     // 名前の無いブロックは外から名指せないため、すべての参照も中にある時だけそのブロックに属し、
     // それ以外はグローバルで、中では "@" だけを付ける。通常ビルドではラベル名はバイト列に
     // 残らないため、どちらを選んでも同じにコンパイルされる。
-    private static void Rescope(AxData data, List<ModuleRange> modules)
+    internal static void Rescope(AxData data, IReadOnlyList<ModuleRange> modules)
     {
         ModuleBlocks.AddGlobalFunctions(data);
         foreach (Label label in data.Labels)
         {
-            ModuleRange? home = modules.Find(m => m.Holds(label.TokenOffset));
+            ModuleRange? home = modules.FirstOrDefault(m => m.Holds(label.TokenOffset));
             bool owned =
                 home != null && (home.Name.Length > 0 || label.ReferenceOffsets.All(home.Holds));
             label.Owner = owned ? home!.Name : null;

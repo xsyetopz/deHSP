@@ -23,6 +23,19 @@ internal sealed class ModuleScope
 
     internal void AddGlobalFunction(string name) => _globalFunctions.Add(name);
 
+    internal IReadOnlyCollection<string> GlobalFunctions => _globalFunctions;
+
+    // Returns to the given global functions outside any module, as before a layout that failed.
+    //
+    // 失敗した配置の前のように、与えたグローバル関数を持ち、どのモジュールの外にも居る状態に
+    // 戻る。
+    internal void Reset(IEnumerable<string> globalFunctions)
+    {
+        _globalFunctions.Clear();
+        _globalFunctions.UnionWith(globalFunctions);
+        Current = null;
+    }
+
     // Leaves any module a finished pass left open, so the lines can be rendered again.
     //
     // 終えた出力が開いたままにしたモジュールを出て、行をもう一度出力できるようにする。
