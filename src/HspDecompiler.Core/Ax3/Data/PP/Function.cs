@@ -25,7 +25,11 @@ internal enum FunctionFlags
 
 internal class Function : Preprocessor
 {
-    // Fix #32: named constants for dllIndex/functionIndex/labelIndex sentinel values
+    // The HSP 3 compiler marks the function kind with these sentinels in the dll, function and
+    // label index fields of each finfo entry.
+    // ---
+    // HSP 3 コンパイラは finfo 各エントリの dll・関数・ラベル番号欄にこれらの番兵値を書き、関数の
+    // 種類を示す。
     private const int DllIndexDeffunc = -1;
     private const int DllIndexDefcfunc = -2;
     private const int DllIndexModule = -3;
@@ -42,7 +46,7 @@ internal class Function : Preprocessor
 
     private int _dllIndex;
     private int _functionIndex;
-    private List<Param> _functionParams = new();
+    private List<Param> _functionParams = [];
     private int _strIndex;
     private int _paramSizeSum;
     private int _labelIndex;
@@ -106,29 +110,29 @@ internal class Function : Preprocessor
 
     internal bool IsModuleFunction => Type == FunctionType.module;
     internal bool IsComFunction => Type == FunctionType.comfunc;
-    internal bool IsUserFunction =>
-        Type switch
-        {
-            FunctionType.deffunc or FunctionType.defcfunc => true,
-            FunctionType.NULL => throw new NotImplementedException(),
-            FunctionType.func => throw new NotImplementedException(),
-            FunctionType.cfunc => throw new NotImplementedException(),
-            FunctionType.comfunc => throw new NotImplementedException(),
-            FunctionType.module => throw new NotImplementedException(),
-            _ => false,
-        };
+    internal bool IsUserFunction => Type is FunctionType.deffunc or FunctionType.defcfunc;
 
-    internal bool IsDllFunction =>
-        Type switch
+    internal bool IsDllFunction => Type is FunctionType.func or FunctionType.cfunc;
+
+    internal int Index => _index;
+
+    internal int NameOffset => _strIndex;
+
+    internal Usedll? Dll => _dll;
+
+    internal Label? Label => _label;
+
+    // Code offset of the first token that calls this function, or -1 when nothing calls it.
+    // この関数を呼び出す最初のトークンのコードオフセット。呼び出しが無ければ -1。
+    internal int FirstUseOffset { get; private set; } = -1;
+
+    internal void MarkUsedAt(int tokenOffset)
+    {
+        if (FirstUseOffset < 0 || tokenOffset < FirstUseOffset)
         {
-            FunctionType.func or FunctionType.cfunc => true,
-            FunctionType.NULL => throw new NotImplementedException(),
-            FunctionType.deffunc => throw new NotImplementedException(),
-            FunctionType.defcfunc => throw new NotImplementedException(),
-            FunctionType.comfunc => throw new NotImplementedException(),
-            FunctionType.module => throw new NotImplementedException(),
-            _ => false,
-        };
+            FirstUseOffset = tokenOffset;
+        }
+    }
 
     private string? _defaultName;
 
@@ -142,7 +146,6 @@ internal class Function : Preprocessor
     private Label? _label;
     private Usedll? _dll;
 
-    // Fix #32: use named sentinel constants instead of magic numbers
     internal FunctionType Type
     {
         get
@@ -303,89 +306,53 @@ internal class Function : Preprocessor
         return strBld.ToString();
     }
 
-    // Fix #11: extracted parameter-formatting logic into AppendParams helper
-    private void AppendParams(StringBuilder strBld, int paramStart)
-    {
-        if (_functionParams.Count > paramStart)
-        {
-            for (int i = paramStart; i < _functionParams.Count; i++)
-            {
-                if (i != paramStart)
-                {
-                    strBld.Append(',');
-                }
-
-                strBld.Append(' ');
-                strBld.Append(_functionParams[i].ToString());
-            }
-        }
-    }
-
-    internal string ToString(bool useModuleStyle)
+    private string ParamsText(int paramStart)
     {
         var strBld = new StringBuilder();
-
-        int paramStart = 0;
-        switch (Type)
+        for (int i = paramStart; i < _functionParams.Count; i++)
         {
-            case FunctionType.defcfunc:
-                strBld.Append("#defcfunc ");
-                strBld.Append(FunctionName);
-                break;
-            case FunctionType.module:
-                return moduleToString(useModuleStyle);
-            case FunctionType.deffunc:
-                if (useModuleStyle)
-                {
-                    if ((_functionParams.Count != 0) && (_functionParams[0].IsModuleType))
-                    {
-                        return modFunctionToString();
-                    }
-                }
-
-                strBld.Append("#deffunc ");
-                strBld.Append(FunctionName);
-                if ((Flags & FunctionFlags.onexit) == FunctionFlags.onexit)
-                {
-                    strBld.Append(" onexit");
-                }
-
-                break;
-            case FunctionType.func:
-                strBld.Append("#func ");
-                strBld.Append(FunctionName);
-                strBld.Append(' ');
-                if ((Flags & FunctionFlags.onexit) == FunctionFlags.onexit)
-                {
-                    strBld.Append("onexit ");
-                }
-
-                strBld.Append('"');
-                strBld.Append(_defaultName);
-                strBld.Append('"');
-                break;
-            case FunctionType.cfunc:
-                strBld.Append("#cfunc ");
-                strBld.Append(FunctionName);
-                strBld.Append(@" """);
-                strBld.Append(_defaultName);
-                strBld.Append('"');
-                break;
-            case FunctionType.comfunc:
-                strBld.Append("#comfunc ");
-                strBld.Append(FunctionName);
-                strBld.Append(' ');
-                strBld.Append(_labelIndex);
-                paramStart = 1;
-                break;
-            case FunctionType.NULL:
-                break;
-            default:
-                return "/*#deffunc?*/";
+            strBld.Append(i == paramStart ? " " : ", ");
+            strBld.Append(_functionParams[i].ToString());
         }
-        AppendParams(strBld, paramStart);
+
         return strBld.ToString();
     }
+
+    private string OnExit(string text) =>
+        (Flags & FunctionFlags.onexit) == FunctionFlags.onexit ? text : string.Empty;
+
+    internal string ToString(bool useModuleStyle) =>
+        Type switch
+        {
+            FunctionType.module => moduleToString(useModuleStyle),
+            FunctionType.deffunc
+                when useModuleStyle
+                    && (_functionParams.Count != 0)
+                    && _functionParams[0].IsModuleType => modFunctionToString(),
+            FunctionType.defcfunc => "#defcfunc " + FunctionName + ParamsText(0),
+            FunctionType.deffunc => "#deffunc " + FunctionName + OnExit(" onexit") + ParamsText(0),
+            FunctionType.func => "#func "
+                + FunctionName
+                + " "
+                + OnExit("onexit ")
+                + "\""
+                + _defaultName
+                + "\""
+                + ParamsText(0),
+            FunctionType.cfunc => "#cfunc "
+                + FunctionName
+                + " \""
+                + _defaultName
+                + "\""
+                + ParamsText(0),
+            FunctionType.comfunc => "#comfunc "
+                + FunctionName
+                + " "
+                + _labelIndex.ToString(CultureInfo.InvariantCulture)
+                + ParamsText(1),
+            FunctionType.NULL => ParamsText(0),
+            _ => "/*#deffunc?*/",
+        };
 
     public override string ToString() => ToString(false);
 }

@@ -20,11 +20,22 @@ internal class Label : Preprocessor, System.IComparable<Label>
     }
 
     private bool _visible;
+
+    // A label is written when a printed statement uses it, when it starts a function, or when
+    // no code token refers to it. hspcmp gives every *label definition an object-table slot
+    // whether or not anything jumps there (codegen.cpp), so an unreferenced slot is a label
+    // the author wrote; labels only repeat/foreach refer to are compiler-generated and stay hidden.
+    // ラベルは、出力される文が参照する時、関数の先頭である時、またはどのトークンからも
+    // 参照されない時に出力する。hspcmp は *label 定義ごとにオブジェクトテーブルの枠を作る
+    // (codegen.cpp)ため、参照の無い枠は作者が書いたラベルである。repeat/foreach だけが
+    // 参照するラベルはコンパイラが生成したものなので出力しない。
     internal bool Visible
     {
-        get => _function != null ? true : _visible;
+        get => _function != null || _visible || !IsReferenced;
         set => _visible = value;
     }
+
+    internal bool IsReferenced { get; set; }
     private string _labelName = "*label";
     internal string LabelName
     {
@@ -46,6 +57,8 @@ internal class Label : Preprocessor, System.IComparable<Label>
     }
 
     private Function? _function;
+
+    internal Function? Function => _function;
 
     internal void SetFunction(Function f)
     {

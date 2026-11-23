@@ -31,7 +31,7 @@ internal class SyntacticAnalyzer
     )
     {
         var ret = new List<LogicalLine>();
-        SubAnalyzePreprocessor(ret, data);
+        int importAnchor = SubAnalyzePreprocessor(ret, data);
         _readingLine = ret.Count;
         while (!stream.NextIsEndOfStream)
         {
@@ -44,6 +44,30 @@ internal class SyntacticAnalyzer
             }
         }
 
+        HideGhostLines(ret);
+        ret = ret.FindAll(IsVisible);
+        for (int i = 0; i < ret.Count; i++)
+        {
+            if (!ret[i].CheckRpn())
+            {
+                ret[i].AddError(Strings.RpnConversionFailed);
+            }
+        }
+
+        SubAnalyzeScope(ret);
+        SubAnalyzeLabel(ret, data);
+        ImportPlacement.Insert(ret, data, importAnchor);
+
+        SetTabCounts(ret);
+
+        ReportErrors(ret, logger);
+        ret[^1].Visible = false;
+        ret = ret.FindAll(IsVisible);
+        return ret;
+    }
+
+    private static void HideGhostLines(List<LogicalLine> ret)
+    {
         for (int i = 0; i < ret.Count; i++)
         {
             if (ret[i].HasFlagIsGhost)
@@ -56,20 +80,10 @@ internal class SyntacticAnalyzer
                 ret[i + 1].Visible = false;
             }
         }
-        ret = ret.FindAll(IsVisible);
-        for (int i = 0; i < ret.Count; i++)
-        {
-            if (!ret[i].CheckRpn())
-            {
-                ret[i].AddError(Strings.RpnConversionFailed);
-            }
-        }
+    }
 
-        // Fix #26: renamed subAnalyzeScoop → SubAnalyzeScope
-        SubAnalyzeScope(ret);
-        // Fix #27: renamed subAnalyzeLabel → SubAnalyzeLabel
-        SubAnalyzeLabel(ret, data);
-
+    private static void SetTabCounts(List<LogicalLine> ret)
+    {
         int tabCount = 1;
         for (int i = 0; i < ret.Count; i++)
         {
@@ -84,7 +98,10 @@ internal class SyntacticAnalyzer
                 tabCount++;
             }
         }
+    }
 
+    private static void ReportErrors(List<LogicalLine> ret, IDecompilerLogger logger)
+    {
         for (int i = 0; i < ret.Count; i++)
         {
             if (ret[i].GetErrorMes().Count != 0)
@@ -95,13 +112,9 @@ internal class SyntacticAnalyzer
                 }
             }
         }
-        ret[^1].Visible = false;
-        ret = ret.FindAll(IsVisible);
-        return ret;
     }
 
-    // Fix #27: renamed subAnalyzePreprocessor → SubAnalyzePreprocessor
-    private static void SubAnalyzePreprocessor(List<LogicalLine> ret, AxData data)
+    private static int SubAnalyzePreprocessor(List<LogicalLine> ret, AxData data)
     {
         if (data.Runtime != null)
         {
@@ -118,21 +131,7 @@ internal class SyntacticAnalyzer
             }
         }
 
-        foreach (Usedll dll in data.Usedlls)
-        {
-            ret.Add(new PreprocessorDeclaration(dll));
-            List<Function> funcs = dll.GetFunctions();
-            if (funcs != null)
-            {
-                foreach (Function func in funcs)
-                {
-                    ret.Add(new PreprocessorDeclaration(func));
-                }
-            }
-
-            ret.Add(new CommentLine());
-        }
-
+        int importAnchor = ret.Count;
         foreach (PlugIn plugin in data.PlugIns)
         {
             ret.Add(new PreprocessorDeclaration(plugin));
@@ -143,9 +142,9 @@ internal class SyntacticAnalyzer
             }
             ret.Add(new CommentLine());
         }
+        return importAnchor;
     }
 
-    // Fix #26+#27: renamed subAnalyzeScoop → SubAnalyzeScope, ScoopEnd → ScopeEnd
     private static void SubAnalyzeScope(List<LogicalLine> ret)
     {
         for (int i = 0; i < ret.Count; i++)
@@ -163,60 +162,65 @@ internal class SyntacticAnalyzer
                 continue;
             }
             int jumpToOffset = scopeStart.JumpToOffset;
-            int jumpToLineNo = -1;
-            for (int j = (i + 1); j < ret.Count; j++)
-            {
-                if (ret[j].TokenOffset == jumpToOffset)
-                {
-                    jumpToLineNo = j;
-                    break;
-                }
-                if ((ret[j].TokenOffset != -1) && (ret[j].TokenOffset > jumpToOffset))
-                {
-                    jumpToLineNo = -2;
-                    break;
-                }
-            }
-            if (jumpToLineNo == -1)
+            int jumpToLineNo = FindScopeEnd(ret, i + 1, jumpToOffset);
+            if (jumpToLineNo < 0)
             {
                 scopeStart.ScopeEndIsDefined = false;
                 scopeStart.AddError(
                     string.Format(
                         CultureInfo.InvariantCulture,
-                        s_scopeEndExceedsCodeFormat,
+                        jumpToLineNo == -1 ? s_scopeEndExceedsCodeFormat : s_scopeEndMidLineFormat,
                         jumpToOffset.ToString("X08", CultureInfo.InvariantCulture)
                     )
                 );
                 continue;
             }
-            if (jumpToLineNo == -2)
+            if (EndsAtElse(scopeStart, ret[jumpToLineNo - 1] as IfStatement, jumpToOffset))
             {
-                scopeStart.ScopeEndIsDefined = false;
-                scopeStart.AddError(
-                    string.Format(
-                        CultureInfo.InvariantCulture,
-                        s_scopeEndMidLineFormat,
-                        jumpToOffset.ToString("X08", CultureInfo.InvariantCulture)
-                    )
-                );
-                continue;
+                jumpToLineNo--;
             }
-            var elseStatement = ret[jumpToLineNo - 1] as IfStatement;
-            if (elseStatement != null)
-            {
-                if ((scopeStart.isIfStatement) && (elseStatement.isElseStatement))
-                {
-                    jumpToLineNo--;
-                }
-            }
-            // Fix #26: ScoopEnd → ScopeEnd
             ret.Insert(jumpToLineNo, new ScopeEnd());
             scopeStart.ScopeEndIsDefined = true;
         }
     }
 
-    // Fix #27: renamed subAnalyzeLabel → SubAnalyzeLabel
-    // Fix #25: calls renamed DeleteInvisibleLabels
+    // Returns -1 when the jump target lies past the code and -2 when it falls inside a line.
+    // ---
+    // 飛び先がコードの外なら -1、行の途中なら -2 を返す。
+    private static int FindScopeEnd(List<LogicalLine> ret, int from, int jumpToOffset)
+    {
+        for (int j = from; j < ret.Count; j++)
+        {
+            if (ret[j].TokenOffset == jumpToOffset)
+            {
+                return j;
+            }
+
+            if ((ret[j].TokenOffset != -1) && (ret[j].TokenOffset > jumpToOffset))
+            {
+                return -2;
+            }
+        }
+
+        return -1;
+    }
+
+    // A block that ends where an else jump ends closes in front of that else. hspcmp also
+    // accepts a second else after an else block ("} else { a } else { b }"), which gives the
+    // same layout with an else opening the scope; Elona's start.hsp has one. An else that jumps
+    // to the same target is an empty "else {}" nested at the end of the block, not a sibling.
+    // ---
+    // ブロックの終端が else ジャンプの直後なら、そのブロックは else の手前で閉じる。hspcmp は
+    // else ブロックの後ろにもう 1 つ else を置く形（"} else { a } else { b }"）も受け付け、
+    // else が開いたスコープで同じ配置になる。Elona の start.hsp に実例がある。同じ飛び先へ
+    // 飛ぶ else はブロック末尾に入れ子になった空の "else {}" であり、兄弟ではない。
+    private static bool EndsAtElse(IfStatement scopeStart, IfStatement? before, int jumpToOffset) =>
+        before is { isElseStatement: true }
+        && (
+            scopeStart.isIfStatement
+            || (scopeStart.isElseStatement && (before.JumpToOffset != jumpToOffset))
+        );
+
     private static void SubAnalyzeLabel(List<LogicalLine> ret, AxData data)
     {
         foreach (LogicalLine line in ret)
@@ -242,10 +246,9 @@ internal class SyntacticAnalyzer
                 i++;
             }
 
-            if ((i > 0) && (ret[i] is IfStatement))
+            if ((i > 0) && (i < ret.Count) && (ret[i] is IfStatement))
             {
                 var ifStatement = ret[i] as IfStatement;
-                // Fix #26: ScoopEnd → ScopeEnd
                 if ((ret[i - 1] is ScopeEnd) && (ifStatement?.isElseStatement == true))
                 {
                     i--;

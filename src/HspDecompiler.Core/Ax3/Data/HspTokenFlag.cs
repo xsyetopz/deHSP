@@ -5,4 +5,5 @@ internal static class HspTokenFlag
     internal const int LongTypeValue = 0x80;
     internal const int ParamHead = 0x40;
     internal const int LineHead = 0x20;
+    internal const int SingleItem = 0x10;
 }

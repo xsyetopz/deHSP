@@ -22,13 +22,13 @@ internal sealed class AxHeader
     private static readonly CompositeFormat s_regionStartFormat = CompositeFormat.Parse(
         Strings.HeaderRegionStartExceedsFileSize
     );
+
     private static readonly CompositeFormat s_regionEndFormat = CompositeFormat.Parse(
         Strings.HeaderRegionEndExceedsFileSize
     );
 
     internal static AxHeader FromBinaryReader(BinaryReader reader)
     {
-        long seekOrigin = reader.BaseStream.Position;
         var header = new AxHeader();
         try
         {
@@ -37,6 +37,7 @@ internal sealed class AxHeader
             {
                 header._data[i] = reader.ReadUInt32();
             }
+
             header._data[21] = reader.ReadUInt16();
             header._data[22] = reader.ReadUInt16();
             header._data[23] = reader.ReadUInt32();
@@ -46,164 +47,59 @@ internal sealed class AxHeader
         {
             throw new HspDecoderException("AxHeader", Strings.InvalidFileFormat, e);
         }
-        header.checkHeader(reader.BaseStream.Length - seekOrigin);
+
+        header.CheckHeader();
         return header;
     }
 
-    private void checkHeader(long fileSize)
+    private void CheckHeader()
     {
         if (_fileType.Equals("HSP2", StringComparison.Ordinal))
         {
-            throw HSPDecoderException(Strings.CompiledWithHsp2OrEarlier);
+            throw HspDecoderException(Strings.CompiledWithHsp2OrEarlier);
         }
 
         if (!_fileType.Equals("HSP3", StringComparison.Ordinal))
         {
-            throw HSPDecoderException(Strings.InvalidFileFormat);
+            throw HspDecoderException(Strings.InvalidFileFormat);
         }
 
-        if (AllDataSize > fileSize)
-        {
-            throw HSPDecoderException(Strings.HeaderFileSizeExceedsActual);
-        }
+        (uint Start, uint End, string Name)[] regions =
+        [
+            (CodeStart, CodeEnd, Strings.RegionCode),
+            (LiteralStart, LiteralEnd, Strings.RegionLiteral),
+            (LabelStart, LabelEnd, Strings.RegionLabel),
+            (DllStart, DllEnd, Strings.RegionDll),
+            (FunctionStart, FunctionEnd, Strings.RegionFunction),
+            (PluginStart, PluginEnd, Strings.RegionPlugin),
+            (ParameterStart, ParameterEnd, Strings.RegionParameter),
+        ];
+        CheckRegions(regions, r => r.Start, s_regionStartFormat);
+        CheckRegions(regions, r => r.End, s_regionEndFormat);
+    }
 
-        if (CodeStart > AllDataSize)
+    private void CheckRegions(
+        (uint Start, uint End, string Name)[] regions,
+        Func<(uint Start, uint End, string Name), uint> bound,
+        CompositeFormat format
+    )
+    {
+        foreach ((uint Start, uint End, string Name) region in regions)
         {
-            throw HSPDecoderException(
-                string.Format(CultureInfo.InvariantCulture, s_regionStartFormat, Strings.RegionCode)
-            );
-        }
-
-        if (LiteralStart > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    s_regionStartFormat,
-                    Strings.RegionLiteral
-                )
-            );
-        }
-
-        if (LabelStart > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    s_regionStartFormat,
-                    Strings.RegionLabel
-                )
-            );
-        }
-
-        if (DllStart > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(CultureInfo.InvariantCulture, s_regionStartFormat, Strings.RegionDll)
-            );
-        }
-
-        if (FunctionStart > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    s_regionStartFormat,
-                    Strings.RegionFunction
-                )
-            );
-        }
-
-        if (PluginStart > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    s_regionStartFormat,
-                    Strings.RegionPlugin
-                )
-            );
-        }
-
-        if (ParameterStart > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    s_regionStartFormat,
-                    Strings.RegionParameter
-                )
-            );
-        }
-
-        if (CodeEnd > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(CultureInfo.InvariantCulture, s_regionEndFormat, Strings.RegionCode)
-            );
-        }
-
-        if (LiteralEnd > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    s_regionEndFormat,
-                    Strings.RegionLiteral
-                )
-            );
-        }
-
-        if (LabelEnd > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(CultureInfo.InvariantCulture, s_regionEndFormat, Strings.RegionLabel)
-            );
-        }
-
-        if (DllEnd > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(CultureInfo.InvariantCulture, s_regionEndFormat, Strings.RegionDll)
-            );
-        }
-
-        if (FunctionEnd > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    s_regionEndFormat,
-                    Strings.RegionFunction
-                )
-            );
-        }
-
-        if (PluginEnd > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(CultureInfo.InvariantCulture, s_regionEndFormat, Strings.RegionPlugin)
-            );
-        }
-
-        if (ParameterEnd > AllDataSize)
-        {
-            throw HSPDecoderException(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    s_regionEndFormat,
-                    Strings.RegionParameter
-                )
-            );
+            if (bound(region) > AllDataSize)
+            {
+                throw HspDecoderException(
+                    string.Format(CultureInfo.InvariantCulture, format, region.Name)
+                );
+            }
         }
     }
 
-    private static HspDecoderException HSPDecoderException(string str) => new("AxHeader", str);
+    private static HspDecoderException HspDecoderException(string str) => new("AxHeader", str);
 
     private string _fileType = "";
     private readonly uint[] _data = new uint[25];
     internal const uint HeaderSize = 0x60;
-    internal string FileType => _fileType;
 
     internal uint AllDataSize => _data[3];
     internal uint CodeStart => _data[4];
@@ -218,7 +114,6 @@ internal sealed class AxHeader
     internal uint LabelEnd => LabelStart + LabelSize;
     internal uint DebugStart => _data[10];
     internal uint DebugSize => _data[11];
-    internal uint DebugEnd => DebugStart + DebugSize;
     internal uint DllStart => _data[12];
     internal uint DllSize => _data[13];
     internal uint DllCount => _data[13] / (int)HeaderDataSize.Dll;

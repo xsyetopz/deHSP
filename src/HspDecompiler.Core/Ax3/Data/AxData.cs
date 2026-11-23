@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.PP;
@@ -30,14 +31,14 @@ internal class AxData
 
     private AxHeader? _header;
     private readonly TokenCollection _tokens = new();
-    private List<Label> _labels = new();
-    private readonly List<Usedll> _dlls = new();
-    private readonly List<Function> _functions = new();
-    private readonly List<Param> _functionParams = new();
-    private readonly List<PlugIn> _plugIns = new();
+    private List<Label> _labels = [];
+    private readonly List<Usedll> _dlls = [];
+    private readonly List<Function> _functions = [];
+    private readonly List<Param> _functionParams = [];
+    private readonly List<PlugIn> _plugIns = [];
     private Runtime? _runtime;
-    private readonly List<Function> _modules = new();
-    private readonly List<string> _variableName = new();
+    private readonly List<Function> _modules = [];
+    private readonly List<string> _variableName = [];
 
     internal List<Function> Modules => _modules;
 
@@ -48,6 +49,12 @@ internal class AxData
     internal AxHeader? Header => _header;
     internal TokenCollection Tokens => _tokens;
     internal List<Usedll> Usedlls => _dlls;
+
+    // Literal-data offset and code offset of every string and double literal, in code order.
+    // コード中の文字列・実数リテラルごとのリテラルデータ位置とコード位置(コード順)。
+    internal List<(int DataOffset, int TokenOffset)> LiteralAnchors { get; } = [];
+
+    internal bool HasSingleItemFlags { get; set; }
     internal List<Label> Labels => _labels;
     internal List<Function> Functions => _functions;
     internal List<Param> FunctionParams => _functionParams;
@@ -73,6 +80,8 @@ internal class AxData
         index < 0 ? null
         : index >= _functionParams.Count ? null
         : _functionParams[index];
+
+    internal bool HasVariableNames => _variableName.Count != 0;
 
     internal string? GetVariableName(int index) =>
         index < 0 ? null
@@ -246,6 +255,60 @@ internal class AxData
         return;
     }
 
+    private void ReadTable<T>(
+        List<T> table,
+        uint start,
+        uint count,
+        HeaderDataSize size,
+        Func<BinaryReader, AxData, int, T> read
+    )
+    {
+        for (int i = 0; i < count; i++)
+        {
+            _reader!.BaseStream.Seek(_seekOrigin + start + ((int)size * i), SeekOrigin.Begin);
+            table.Add(read(_reader, this, i));
+        }
+    }
+
+    private void ReadTables(AxHeader header)
+    {
+        ReadTable(
+            _labels,
+            header.LabelStart,
+            header.LabelCount,
+            HeaderDataSize.Label,
+            Label.FromBinaryReader
+        );
+        ReadTable(
+            _dlls,
+            header.DllStart,
+            header.DllCount,
+            HeaderDataSize.Dll,
+            Usedll.FromBinaryReader
+        );
+        ReadTable(
+            _functionParams,
+            header.ParameterStart,
+            header.ParameterCount,
+            HeaderDataSize.Parameter,
+            Param.FromBinaryReader
+        );
+        ReadTable(
+            _functions,
+            header.FunctionStart,
+            header.FunctionCount,
+            HeaderDataSize.Function,
+            Function.FromBinaryReader
+        );
+        ReadTable(
+            _plugIns,
+            header.PluginStart,
+            header.PluginCount,
+            HeaderDataSize.Plugin,
+            PlugIn.FromBinaryReader
+        );
+    }
+
     internal void ReadPreprocessor(Hsp3Dictionary? dictionary)
     {
         if (!_isStarted)
@@ -269,47 +332,8 @@ internal class AxData
                 _runtime = new Runtime(runtimeName);
             }
         }
-        uint count = _header.LabelCount;
-        for (int i = 0; i < count; i++)
-        {
-            long offset = _seekOrigin + _header.LabelStart + ((int)HeaderDataSize.Label * i);
-            _reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
-            _labels.Add(Label.FromBinaryReader(_reader, this, i));
-        }
-
-        count = _header.DllCount;
-        for (int i = 0; i < count; i++)
-        {
-            long offset = _seekOrigin + _header.DllStart + ((int)HeaderDataSize.Dll * i);
-            _reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
-            _dlls.Add(Usedll.FromBinaryReader(_reader, this, i));
-        }
-
-        count = _header.ParameterCount;
-        for (int i = 0; i < count; i++)
-        {
-            long offset =
-                _seekOrigin + _header.ParameterStart + ((int)HeaderDataSize.Parameter * i);
-            _reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
-            _functionParams.Add(Param.FromBinaryReader(_reader, this, i));
-        }
-
-        count = _header.FunctionCount;
-        for (int i = 0; i < count; i++)
-        {
-            long offset = _seekOrigin + _header.FunctionStart + ((int)HeaderDataSize.Function * i);
-            _reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
-            _functions.Add(Function.FromBinaryReader(_reader, this, i));
-        }
-
-        count = _header.PluginCount;
-        for (int i = 0; i < count; i++)
-        {
-            long offset = _seekOrigin + _header.PluginStart + ((int)HeaderDataSize.Plugin * i);
-            _reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
-            _plugIns.Add(PlugIn.FromBinaryReader(_reader, this, i));
-        }
-        if ((count != 0) && (_header.PluginParameterCount != 0))
+        ReadTables(_header);
+        if ((_header.PluginCount != 0) && (_header.PluginParameterCount != 0))
         {
             _plugIns[0].ExtendedTypeCount = (int)_header.PluginParameterCount;
         }
@@ -411,43 +435,89 @@ internal class AxData
     {
         foreach (Function func in dllfuncs)
         {
-            string defName = func.DefaultName ?? "";
-            string newName = defName;
-            if (newName.StartsWith('_') && (newName.Length > 1))
-            {
-                newName = newName[1..];
-            }
-
-            int atIndex = newName.IndexOf('@');
-            if (atIndex > 0)
-            {
-                newName = newName[..atIndex];
-            }
-
-            if (
-                !functionNames.Contains(
-                    newName.ToLower(System.Globalization.CultureInfo.CurrentCulture)
-                )
-            )
-            {
-                func.SetName(newName);
-                functionNames.Add(newName.ToLower(System.Globalization.CultureInfo.CurrentCulture));
-                continue;
-            }
-            int index = 1;
-            do
-            {
-                newName = string.Format(
-                    CultureInfo.InvariantCulture,
-                    s_dllFunctionNameFormat,
-                    index
-                );
-                index++;
-            } while (functionNames.Contains(newName));
+            string newName = ResolveDllFunctionName(func.DefaultName ?? "", functionNames);
             func.SetName(newName);
             functionNames.Add(newName.ToLower(System.Globalization.CultureInfo.CurrentCulture));
         }
     }
+
+    // Upper bound for OpenProject_dll2..OpenProject_dllN; past it, func_N is clearer.
+    private const int MaxDllAliasSuffix = 9;
+
+    /// <summary>
+    /// Chooses a readable alias for a <c>#func</c>/<c>#cfunc</c> import.
+    /// </summary>
+    /// <remarks>
+    /// The .ax file stores only the DLL export name, not the alias the author
+    /// wrote, so the alias is derived from the export. HSP identifiers are
+    /// case-insensitive, and wrapper scripts commonly define a
+    /// <c>#deffunc openproject</c> around an <c>_OpenProject@8</c> import, so
+    /// the bare name often collides. Candidates are tried in order: the
+    /// undecorated name (<c>OpenProject</c>), the export with only the stdcall
+    /// suffix removed (<c>_OpenProject</c>), <c>OpenProject_dll</c>, and
+    /// <c>OpenProject_dll2</c> through <c>OpenProject_dll9</c> for repeated
+    /// imports, and finally the numbered <c>func_N</c>.
+    /// </remarks>
+    /// <param name="exportName">DLL export name as stored in the .ax file.</param>
+    /// <param name="takenLowerNames">Lower-cased names already in use.</param>
+    /// <returns>The first candidate not present in <paramref name="takenLowerNames"/>.</returns>
+    internal static string ResolveDllFunctionName(
+        string exportName,
+        ICollection<string> takenLowerNames
+    )
+    {
+        int atIndex = exportName.IndexOf('@');
+        string undecorated = atIndex > 0 ? exportName[..atIndex] : exportName;
+        string bare =
+            undecorated.StartsWith('_') && undecorated.Length > 1 ? undecorated[1..] : undecorated;
+
+        var candidates = new List<string>();
+        if (IsHspIdentifier(bare))
+        {
+            candidates.Add(bare);
+            if (undecorated != bare)
+            {
+                candidates.Add(undecorated);
+            }
+            candidates.Add(bare + "_dll");
+            // Flattened modules each import the same export (CloseHandle in
+            // three #module blocks), so repeats are numbered per export.
+            for (int n = 2; n <= MaxDllAliasSuffix; n++)
+            {
+                candidates.Add(string.Create(CultureInfo.InvariantCulture, $"{bare}_dll{n}"));
+            }
+        }
+
+        foreach (string candidate in candidates)
+        {
+            if (
+                IsHspIdentifier(candidate)
+                && !takenLowerNames.Contains(
+                    candidate.ToLower(System.Globalization.CultureInfo.CurrentCulture)
+                )
+            )
+            {
+                return candidate;
+            }
+        }
+
+        int index = 1;
+        string numbered;
+        do
+        {
+            numbered = string.Format(CultureInfo.InvariantCulture, s_dllFunctionNameFormat, index);
+            index++;
+        } while (takenLowerNames.Contains(numbered));
+        return numbered;
+    }
+
+    // Exports such as ordinals ("#12") or C++ mangled names ("?Fn@@YAXH@Z")
+    // are not valid HSP names and must fall through to func_N.
+    private static bool IsHspIdentifier(string name) =>
+        name.Length > 0
+        && name.Length <= 59
+        && (char.IsLetter(name[0]) || name[0] == '_')
+        && name.All(c => char.IsLetterOrDigit(c) || c == '_');
 
     private static void RenameComFunctions(List<string> functionNames, List<Function> comfuncs)
     {

@@ -1,0 +1,4 @@
+#cmpopt optprm 0
+mes "a"
+pos 1, 2
+stop

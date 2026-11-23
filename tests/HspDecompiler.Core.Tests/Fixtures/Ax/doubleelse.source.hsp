@@ -1,0 +1,16 @@
+a=14:b=531
+if a == 14 {
+	mes 1
+	if b == 528 {
+		mes 2
+	} else {
+		if b == 531 {
+			mes 3
+		} else {
+			mes 4
+		} else {
+			mes 5
+		}
+	}
+}
+mes 9
