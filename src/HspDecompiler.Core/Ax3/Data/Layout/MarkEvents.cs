@@ -152,9 +152,8 @@ internal sealed class MarkEvents
     // #struct 行が goto の直前に要る。
     private static MarkBlock? GotoBlock(List<MarkedRow> rows, int labelRow, Label exit, AxData data)
     {
-        string jump = "goto " + exit.LabelName;
         int start = rows.FindLastIndex(labelRow, labelRow + 1, row =>
-            row.Line is Command && row.Line.ToString() == jump
+            row.Line is Command command && command.IsGotoTo(exit)
         );
         if (start < 0)
         {

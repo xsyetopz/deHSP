@@ -1,3 +1,4 @@
+using HspDecompiler.Core.Ax3.Data.PP;
 using HspDecompiler.Core.Ax3.Data.Primitive;
 
 namespace HspDecompiler.Core.Ax3.Data.Token;
@@ -27,6 +28,8 @@ internal sealed class LiteralToken : OperandToken
     // An integer that is not a label or a symbol, or null.
     //
     // ラベルや記号ではない整数。それ以外は null。
+    internal Label? Label => (_token as LabelPrimitive)?.Label;
+
     internal int? Integer => _token is IntegerPrimitive integer ? integer.Value : null;
 
     internal void WriteInHex()

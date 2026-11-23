@@ -37,6 +37,20 @@ internal sealed class Command : LogicalLine
 
     private readonly FunctionToken? _function;
 
+    // TYPE_PROGCMD with value 0 is goto (hsp3code.h), whatever name the dictionary gives it.
+    //
+    // TYPE_PROGCMD の値 0 は goto である(hsp3code.h)。辞書が付ける名前には依らない。
+    private const int ProgramCommandType = 0x0F;
+    private const int GotoValue = 0;
+
+    // True for "goto" with the label as its only argument, as hspcmp writes for #module.
+    //
+    // ラベルだけを引数に持つ "goto" なら真。hspcmp は #module にこれを書く。
+    internal bool IsGotoTo(PP.Label label) =>
+        _function is { Arguments.Exps: [{ Literal.Label: { } target }] } function
+        && function.Primitive.IsCode(ProgramCommandType, GotoValue)
+        && ReferenceEquals(target, label);
+
     internal override bool TabIncrement =>
         (_function!.Primitive.CodeExtraFlags & HspCodeExtraOptions.AddTab)
         == HspCodeExtraOptions.AddTab;

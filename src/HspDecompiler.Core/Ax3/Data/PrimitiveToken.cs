@@ -58,6 +58,11 @@ internal abstract class PrimitiveToken
 
     internal int Value => _value;
 
+    // True for the code hspcmp wrote with this type and value, before any dictionary naming.
+    //
+    // hspcmp がこの型と値で書いたコードなら真。辞書による名前付けの前の値で比べる。
+    internal bool IsCode(int type, int value) => _type == type && _value == value;
+
     private readonly HspCodeExtraOptions _codeExtraFlags;
     private string? _name;
 

@@ -62,10 +62,9 @@ internal static class ModuleBlocks
 
     private static int? FindStart(List<LogicalLine> lines, int from, int end, Label exit)
     {
-        string jump = "goto " + exit.LabelName;
         for (int j = end - 1; j >= from; j--)
         {
-            if (lines[j] is Command && lines[j].TokenOffset >= 0 && lines[j].ToString() == jump)
+            if (lines[j] is Command command && command.TokenOffset >= 0 && command.IsGotoTo(exit))
             {
                 return j;
             }

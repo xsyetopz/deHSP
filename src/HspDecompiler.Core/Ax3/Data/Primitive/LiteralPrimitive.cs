@@ -26,6 +26,8 @@ internal sealed class LabelPrimitive : LiteralPrimitive
 
     private readonly Label? _label;
 
+    internal Label? Label => _label;
+
     public override string ToString() => _label == null ? DefaultName : _label.LabelName;
 
     internal void LabelIsUsed()
