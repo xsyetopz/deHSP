@@ -19,6 +19,17 @@ using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Pipeline;
 
+/// <summary>
+/// <para xml:lang="en">
+/// Decompiles HSP 2 and HSP 3 programs: a compiled .ax file, a DPMX or DPM2 archive, or an
+/// executable with an archive inside. Call <see cref="Initialize()"/> once before decoding.
+/// </para>
+/// <para xml:lang="ja">
+/// HSP 2 と HSP 3 のプログラムをデコンパイルする。対象はコンパイル済みの .ax ファイル、DPMX
+/// または DPM2 アーカイブ、アーカイブを含む実行ファイル。復元の前に一度
+/// <see cref="Initialize()"/> を呼ぶ。
+/// </para>
+/// </summary>
 public sealed class DecompilerPipeline
 {
     private const string Hsp2Magic = "HSP2";
@@ -72,6 +83,22 @@ public sealed class DecompilerPipeline
     private readonly IProgressReporter _progress;
     private Hsp3Dictionary? _dictionary;
 
+    /// <summary>
+    /// <para xml:lang="en">Creates a pipeline that reports to the given logger and progress sink.</para>
+    /// <para xml:lang="ja">指定したロガーと進行状況の通知先へ報告するパイプラインを作る。</para>
+    /// </summary>
+    /// <param name="logger">
+    /// <para xml:lang="en">Receives messages and warnings.</para>
+    /// <para xml:lang="ja">メッセージと警告を受け取る。</para>
+    /// </param>
+    /// <param name="progress">
+    /// <para xml:lang="en">Receives status text and yields to the host.</para>
+    /// <para xml:lang="ja">状態の文字列を受け取り、ホストへ制御を譲る。</para>
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// <para xml:lang="en">An argument is null.</para>
+    /// <para xml:lang="ja">引数が null。</para>
+    /// </exception>
     public DecompilerPipeline(IDecompilerLogger logger, IProgressReporter progress)
     {
         ArgumentNullException.ThrowIfNull(logger);
@@ -81,9 +108,13 @@ public sealed class DecompilerPipeline
     }
 
     /// <summary>
-    /// Loads the HSP keyword dictionary built into the library.
+    /// <para xml:lang="en">Loads the HSP keyword dictionary built into the library.</para>
+    /// <para xml:lang="ja">ライブラリに組み込まれた HSP のキーワード辞書を読み込む。</para>
     /// </summary>
-    /// <returns><see langword="true"/> once the dictionary is ready.</returns>
+    /// <returns>
+    /// <para xml:lang="en"><see langword="true"/> once the dictionary is ready.</para>
+    /// <para xml:lang="ja">辞書の準備ができると <see langword="true"/>。</para>
+    /// </returns>
     public bool Initialize()
     {
         _dictionary = Hsp3Dictionary.BuiltIn;
@@ -98,12 +129,22 @@ public sealed class DecompilerPipeline
     }
 
     /// <summary>
-    /// Loads an HSP keyword dictionary from a JSON file in the format of the built-in one.
+    /// <para xml:lang="en">Loads an HSP keyword dictionary from a JSON file in the format of the built-in one.</para>
+    /// <para xml:lang="ja">組み込みの辞書と同じ形式の JSON ファイルから HSP のキーワード辞書を読み込む。</para>
     /// </summary>
-    /// <param name="dictionaryPath">Path of the dictionary JSON file.</param>
+    /// <param name="dictionaryPath">
+    /// <para xml:lang="en">Path of the dictionary JSON file.</para>
+    /// <para xml:lang="ja">辞書の JSON ファイルのパス。</para>
+    /// </param>
     /// <returns>
-    /// <see langword="true"/> when the file loaded; <see langword="false"/> when it is missing
-    /// or malformed, after logging the failure.
+    /// <para xml:lang="en">
+    /// <see langword="true"/> when the file loaded; <see langword="false"/> when it is missing or
+    /// malformed, after logging the failure.
+    /// </para>
+    /// <para xml:lang="ja">
+    /// 読み込めれば <see langword="true"/>。ファイルが無いか形式が不正なら、失敗を記録した上で
+    /// <see langword="false"/>。
+    /// </para>
     /// </returns>
     public bool Initialize(string dictionaryPath)
     {
@@ -118,6 +159,32 @@ public sealed class DecompilerPipeline
         return _dictionary != null;
     }
 
+    /// <summary>
+    /// <para xml:lang="en">
+    /// Decompiles the input that <paramref name="options"/> names, extracting an archive first when
+    /// the input holds one. Failures are logged and returned rather than thrown.
+    /// </para>
+    /// <para xml:lang="ja">
+    /// <paramref name="options"/> が指す入力をデコンパイルする。入力がアーカイブを含む場合は先に
+    /// 展開する。失敗は例外にせず、記録した上で結果として返す。
+    /// </para>
+    /// </summary>
+    /// <param name="options">
+    /// <para xml:lang="en">Input, output and decryption settings.</para>
+    /// <para xml:lang="ja">入力、出力、復号の設定。</para>
+    /// </param>
+    /// <param name="ct">
+    /// <para xml:lang="en">Stops the work when cancelled.</para>
+    /// <para xml:lang="ja">キャンセルされると処理を中止する。</para>
+    /// </param>
+    /// <returns>
+    /// <para xml:lang="en">The outcome, including the output path and warnings.</para>
+    /// <para xml:lang="ja">出力パスと警告を含む結果。</para>
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// <para xml:lang="en"><paramref name="options"/> is null.</para>
+    /// <para xml:lang="ja"><paramref name="options"/> が null。</para>
+    /// </exception>
     public async Task<DecompilerResult> RunAsync(
         DecompilerOptions options,
         CancellationToken ct = default
@@ -243,6 +310,7 @@ public sealed class DecompilerPipeline
         axMagic.StartsWith(Hsp2Magic, StringComparison.Ordinal) ? ".as" : ".hsp";
 
     // Returns false when nothing past the extraction is left to decompile.
+    // ---
     // 展開後にデコンパイルするものが無い場合は false を返す。
     private async Task<bool> DecompileArchiveAsync(
         BinaryReader reader,
@@ -321,6 +389,42 @@ public sealed class DecompilerPipeline
         return magic;
     }
 
+    /// <summary>
+    /// <para xml:lang="en">
+    /// Extracts the DPMX or DPM2 archive that <paramref name="reader"/> holds into
+    /// <paramref name="outputDir"/>, decrypting entries as <paramref name="options"/> allows.
+    /// Existing files are kept.
+    /// </para>
+    /// <para xml:lang="ja">
+    /// <paramref name="reader"/> が含む DPMX または DPM2 アーカイブを <paramref name="outputDir"/>
+    /// へ展開し、<paramref name="options"/> が許す範囲でエントリを復号する。既存のファイルは
+    /// 上書きしない。
+    /// </para>
+    /// </summary>
+    /// <param name="reader">
+    /// <para xml:lang="en">Reader over an archive or an executable that contains one.</para>
+    /// <para xml:lang="ja">アーカイブ、またはアーカイブを含む実行ファイルを読むリーダー。</para>
+    /// </param>
+    /// <param name="outputDir">
+    /// <para xml:lang="en">Directory to extract into; it is created when missing.</para>
+    /// <para xml:lang="ja">展開先のディレクトリ。無ければ作成する。</para>
+    /// </param>
+    /// <param name="options">
+    /// <para xml:lang="en">Decryption settings.</para>
+    /// <para xml:lang="ja">復号の設定。</para>
+    /// </param>
+    /// <param name="ct">
+    /// <para xml:lang="en">Stops the work when cancelled.</para>
+    /// <para xml:lang="ja">キャンセルされると処理を中止する。</para>
+    /// </param>
+    /// <returns>
+    /// <para xml:lang="en">The archive entries and whether encryption stopped the extraction.</para>
+    /// <para xml:lang="ja">アーカイブのエントリと、暗号化によって展開が止まったかどうか。</para>
+    /// </returns>
+    /// <exception cref="HspDecoderException">
+    /// <para xml:lang="en">No archive header is found, or the archive is empty.</para>
+    /// <para xml:lang="ja">アーカイブのヘッダーが見つからないか、アーカイブが空。</para>
+    /// </exception>
     public async Task<DpmExtractionResult> DecompressDpmAsync(
         BinaryReader reader,
         string outputDir,
@@ -542,6 +646,36 @@ public sealed class DecompilerPipeline
         }
     }
 
+    /// <summary>
+    /// <para xml:lang="en">
+    /// Decodes the .ax file that <paramref name="reader"/> holds and writes the source to
+    /// <paramref name="outputPath"/> in Shift_JIS. HSP 2 include files go beside it.
+    /// </para>
+    /// <para xml:lang="ja">
+    /// <paramref name="reader"/> が含む .ax ファイルを復元し、ソースを Shift_JIS で
+    /// <paramref name="outputPath"/> へ書き出す。HSP 2 のインクルードファイルはその隣に置く。
+    /// </para>
+    /// </summary>
+    /// <param name="reader">
+    /// <para xml:lang="en">Reader positioned at the start of the .ax file.</para>
+    /// <para xml:lang="ja">.ax ファイルの先頭を指すリーダー。</para>
+    /// </param>
+    /// <param name="outputPath">
+    /// <para xml:lang="en">Path of the source file to write.</para>
+    /// <para xml:lang="ja">書き出すソースファイルのパス。</para>
+    /// </param>
+    /// <param name="ct">
+    /// <para xml:lang="en">Stops the work when cancelled.</para>
+    /// <para xml:lang="ja">キャンセルされると処理を中止する。</para>
+    /// </param>
+    /// <returns>
+    /// <para xml:lang="en">A task that completes when the source is written.</para>
+    /// <para xml:lang="ja">ソースを書き終えると完了するタスク。</para>
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// <para xml:lang="en"><see cref="Initialize()"/> has not been called.</para>
+    /// <para xml:lang="ja"><see cref="Initialize()"/> がまだ呼ばれていない。</para>
+    /// </exception>
     public async Task DecodeAsync(
         BinaryReader reader,
         string outputPath,

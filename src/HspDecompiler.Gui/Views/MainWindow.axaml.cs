@@ -8,11 +8,19 @@ using HspDecompiler.Gui.ViewModels;
 
 namespace HspDecompiler.Gui.Views;
 
+/// <summary>
+/// <para xml:lang="en">Main window: open or drop a file to decompile it.</para>
+/// <para xml:lang="ja">メインウィンドウ。ファイルを開くかドロップするとデコンパイルする。</para>
+/// </summary>
 public partial class MainWindow : Window
 {
     private static readonly string[] s_hspFilePatterns = ["*.ax", "*.exe", "*.dpm"];
     private static readonly string[] s_allFilePatterns = ["*"];
 
+    /// <summary>
+    /// <para xml:lang="en">Creates the window and accepts dropped files.</para>
+    /// <para xml:lang="ja">ウィンドウを作り、ファイルのドロップを受け付ける。</para>
+    /// </summary>
     public MainWindow()
     {
         InitializeComponent();
@@ -20,6 +28,7 @@ public partial class MainWindow : Window
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
     }
 
+    /// <inheritdoc/>
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
