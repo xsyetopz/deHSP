@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -9,9 +8,8 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Schema;
 using HspDecompiler.Core.Abstractions;
-using HspDecompiler.Core.Ax2;
 using HspDecompiler.Core.Ax3;
-using HspDecompiler.Core.DpmToAx;
+using HspDecompiler.Core.Containers;
 using HspDecompiler.Core.Encoding;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Resources;
@@ -43,25 +41,12 @@ public sealed partial class DecompilerPipeline
         Strings.ReadingFile
     );
 
-    private static readonly CompositeFormat s_fileAlreadyExistsFormat = CompositeFormat.Parse(
-        Strings.FileAlreadyExists
-    );
-
-    private static readonly CompositeFormat s_outputtingToFormat = CompositeFormat.Parse(
-        Strings.OutputtingTo
-    );
-
-    private static readonly CompositeFormat s_lineNotEncodableFormat = CompositeFormat.Parse(
-        Strings.LineNotEncodable
-    );
-
     private static readonly UTF8Encoding s_utf8 = new(false);
 
     private readonly IDecompilerLogger _logger;
     private readonly IProgressReporter _progress;
+    private readonly OutputWriter _writer;
     private Hsp3Dictionary? _dictionary;
-    private string? _commonDirectory;
-    private SourceStyle _style = SourceStyle.Default;
 
     /// <summary>
     /// <para xml:lang="en">Creates a pipeline that reports to the given logger and progress sink.</para>
@@ -85,6 +70,7 @@ public sealed partial class DecompilerPipeline
         ArgumentNullException.ThrowIfNull(progress);
         _logger = logger;
         _progress = progress;
+        _writer = new OutputWriter(logger);
     }
 
     /// <summary>
@@ -199,8 +185,6 @@ public sealed partial class DecompilerPipeline
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        _commonDirectory = options.CommonDirectory;
-        _style = options.Style;
         var decompilerOutput = new DecompilerResult();
 
         try
@@ -223,7 +207,7 @@ public sealed partial class DecompilerPipeline
                 return decompilerOutput;
             }
 
-            WriteWarningLog(errorLogPath, decompilerOutput);
+            _writer.WriteWarningLog(errorLogPath, decompilerOutput);
             decompilerOutput.Success = true;
         }
         catch (Exception ex)
@@ -254,15 +238,31 @@ public sealed partial class DecompilerPipeline
 
         if (AxFormats.Of(magic) is { } format)
         {
-            return await DecompileAxAsync(
-                    reader,
-                    format,
-                    explicitDir,
-                    options,
-                    decompilerOutput,
+            if (explicitDir != null)
+            {
+                Directory.CreateDirectory(explicitDir);
+            }
+
+            string outputPath = OutputWriter.FreeFileName(
+                explicitDir ?? InputDirectory(options),
+                InputBaseName(options),
+                AxFormats.SourceExtension(format)
+            );
+            decompilerOutput.OutputPath = outputPath;
+            AxImage image = new(
+                Path.GetFileName(options.InputPath),
+                reader.ReadBytes((int)(reader.BaseStream.Length - reader.BaseStream.Position)),
+                format
+            );
+            await DecodeImageAsync(
+                    image,
+                    outputPath,
+                    SettingsOf(options),
+                    SourceEncoding(options),
                     ct
                 )
                 .ConfigureAwait(false);
+            return outputPath + ".log";
         }
 
         if (!AxFormats.IsContainer(magic))
@@ -271,7 +271,7 @@ public sealed partial class DecompilerPipeline
         }
 
         string outputDir = explicitDir
-            ?? BuildAutoIncrementDirName(InputDirectory(options), InputBaseName(options));
+            ?? OutputWriter.FreeDirectoryName(InputDirectory(options), InputBaseName(options));
         bool decompiled = await DecompileArchiveAsync(
                 reader,
                 outputDir,
@@ -283,33 +283,6 @@ public sealed partial class DecompilerPipeline
         return decompiled ? outputDir.TrimEnd(Path.DirectorySeparatorChar) + ".log" : null;
     }
 
-    // Returns the warning log path for the decompiled source.
-    //
-    // デコンパイルしたソースの警告ログのパスを返す。
-    private async Task<string> DecompileAxAsync(
-        BinaryReader reader,
-        AxFormat format,
-        string? explicitDir,
-        DecompilerOptions options,
-        DecompilerResult decompilerOutput,
-        CancellationToken ct
-    )
-    {
-        if (explicitDir != null)
-        {
-            Directory.CreateDirectory(explicitDir);
-        }
-
-        string outputPath = BuildAutoIncrementFileName(
-            explicitDir ?? InputDirectory(options),
-            InputBaseName(options),
-            AxFormats.SourceExtension(format)
-        );
-        decompilerOutput.OutputPath = outputPath;
-        await DecodeAsync(reader, outputPath, SourceEncoding(options), ct).ConfigureAwait(false);
-        return outputPath + ".log";
-    }
-
     private static System.Text.Encoding SourceEncoding(DecompilerOptions options) =>
         options.Utf8Output ? s_utf8 : ShiftJisHelper.Encoding;
 
@@ -319,9 +292,13 @@ public sealed partial class DecompilerPipeline
     private static string InputBaseName(DecompilerOptions options) =>
         Path.GetFileNameWithoutExtension(options.InputPath);
 
+    // Extracts the archive and decodes each AX entry from the bytes read out of the archive, so
+    // a file of the same name already in the output directory is never decoded in its place.
     // Returns false when nothing past the extraction is left to decompile.
     //
-    // 展開後にデコンパイルするものが無い場合は false を返す。
+    // アーカイブを展開し、各 AX のエントリをアーカイブから読んだバイト列のまま復元する。その
+    // ため出力先に同名のファイルが既にあっても、それを代わりに復元することは無い。展開後に
+    // デコンパイルするものが無い場合は false を返す。
     private async Task<bool> DecompileArchiveAsync(
         BinaryReader reader,
         string outputDir,
@@ -331,9 +308,11 @@ public sealed partial class DecompilerPipeline
     )
     {
         outputDir = Path.TrimEndingDirectorySeparator(outputDir) + Path.DirectorySeparatorChar;
-        DpmExtractionResult dpmResult = await DecompressDpmAsync(reader, outputDir, options, ct)
+        DecodeSettings settings = SettingsOf(options);
+        ArchiveContents contents = await ExtractAsync(reader, outputDir, options, settings, ct)
             .ConfigureAwait(false);
-        decompilerOutput.DpmFiles.AddRange(dpmResult.Files);
+        DpmExtractionResult listing = contents.Listing;
+        decompilerOutput.DpmFiles.AddRange(listing.Files);
         decompilerOutput.OutputPath = outputDir;
 
         // A run that extracts nothing fails, so callers such as the CLI never report success
@@ -341,59 +320,54 @@ public sealed partial class DecompilerPipeline
         //
         // 何も展開しなかった処理は失敗とする。設定がすべてのエントリを止めたアーカイブについて、
         // CLI などの呼び出し側が成功と報告しないようにするため。
-        if (dpmResult.AllEncrypted || dpmResult.Cancelled)
+        if (listing.AllEncrypted || listing.Cancelled)
         {
             decompilerOutput.Success = false;
-            decompilerOutput.ErrorMessage = dpmResult.AllEncrypted
+            decompilerOutput.ErrorMessage = listing.AllEncrypted
                 ? Strings.AllFilesEncrypted
                 : Strings.SomeFilesEncrypted;
             return false;
         }
 
-        foreach (DpmFileEntry entry in dpmResult.Files)
+        foreach (ArchiveEntry entry in contents.Entries)
         {
-            string axPath = Path.Combine(outputDir, entry.FileName ?? "");
-            if (
-                entry.FileName == null
-                || !entry.FileName.EndsWith(".ax", StringComparison.OrdinalIgnoreCase)
-                || !File.Exists(axPath)
-            )
+            if (!entry.IsAx || AxImage.FormatOf(entry.Bytes) is not { } format)
             {
                 continue;
             }
 
-            var axStream = new FileStream(axPath, FileMode.Open, FileAccess.Read);
-            await using ConfiguredAsyncDisposable axScope = axStream.ConfigureAwait(false);
-            using var axReader = new BinaryReader(axStream, ShiftJisHelper.Encoding);
-            string outputPath = BuildAutoIncrementFileName(
+            string outputPath = OutputWriter.FreeFileName(
                 outputDir,
-                Path.GetFileNameWithoutExtension(entry.FileName),
-                AxFormats.SourceExtension(AxFormats.Detect(axReader))
+                Path.GetFileNameWithoutExtension(entry.File.FileName!),
+                AxFormats.SourceExtension(format)
             );
-            await DecodeAsync(axReader, outputPath, SourceEncoding(options), ct)
+            await DecodeImageAsync(
+                    new AxImage(entry.File.FileName!, entry.Bytes, format),
+                    outputPath,
+                    settings,
+                    SourceEncoding(options),
+                    ct
+                )
                 .ConfigureAwait(false);
         }
 
         return true;
     }
 
-    private void WriteWarningLog(string errorLogPath, DecompilerResult decompilerOutput)
-    {
-        if (_logger.Warnings.Count == 0)
-        {
-            return;
-        }
-
-        using (var errorLog = new StreamWriter(errorLogPath, false, ShiftJisHelper.Encoding))
-        {
-            foreach (string warning in _logger.Warnings)
-            {
-                errorLog.WriteLine(warning);
-            }
-        }
-
-        decompilerOutput.Warnings.AddRange(_logger.Warnings);
-    }
+    // The settings one run decodes with. The dictionary is required here rather than when the
+    // pipeline is built, because Initialize may still pick another one.
+    //
+    // 1 回の実行が復元に使う設定。Initialize が別の辞書を選び得るため、辞書はパイプラインを
+    // 作る時ではなくここで必要とする。
+    private DecodeSettings SettingsOf(DecompilerOptions options) =>
+        new(
+            _dictionary ?? throw new InvalidOperationException(Strings.DictionaryNotInitialized),
+            options.Style,
+            DirectoryCommonFiles.Of(options.CommonDirectory),
+            string.IsNullOrWhiteSpace(options.CompilerRelease)
+                ? null
+                : options.CompilerRelease.Trim()
+        );
 
     /// <summary>
     /// <para xml:lang="en">
@@ -475,182 +449,43 @@ public sealed partial class DecompilerPipeline
     )
     {
         ArgumentNullException.ThrowIfNull(reader);
+        ArgumentNullException.ThrowIfNull(outputPath);
         ArgumentNullException.ThrowIfNull(sourceEncoding);
 
-        if (_dictionary == null)
-        {
-            throw new InvalidOperationException(Strings.DictionaryNotInitialized);
-        }
+        DecodeSettings settings = SettingsOf(new DecompilerOptions());
+        byte[] bytes = reader.ReadBytes(
+            (int)(reader.BaseStream.Length - reader.BaseStream.Position)
+        );
+        await DecodeImageAsync(
+                AxImage.Of(Path.GetFileName(outputPath), bytes),
+                outputPath,
+                settings,
+                sourceEncoding,
+                ct
+            )
+            .ConfigureAwait(false);
+    }
 
+    private async Task DecodeImageAsync(
+        AxImage image,
+        string outputPath,
+        DecodeSettings settings,
+        System.Text.Encoding sourceEncoding,
+        CancellationToken ct
+    )
+    {
         _logger.StartSection();
         _logger.Write(Strings.Decompiling);
         _logger.StartSection();
 
-        DecodedSource source = await CreateDecoder(reader, Path.GetFileName(outputPath))
-            .DecodeSourceAsync(reader, _logger, _progress, ct)
+        DecodedSource source = await settings
+            .DecoderFor(image.Format)
+            .DecodeAsync(image, Path.GetFileName(outputPath), _logger, _progress, ct)
             .ConfigureAwait(false);
 
         _logger.EndSection();
         _logger.Write(Strings.DecompileComplete);
         _logger.EndSection();
-        _logger.Write(
-            string.Format(
-                CultureInfo.InvariantCulture,
-                s_outputtingToFormat,
-                Path.GetFileName(outputPath)
-            )
-        );
-
-        WarnUnencodableLines(source.Main, sourceEncoding);
-        WriteOutputLines(source.Main, outputPath, sourceEncoding);
-        WriteIncludeFiles(
-            source.Includes,
-            Path.GetDirectoryName(outputPath) ?? ".",
-            sourceEncoding
-        );
-
-        _logger.Write(Strings.OutputComplete);
-    }
-
-    private ISourceDecoder CreateDecoder(BinaryReader reader, string? mainFileName = null)
-    {
-        AxFormat? format = AxFormats.Detect(reader);
-        if (format == AxFormat.Ax2)
-        {
-            return new Ax2Decoder { MainFileName = mainFileName };
-        }
-
-        if (format == AxFormat.Ax3)
-        {
-            var decoder = new Ax3Decoder
-            {
-                Dictionary = _dictionary,
-                MainFileName = mainFileName ?? "start.hsp",
-                CommonDirectory = _commonDirectory,
-                Style = _style,
-            };
-            return decoder;
-        }
-
-        throw new HspDecoderException(Strings.NotHsp2OrHsp3);
-    }
-
-    // A string that UTF-8 AX data decoded to can hold characters Shift_JIS lacks, and the writer
-    // would turn each into '?', so every such line gets a warning instead of a silent change.
-    //
-    // UTF-8 の AX データから復元した文字列には Shift_JIS に無い文字が入り得て、書き出し時に
-    // それぞれ '?' に化けるため、黙って変えずに該当する行ごとに警告する。
-    private void WarnUnencodableLines(List<string> lines, System.Text.Encoding encoding)
-    {
-        for (int i = 0; i < lines.Count; i++)
-        {
-            string line = lines[i];
-            if (
-                !string.Equals(
-                    encoding.GetString(encoding.GetBytes(line)),
-                    line,
-                    StringComparison.Ordinal
-                )
-            )
-            {
-                _logger.Warning(
-                    string.Format(
-                        CultureInfo.InvariantCulture,
-                        s_lineNotEncodableFormat,
-                        encoding.WebName
-                    ),
-                    i + 1
-                );
-            }
-        }
-    }
-
-    private static void WriteOutputLines(
-        List<string> lines,
-        string outputPath,
-        System.Text.Encoding encoding
-    )
-    {
-        using var writer = new StreamWriter(outputPath, false, encoding);
-        foreach (string line in lines)
-        {
-            writer.WriteLine(line);
-        }
-    }
-
-    // An include keeps the exact name hspcmp recorded, so an existing file of that name is left
-    // alone rather than renamed or overwritten.
-    //
-    // 取り込みファイルは hspcmp が記録した名前のままにする必要があるため、同名のファイルが既に
-    // あれば名前を変えたり上書きしたりせずに残す。
-    private void WriteIncludeFiles(
-        IReadOnlyList<IncludeFile> includes,
-        string directory,
-        System.Text.Encoding encoding
-    )
-    {
-        foreach (IncludeFile include in includes)
-        {
-            // A rebuilt HSP 3 include can sit in a subdirectory that hspcmp wrote with '\\'.
-            //
-            // 復元した HSP 3 の取り込みファイルは、hspcmp が '\\' で書いたサブディレクトリに
-            // 置かれ得る。
-            string path = Path.Combine(directory, include.Name.Replace('\\', '/'));
-            if (File.Exists(path))
-            {
-                _logger.Warning(
-                    string.Format(
-                        CultureInfo.InvariantCulture,
-                        s_fileAlreadyExistsFormat,
-                        include.Name
-                    )
-                );
-                continue;
-            }
-
-            _logger.Write(
-                string.Format(CultureInfo.InvariantCulture, s_outputtingToFormat, include.Name)
-            );
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            WriteOutputLines(include.Lines, path, encoding);
-        }
-    }
-
-    private static string BuildAutoIncrementDirName(string parentDir, string baseName)
-    {
-        string candidate = Path.Combine(parentDir, baseName);
-        if (!Directory.Exists(candidate))
-        {
-            return candidate;
-        }
-
-        int i = 1;
-        string directoryPath;
-        do
-        {
-            directoryPath = Path.Combine(parentDir, $"{baseName} ({i})");
-            i++;
-        } while (Directory.Exists(directoryPath));
-
-        return directoryPath;
-    }
-
-    private static string BuildAutoIncrementFileName(string dir, string baseName, string extension)
-    {
-        string candidate = Path.Combine(dir, baseName + extension);
-        if (!File.Exists(candidate))
-        {
-            return candidate;
-        }
-
-        int i = 1;
-        string filePath;
-        do
-        {
-            filePath = Path.Combine(dir, $"{baseName} ({i}){extension}");
-            i++;
-        } while (File.Exists(filePath));
-
-        return filePath;
+        _writer.WriteSource(source, outputPath, sourceEncoding);
     }
 }

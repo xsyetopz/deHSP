@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using HspDecompiler.Core.Containers;
 
 namespace HspDecompiler.Core.Abstractions;
 
@@ -20,13 +20,17 @@ internal sealed record DecodedSource(List<string> Main, IReadOnlyList<IncludeFil
     internal static DecodedSource Single(List<string> main) => new(main, []);
 }
 
-// A decoder that returns the whole decoded source, include files with it.
+// Decodes one AX image of the format it is built for into the main source and its include
+// files. mainFileName is the name the main source is written under, which a rebuilt include
+// must not take.
 //
-// 取り込みファイルを含め、復元したソース全体を返すデコーダー。
-internal interface ISourceDecoder : IAxDecoder
+// 自身が対象とする形式の AX イメージを、メインのソースと取り込みファイルへ復元する。
+// mainFileName はメインのソースを書き出す名前で、復元した取り込みファイルはこの名前を使えない。
+internal interface ISourceDecoder
 {
-    Task<DecodedSource> DecodeSourceAsync(
-        BinaryReader reader,
+    Task<DecodedSource> DecodeAsync(
+        AxImage image,
+        string mainFileName,
         IDecompilerLogger logger,
         IProgressReporter progress,
         CancellationToken ct

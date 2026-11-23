@@ -4,6 +4,7 @@ using System.IO;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.Primitive;
 using HspDecompiler.Core.Ax3.Dictionary;
+using HspDecompiler.Core.Ax3.Reading;
 
 namespace HspDecompiler.Core.Ax3.Data;
 
@@ -25,30 +26,25 @@ internal class LexicalAnalyzer
     private readonly Hsp3Dictionary? _dictionary;
     private int _tokenOffset;
 
-    internal TokenCollection Analyze(AxData data)
+    internal TokenCollection Analyze(Ax3ImageReader image, AxData data)
     {
-        if (!data.IsStarted)
-        {
-            throw new InvalidOperationException();
-        }
-
         var stream = new TokenCollection();
-        BinaryReader reader = data.Reader!;
-        long sizeOfCode = data.Header!.CodeSize;
-        long startOfCode = data.StartOfCode;
+        BinaryReader reader = image.Reader;
+        long sizeOfCode = image.Header.CodeSize;
         _tokenOffset = 0;
-        reader.BaseStream.Seek(startOfCode, SeekOrigin.Begin);
+        reader.BaseStream.Seek(image.StartOfCode, SeekOrigin.Begin);
         while (_tokenOffset < sizeOfCode)
         {
-            PrimitiveToken code = ReadPrimitive(reader, data);
+            PrimitiveToken code = ReadPrimitive(image, data);
             stream.Add(code);
         }
 
         return stream;
     }
 
-    private PrimitiveToken ReadPrimitive(BinaryReader reader, AxData data)
+    private PrimitiveToken ReadPrimitive(Ax3ImageReader image, AxData data)
     {
+        BinaryReader reader = image.Reader;
         int theTokenOffset = _tokenOffset;
         int type = reader.ReadByte();
         int flag = reader.ReadByte();
@@ -88,15 +84,18 @@ internal class LexicalAnalyzer
             _tokenOffset += 1;
         }
 
-        PrimitiveToken ret = CreatePrimitive(
-            data,
-            known ? dicValue : default,
-            theTokenOffset,
-            type,
-            flag,
-            value,
-            extraValue
-        );
+        HspDictionaryValue found = known ? dicValue : default;
+        var dataset = new PrimitiveTokenDataSet
+        {
+            _parent = data,
+            _dicValue = found,
+            _tokenOffset = theTokenOffset,
+            _type = type,
+            _flag = flag,
+            _value = value,
+            _name = found._name,
+        };
+        PrimitiveToken ret = CreatePrimitive(image, data, dataset, extraValue);
         ret.SetName();
 
         return ret;
@@ -109,36 +108,25 @@ internal class LexicalAnalyzer
     // 破棄パターンの隣に明示する。
     [SuppressMessage("ReSharper", "PatternIsRedundant", Justification = "IDE0072 wants None")]
     private static PrimitiveToken CreatePrimitive(
+        Ax3ImageReader image,
         AxData data,
-        HspDictionaryValue dicValue,
-        int theTokenOffset,
-        int type,
-        int flag,
-        int value,
+        PrimitiveTokenDataSet dataset,
         int extraValue
     )
     {
-        var dataset = new PrimitiveTokenDataSet
+        HspCodeType kind = dataset._dicValue._type;
+        int value = dataset._value;
+        if (kind is HspCodeType.DoubleValue or HspCodeType.StringValue)
         {
-            _parent = data,
-            _dicValue = dicValue,
-            _tokenOffset = theTokenOffset,
-            _type = type,
-            _flag = flag,
-            _value = value,
-            _name = dicValue._name,
-        };
-        if (dicValue._type is HspCodeType.DoubleValue or HspCodeType.StringValue)
-        {
-            data.LiteralAnchors.Add((value, theTokenOffset));
+            data.LiteralAnchors.Add((value, dataset._tokenOffset));
         }
 
-        return dicValue._type switch
+        return kind switch
         {
             HspCodeType.Label => new LabelPrimitive(dataset),
             HspCodeType.IntegerValue => new IntegerPrimitive(dataset),
-            HspCodeType.DoubleValue => new DoublePrimitive(dataset, data.ReadDoubleLiteral(value)),
-            HspCodeType.StringValue => new StringPrimitive(dataset, data.ReadScriptString(value)),
+            HspCodeType.DoubleValue => new DoublePrimitive(dataset, image.ReadDoubleLiteral(value)),
+            HspCodeType.StringValue => new StringPrimitive(dataset, image.ReadScriptString(value)),
             HspCodeType.Symbol => new SymbolPrimitive(dataset),
             HspCodeType.Param => new ParameterPrimitive(dataset),
             HspCodeType.Variable => new GlobalVariablePrimitive(dataset),

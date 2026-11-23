@@ -9,6 +9,9 @@ using HspDecompiler.Core.Ax3.Data;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.Layout;
 using HspDecompiler.Core.Ax3.Data.PP;
+using HspDecompiler.Core.Ax3.Naming;
+using HspDecompiler.Core.Ax3.Reading;
+using HspDecompiler.Core.Containers;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Pipeline;
 using HspDecompiler.Core.Releases;
@@ -16,72 +19,49 @@ using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax3;
 
-internal class Ax3Decoder : ISourceDecoder
+internal sealed class Ax3Decoder(DecodeSettings settings) : ISourceDecoder
 {
-    private Hsp3Dictionary? _dictionary;
-
-    // The name the main source is written under; a rebuilt include must not take it.
-    //
-    // メインのソースを書き出す名前。復元した取り込みファイルはこの名前を使えない。
-    internal string MainFileName { get; init; } = "start.hsp";
-
-    // The directory of the caller's common files (hspcmp --compath), used to restore the
-    // #include of a common header that left no code.
-    //
-    // 呼び出し側の共通ファイルのディレクトリ(hspcmp の --compath)。コードを残さなかった
-    // 共通ヘッダーの #include を復元するのに使う。
-    internal string? CommonDirectory { get; init; }
-
-    internal SourceStyle Style { get; init; } = SourceStyle.Default;
-
-    internal Hsp3Dictionary? Dictionary
-    {
-        get => _dictionary;
-        set => _dictionary = value;
-    }
-
-    public async Task<List<string>> DecodeAsync(
-        BinaryReader reader,
-        IDecompilerLogger logger,
-        IProgressReporter progress,
-        CancellationToken ct = default
-    ) => (await DecodeSourceAsync(reader, logger, progress, ct).ConfigureAwait(false)).Main;
-
-    public async Task<DecodedSource> DecodeSourceAsync(
-        BinaryReader reader,
+    public async Task<DecodedSource> DecodeAsync(
+        AxImage image,
+        string mainFileName,
         IDecompilerLogger logger,
         IProgressReporter progress,
         CancellationToken ct
     )
     {
-        var data = new AxData { Style = Style };
+        using BinaryReader reader = image.Open();
+        var data = new AxData { Dictionary = settings.Dictionary, Style = settings.Style };
         try
         {
             logger.Write(Strings.AnalyzingHeader);
-            data.LoadStart(reader, _dictionary);
-            data.ReadHeader();
+            var axImage = new Ax3ImageReader(reader, data.ScriptStrings);
+            data.Header = axImage.Header;
             logger.Write(Strings.AnalyzingPreprocessor);
-            data.ReadPreprocessor(_dictionary);
+            axImage.ReadTables(data);
+            NameAssigner.NameFunctions(data.Functions, settings.Dictionary);
+            data.DebugInfo = axImage.ReadDebugInfo();
             logger.Write(Strings.LexicalAnalysis);
-            var lex = new LexicalAnalyzer(_dictionary!);
-            TokenCollection stream = lex.Analyze(data);
+            var lex = new LexicalAnalyzer(settings.Dictionary);
+            TokenCollection stream = lex.Analyze(axImage, data);
+            data.HasRepeatedStrings = axImage.HasRepeatedStrings;
             data.ScriptStrings.Resolve(
                 data.Runtime != null,
-                BootOptionDirectives.IsUtf8Runtime(data.Header!.BootOption)
+                BootOptionDirectives.IsUtf8Runtime(data.Header.BootOption)
             );
             AxEvidence evidence = EvidenceReader.Read(data);
-            data.Release = ReleaseProfile.Infer(evidence);
-            IncludeNames? names = data.DebugInfo.HasLines ? IncludeNamesOf(data) : null;
+            data.Release = settings.ReleaseFor(evidence, logger);
+            IncludeNames? names = data.DebugInfo.HasLines
+                ? IncludeNamesOf(data, mainFileName)
+                : null;
             HashSet<int> restored =
-                names == null ? [] : CommonIncludes.Attach(data, names, CommonDirectory);
+                names == null ? [] : CommonIncludes.Attach(data, names, settings.CommonFiles);
             DebugNames.ApplyParameterNames(data);
-            data.LoadEnd();
             logger.Write(Strings.SyntacticAnalysis);
-            var synt = new SyntacticAnalyzer();
-            List<LogicalLine> lines = await synt.AnalyzeAsync(stream, data, logger, progress, ct)
+            List<LogicalLine> lines = await SyntacticAnalyzer
+                .AnalyzeAsync(stream, data, logger, progress, ct)
                 .ConfigureAwait(false);
             logger.Write(Strings.CreatingOutputFile);
-            DecodedSource source = Write(lines, data, evidence, names, restored);
+            DecodedSource source = Write(lines, data, evidence, names, restored, mainFileName);
             WarnStructs(source, logger);
             return source;
         }
@@ -91,15 +71,16 @@ internal class Ax3Decoder : ISourceDecoder
         }
     }
 
-    private DecodedSource Write(
+    private static DecodedSource Write(
         List<LogicalLine> lines,
         AxData data,
         AxEvidence evidence,
         IncludeNames? names,
-        HashSet<int> restored
+        HashSet<int> restored,
+        string mainFileName
     ) =>
         LayoutStrategies.Layout(
-            new LayoutInput(lines, data, evidence, names, restored, MainFileName, unused =>
+            new LayoutInput(lines, data, evidence, names, restored, mainFileName, unused =>
                 DirectivePlanner.Plan(DirectivePlanner.FactsOf(data, evidence, unused))
             )
         );
@@ -128,6 +109,6 @@ internal class Ax3Decoder : ISourceDecoder
         }
     }
 
-    private IncludeNames IncludeNamesOf(AxData data) =>
-        new([.. data.DebugInfo.FileNames.Select(data.DecodeName)], MainFileName);
+    private static IncludeNames IncludeNamesOf(AxData data, string mainFileName) =>
+        new([.. data.DebugInfo.FileNames.Select(data.DecodeName)], mainFileName);
 }

@@ -14,7 +14,7 @@ internal class Label : Preprocessor, System.IComparable<Label>
 
     internal int TokenOffset => _tokenOffset;
 
-    internal static Label FromBinaryReader(BinaryReader reader, AxData _, int index)
+    internal static Label FromBinaryReader(BinaryReader reader, int index)
     {
         var ret = new Label(index) { _tokenOffset = reader.ReadInt32() };
         return ret;

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using HspDecompiler.Core.Ax3.Reading;
 
 namespace HspDecompiler.Core.Ax3.Data.PP;
 
@@ -20,8 +21,9 @@ internal sealed class Usedll : Preprocessor
     private string? _clsName;
     private int _type;
 
-    internal static Usedll FromBinaryReader(BinaryReader reader, AxData parent, int index)
+    internal static Usedll FromBinaryReader(Ax3ImageReader image, int index)
     {
+        BinaryReader reader = image.Reader;
         var ret = new Usedll(index) { _type = reader.ReadInt32() };
         int nameOffset = reader.ReadInt32();
         // LIBDAT.hlib, a library handle the runtime fills in.
@@ -32,11 +34,11 @@ internal sealed class Usedll : Preprocessor
         switch (ret.Type)
         {
             case UsedllType.UseCom:
-                ret._name = parent.ReadIidCodeLiteral(nameOffset);
-                ret._clsName = parent.ReadStringLiteral(clsNameOffset);
+                ret._name = image.ReadIidCodeLiteral(nameOffset);
+                ret._clsName = image.ReadStringLiteral(clsNameOffset);
                 break;
             case UsedllType.UseLib:
-                ret._name = parent.ReadStringLiteral(nameOffset);
+                ret._name = image.ReadStringLiteral(nameOffset);
                 break;
             case UsedllType.None:
             default:

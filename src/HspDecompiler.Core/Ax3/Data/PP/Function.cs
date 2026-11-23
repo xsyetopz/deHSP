@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using HspDecompiler.Core.Ax3.Data.Layout;
+using HspDecompiler.Core.Ax3.Reading;
 
 namespace HspDecompiler.Core.Ax3.Data.PP;
 
@@ -71,8 +72,9 @@ internal class Function : Preprocessor
     private int _labelIndex;
     private int _flags;
 
-    internal static Function FromBinaryReader(BinaryReader reader, AxData parent, int index)
+    internal static Function FromBinaryReader(Ax3ImageReader image, AxData parent, int index)
     {
+        BinaryReader reader = image.Reader;
         var ret = new Function(index)
         {
             _dllIndex = reader.ReadInt16(),
@@ -89,7 +91,7 @@ internal class Function : Preprocessor
         ret._strIndex = reader.ReadInt32();
         if (ret._strIndex >= 0)
         {
-            ret._defaultName = parent.ReadStringLiteral(ret._strIndex);
+            ret._defaultName = image.ReadStringLiteral(ret._strIndex);
         }
 
         // STRUCTDAT.size, the stack size of the parameters. The source does not spell it out,

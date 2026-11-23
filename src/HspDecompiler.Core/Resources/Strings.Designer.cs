@@ -122,14 +122,9 @@ namespace HspDecompiler.Core.Resources
         internal static string RegionPlugin => ResourceManager.GetString("RegionPlugin", resourceCulture);
         internal static string RegionParameter => ResourceManager.GetString("RegionParameter", resourceCulture);
 
-        // AxData validation
-        internal static string ArgumentNullReader => ResourceManager.GetString("ArgumentNullReader", resourceCulture);
-        internal static string ArgumentNullDictionary => ResourceManager.GetString("ArgumentNullDictionary", resourceCulture);
-        internal static string LoadStartNotCalled => ResourceManager.GetString("LoadStartNotCalled", resourceCulture);
-        internal static string HeaderNotLoaded => ResourceManager.GetString("HeaderNotLoaded", resourceCulture);
-
         // Syntactic analysis
         internal static string RpnConversionFailed => ResourceManager.GetString("RpnConversionFailed", resourceCulture);
+        internal static string CompilerHintIgnored => ResourceManager.GetString("CompilerHintIgnored", resourceCulture);
         internal static string StructNotInHspSpec => ResourceManager.GetString("StructNotInHspSpec", resourceCulture);
         internal static string AnalysisFailedEndNotStored => ResourceManager.GetString("AnalysisFailedEndNotStored", resourceCulture);
         internal static string AnalysisFailedScopeEndExceedsCode => ResourceManager.GetString("AnalysisFailedScopeEndExceedsCode", resourceCulture);

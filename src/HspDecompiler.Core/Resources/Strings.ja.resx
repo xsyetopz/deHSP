@@ -115,14 +115,9 @@
   <data name="RegionPlugin" xml:space="preserve"><value>プラグイン定義領域</value></data>
   <data name="RegionParameter" xml:space="preserve"><value>関数パラメータ定義領域</value></data>
 
-  <!-- AxData validation -->
-  <data name="ArgumentNullReader" xml:space="preserve"><value>readerにnull値を指定できません</value></data>
-  <data name="ArgumentNullDictionary" xml:space="preserve"><value>dictionaryにnull値を指定できません</value></data>
-  <data name="LoadStartNotCalled" xml:space="preserve"><value>LoadStartを呼び出していません</value></data>
-  <data name="HeaderNotLoaded" xml:space="preserve"><value>ヘッダーが読み込まれていません</value></data>
-
   <!-- Syntactic analysis -->
   <data name="RpnConversionFailed" xml:space="preserve"><value>逆ポーランドへの変換に失敗</value></data>
+  <data name="CompilerHintIgnored" xml:space="preserve"><value>コンパイラの指定 {0} はこの AX ({1}) に合わないため、推定したリリースを使います</value></data>
   <data name="StructNotInHspSpec" xml:space="preserve"><value>deHSPの出力する#structはHSPの公開されている宣言仕様には含まれません</value></data>
   <data name="AnalysisFailedEndNotStored" xml:space="preserve"><value>解析失敗:終端が保存されていません</value></data>
   <data name="AnalysisFailedScopeEndExceedsCode" xml:space="preserve"><value>解析失敗:{0}:スコープの終端がコード終端を超えています</value></data>

@@ -91,4 +91,20 @@ public sealed class DecompilerOptions
     /// </para>
     /// </summary>
     public SourceStyle Style { get; set; } = new();
+
+    /// <summary>
+    /// <para xml:lang="en">
+    /// The hspcmp release that wrote the program, such as <c>3.32</c> or <c>3.8b2</c>, when the
+    /// caller knows it. The hint is advisory: several releases write the same header, and the
+    /// hint picks among those the AX itself leaves possible. A hint the AX contradicts is
+    /// ignored with a warning. When empty, the release is inferred from the AX alone.
+    /// </para>
+    /// <para xml:lang="ja">
+    /// 呼び出し側が知っている場合の、プログラムを書いた hspcmp のリリース(<c>3.32</c> や
+    /// <c>3.8b2</c> など)。この指定は助言である。複数のリリースが同じヘッダーを書くため、
+    /// 指定は AX 自体が可能として残すものの中から選ぶ。AX と矛盾する指定は警告して無視する。
+    /// 空なら AX だけからリリースを推定する。
+    /// </para>
+    /// </summary>
+    public string? CompilerRelease { get; set; }
 }

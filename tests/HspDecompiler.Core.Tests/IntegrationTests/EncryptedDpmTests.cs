@@ -97,6 +97,26 @@ public sealed class EncryptedDpmTests : IDisposable
     }
 
     [Fact]
+    public async Task ArchiveEntryDecodesFromTheArchiveNotAnExistingFileOfItsName()
+    {
+        Directory.CreateDirectory(OutputDirectory);
+        await File.WriteAllBytesAsync(OutputFile("secret.ax"), "not an AX image"u8.ToArray());
+
+        DecompilerResult result = await RunAsync(
+            WriteArchive(encryptPlainEntry: false),
+            allowDecryption: true,
+            skipEncrypted: false
+        );
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.True(File.Exists(OutputFile("secret.hsp")));
+        Assert.Equal(
+            "not an AX image"u8.ToArray(),
+            await File.ReadAllBytesAsync(OutputFile("secret.ax"))
+        );
+    }
+
+    [Fact]
     public async Task DecompressDpmCountsEncryptedEntries()
     {
         var pipeline = new DecompilerPipeline(new NullLogger(), new NullProgressReporter());

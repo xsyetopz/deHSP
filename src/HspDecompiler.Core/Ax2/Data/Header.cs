@@ -5,6 +5,7 @@ internal class Header
     private Header() { }
 
     #region var
+    private uint _version;
     private int _allDataByte;
     private int _scriptOffset;
     private int _scriptByte;
@@ -23,6 +24,11 @@ internal class Header
     #endregion
 
     #region properties
+    // The format word hspcmp writes after the magic; every HSP 2.6 and 2.61 build writes 0x206.
+    //
+    // hspcmp がマジックの後に書く形式のワード。HSP 2.6 と 2.61 のどのビルドも 0x206 を書く。
+    internal uint Version => _version;
+
     internal int AllDataByte => _allDataByte;
 
     internal int ScriptOffset => _scriptOffset;
@@ -78,6 +84,7 @@ internal class Header
 
         var ret = new Header
         {
+            _version = (uint)data[1],
             _allDataByte = data[3],
             _scriptOffset = data[4],
             _scriptByte = data[5],

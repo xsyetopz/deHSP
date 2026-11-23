@@ -1,48 +1,21 @@
 using System;
-using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using HspDecompiler.Core.Abstractions;
-using HspDecompiler.Core.DpmToAx;
-using HspDecompiler.Core.DpmToAx.Crypto;
-using HspDecompiler.Core.Encoding;
+using HspDecompiler.Core.Containers;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Pipeline;
 
-// Extraction of DPMX and DPM2 archives, including the decryption of their entries.
+// Extraction of DPMX and DPM2 archives: DpmArchive reads and decrypts the entries in memory,
+// and the pipeline writes them out.
 //
-// DPMX・DPM2 アーカイブの展開と、そのエントリの復号。
+// DPMX・DPM2 アーカイブの展開。DpmArchive がメモリ上でエントリを読んで復号し、パイプラインが
+// それを書き出す。
 public sealed partial class DecompilerPipeline
 {
-    private static readonly CompositeFormat s_directoryCreateFailedFormat = CompositeFormat.Parse(
-        Strings.DirectoryCreateFailed
-    );
-
-    private static readonly CompositeFormat s_fileEncryptedFormat = CompositeFormat.Parse(
-        Strings.FileEncrypted
-    );
-
-    private static readonly CompositeFormat s_fileSeekFailedFormat = CompositeFormat.Parse(
-        Strings.FileSeekFailed
-    );
-
-    private static readonly CompositeFormat s_fileSaveFailedFormat = CompositeFormat.Parse(
-        Strings.FileSaveFailed
-    );
-
-    private static readonly CompositeFormat s_decryptingFileFormat = CompositeFormat.Parse(
-        Strings.DecryptingFile
-    );
-
-    private static readonly CompositeFormat s_decryptionFailedFormat = CompositeFormat.Parse(
-        Strings.DecryptionFailed
-    );
-
     /// <summary>
     /// <para xml:lang="en">
     /// Extracts the DPMX or DPM2 archive that <paramref name="reader"/> holds into
@@ -87,218 +60,86 @@ public sealed partial class DecompilerPipeline
     )
     {
         ArgumentNullException.ThrowIfNull(reader);
+        ArgumentNullException.ThrowIfNull(outputDir);
+        ArgumentNullException.ThrowIfNull(options);
 
-        var dpmResult = new DpmExtractionResult();
+        ArchiveContents contents = await ExtractAsync(
+                reader,
+                outputDir,
+                options,
+                _dictionary == null ? null : SettingsOf(options),
+                ct
+            )
+            .ConfigureAwait(false);
+        return contents.Listing;
+    }
 
-        _logger.Write(Strings.SearchingDpmHeader);
-        DpmExtractor extractor = DpmExtractor.FromBinaryReader(reader)
-            ?? throw new HspDecoderException(Strings.DpmHeaderNotFound);
-        if (extractor.FileList == null || extractor.FileList.Count == 0)
+    // Reads the archive and writes each entry read in plain form into outputDir. Without
+    // settings, no key can be checked, so every encrypted entry stays unread.
+    //
+    // アーカイブを読み、平文で読めた各エントリを outputDir へ書く。設定が無ければ鍵を確かめ
+    // られないため、暗号化されたエントリはすべて読まずに残る。
+    private async Task<ArchiveContents> ExtractAsync(
+        BinaryReader reader,
+        string outputDir,
+        DecompilerOptions options,
+        DecodeSettings? settings,
+        CancellationToken ct
+    )
+    {
+        var archive = new DpmArchive(
+            _logger,
+            new KeyCracker(bytes => settings != null && DecodesWhole(bytes, settings))
+        );
+        ArchiveContents contents = archive.Read(reader, options);
+        if (contents.Listing.AllEncrypted || contents.Listing.Cancelled)
         {
-            throw new HspDecoderException(Strings.DpmNoFiles);
+            return contents;
         }
 
-        dpmResult.Files.AddRange(extractor.FileList);
-        int encryptedCount = extractor.FileList.Count(file => file.IsEncrypted);
-        dpmResult.EncryptedCount = encryptedCount;
-
-        int totalCount = extractor.FileList.Count;
-        if (totalCount == encryptedCount && !DecryptsEntries(options))
+        OutputWriter.CreateDirectory(outputDir);
+        foreach (ArchiveEntry entry in contents.Entries)
         {
-            dpmResult.AllEncrypted = true;
-            _logger.Write(Strings.ExtractionCancelled);
-            return dpmResult;
-        }
-
-        if (encryptedCount > 0 && options is { SkipEncrypted: false, AllowDecryption: false })
-        {
-            dpmResult.Cancelled = true;
-            _logger.Write(Strings.ExtractionCancelled);
-            return dpmResult;
-        }
-
-        CreateOutputDirectory(outputDir);
-
-        Dpm2CryptoTransform? dpm2Crypto = null;
-        if (extractor.IsDpm2 && extractor.CrcSeed != 0)
-        {
-            dpm2Crypto = Dpm2CryptoTransform.FromCrcSeed(extractor.CrcSeed, extractor.Salt);
-        }
-
-        foreach (DpmFileEntry file in extractor.FileList)
-        {
-            await WriteDpmEntryAsync(reader, extractor, file, outputDir, options, dpm2Crypto, ct)
-                .ConfigureAwait(false);
+            await _writer.SaveEntryAsync(entry, outputDir, ct).ConfigureAwait(false);
         }
 
         _logger.Write(Strings.ExtractionComplete);
-        return dpmResult;
+        return contents;
     }
 
-    // SkipEncrypted wins over AllowDecryption, so the flag skips encrypted entries on its own.
+    // The key oracle: a key counts only when the whole AX decodes, since the magic alone matches
+    // many wrong keys. The trial decodes with no common files, so trying a key reads no disk.
+    // CrackEncryption takes a synchronous check, so the decode blocks here.
     //
-    // SkipEncrypted は AllowDecryption より優先するため、単独でも暗号化されたエントリを飛ばす。
-    private static bool DecryptsEntries(DecompilerOptions options) =>
-        options is { AllowDecryption: true, SkipEncrypted: false };
-
-    private static void CreateOutputDirectory(string outputDir)
+    // 鍵の判定。マジックだけでは誤った鍵も多く一致するため、AX 全体を復元できた鍵だけを採用する。
+    // 試行は共通ファイル無しで復元するため、鍵を試してもディスクを読まない。CrackEncryption は
+    // 同期の検査を受け取るため、ここでは復元を同期で待つ。
+    private bool DecodesWhole(ReadOnlyMemory<byte> bytes, DecodeSettings settings)
     {
+        byte[] array = bytes.ToArray();
+        if (AxImage.FormatOf(array) is not { } format)
+        {
+            return false;
+        }
+
         try
         {
-            Directory.CreateDirectory(outputDir);
-        }
-        catch (Exception ex)
-        {
-            throw new HspDecoderException(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    s_directoryCreateFailedFormat,
-                    outputDir
-                ),
-                ex
-            );
-        }
-    }
-
-    private async Task WriteDpmEntryAsync(
-        BinaryReader reader,
-        DpmExtractor extractor,
-        DpmFileEntry file,
-        string outputDir,
-        DecompilerOptions options,
-        Dpm2CryptoTransform? dpm2Crypto,
-        CancellationToken ct
-    )
-    {
-        if (file.IsEncrypted && !DecryptsEntries(options))
-        {
-            _logger.Write(
-                string.Format(CultureInfo.InvariantCulture, s_fileEncryptedFormat, file.FileName)
-            );
-            return;
-        }
-
-        string outputPath = Path.Combine(outputDir, file.FileName ?? "");
-        if (File.Exists(outputPath))
-        {
-            _logger.Write(
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    s_fileAlreadyExistsFormat,
-                    file.FileName
+            (settings with { CommonFiles = null })
+                .DecoderFor(format)
+                .DecodeAsync(
+                    new AxImage("start.ax", array, format),
+                    "start" + AxFormats.SourceExtension(format),
+                    NullDecompilerLogger.Instance,
+                    _progress,
+                    CancellationToken.None
                 )
-            );
-            return;
+                .GetAwaiter()
+                .GetResult();
+            return true;
         }
-
-        if (!extractor.Seek(file))
+        catch (Exception ex) when (ex is HspDecoderException or IOException or FormatException)
         {
-            _logger.Write(
-                string.Format(CultureInfo.InvariantCulture, s_fileSeekFailedFormat, file.FileName)
-            );
-            return;
-        }
-
-        byte[] fileData = reader.ReadBytes(file.FileSize);
-
-        if (dpm2Crypto != null && file.Checksum != 0)
-        {
-            fileData = dpm2Crypto.Decrypt(fileData, file.Checksum);
-        }
-
-        if (file.IsEncrypted)
-        {
-            byte[]? decrypted = CrackDpmEncryption(fileData, file);
-            if (decrypted == null)
-            {
-                return;
-            }
-            fileData = decrypted;
-        }
-
-        await SaveDpmEntryAsync(fileData, file, outputPath, ct).ConfigureAwait(false);
-    }
-
-    private async Task SaveDpmEntryAsync(
-        byte[] fileData,
-        DpmFileEntry file,
-        string outputPath,
-        CancellationToken ct
-    )
-    {
-        try
-        {
-            string? dir = Path.GetDirectoryName(outputPath);
-            if (!string.IsNullOrEmpty(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
-
-            var saveStream = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write);
-            await using (saveStream.ConfigureAwait(false))
-            {
-                await saveStream.WriteAsync(fileData, ct).ConfigureAwait(false);
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            _logger.Warning(
-                string.Format(CultureInfo.InvariantCulture, s_fileSaveFailedFormat, file.FileName)
-                    + " "
-                    + ex.Message
-            );
-        }
-    }
-
-    private byte[]? CrackDpmEncryption(byte[] fileData, DpmFileEntry file)
-    {
-        _logger.Write(
-            string.Format(CultureInfo.InvariantCulture, s_decryptingFileFormat, file.FileName)
-        );
-
-        var decryptor = HspCryptoTransform.CrackEncryption(fileData, Validator);
-        if (decryptor != null)
-        {
-            return decryptor.Decryption(fileData);
-        }
-
-        _logger.Write(
-            string.Format(CultureInfo.InvariantCulture, s_decryptionFailedFormat, file.FileName)
-        );
-        return null;
-
-        // A key counts only when the whole AX decodes; the magic alone matches many wrong keys.
-        //
-        // マジックだけでは誤った鍵も多く一致するため、AX 全体を解析できた鍵だけを採用する。
-        bool Validator(byte[] decryptedData)
-        {
-            try
-            {
-                using var ms = new MemoryStream(decryptedData);
-                using var br = new BinaryReader(ms, ShiftJisHelper.Encoding);
-                if (AxFormats.Detect(br) == null)
-                {
-                    return false;
-                }
-
-                // CrackEncryption takes a synchronous validator, so the decode blocks here.
-                //
-                // CrackEncryption は同期の検証関数を受け取るため、ここでは解析を同期で待つ。
-                CreateDecoder(br)
-                    .DecodeAsync(
-                        br,
-                        NullDecompilerLogger.Instance,
-                        _progress,
-                        CancellationToken.None
-                    )
-                    .GetAwaiter()
-                    .GetResult();
-                return true;
-            }
-            catch (Exception ex) when (ex is HspDecoderException or IOException or FormatException)
-            {
-                return false;
-            }
+            return false;
         }
     }
 }

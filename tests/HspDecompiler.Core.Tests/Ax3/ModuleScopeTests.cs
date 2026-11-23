@@ -14,7 +14,7 @@ public class ModuleScopeTests
     private static Label LabelAt(int offset)
     {
         using var reader = new BinaryReader(new MemoryStream(System.BitConverter.GetBytes(offset)));
-        return Label.FromBinaryReader(reader, new AxData(), 0);
+        return Label.FromBinaryReader(reader, 0);
     }
 
     [Theory]

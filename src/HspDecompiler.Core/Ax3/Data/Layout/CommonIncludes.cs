@@ -1,13 +1,13 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using HspDecompiler.Core.Ax3.Data.PP;
 using HspDecompiler.Core.Encoding;
+using HspDecompiler.Core.Pipeline;
 
 namespace HspDecompiler.Core.Ax3.Data.Layout;
 
 // Restores the #include of a common header (hspcmp.as, a Windows API header) that left no code
-// of its own, given the directory that holds the caller's copy. The imports the program took
+// of its own, given the caller's common files. The imports the program took
 // from it are matched by DLL, export name and parameter types; they get the header's aliases
 // and are no longer declared in the main source, so the recompile reads them from the header
 // as the original did. A header is only restored when each import it could have declared
@@ -15,17 +15,17 @@ namespace HspDecompiler.Core.Ax3.Data.Layout;
 // would stop the recompile or bind a name to another symbol.
 //
 // コードを残さなかった共通ヘッダー(hspcmp.as や Windows API のヘッダー)の #include を、
-// 呼び出し側が持つコピーのディレクトリから復元する。プログラムがそこから取り込んだインポート
+// 呼び出し側の共通ファイルから復元する。プログラムがそこから取り込んだインポート
 // は DLL・エクスポート名・引数の型で照合し、ヘッダーの別名を付けてメインのソースでは宣言し
 // ない。そのため再コンパイルは元と同じくヘッダーから読む。ヘッダーを復元するのは、宣言し得た
 // 各インポートが完全に一致し、ヘッダーの名前が出力の名前と衝突しない時だけである。どちらかが
 // 崩れると再コンパイルが止まるか、名前が別のシンボルに結び付くためである。
 internal static class CommonIncludes
 {
-    internal static HashSet<int> Attach(AxData data, IncludeNames names, string? directory)
+    internal static HashSet<int> Attach(AxData data, IncludeNames names, ICommonFiles? files)
     {
         var restored = new HashSet<int>();
-        if (string.IsNullOrEmpty(directory))
+        if (files == null)
         {
             return restored;
         }
@@ -36,18 +36,11 @@ internal static class CommonIncludes
         ];
         for (int file = names.MainFile + 1; file < names.Count; file++)
         {
-            if (!names.IsCommon(file) || codeFiles.Contains(file))
-            {
-                continue;
-            }
-
-            string path = Path.Combine(
-                directory,
-                names.RelativeName(file).Replace('\\', Path.DirectorySeparatorChar)
-            );
             if (
-                File.Exists(path)
-                && TryAttach(data, CommonHeader.Parse(Decode(File.ReadAllBytes(path))))
+                names.IsCommon(file)
+                && !codeFiles.Contains(file)
+                && files.TryRead(names.RelativeName(file), out byte[]? bytes)
+                && TryAttach(data, CommonHeader.Parse(Decode(bytes)))
             )
             {
                 restored.Add(file);

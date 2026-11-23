@@ -68,6 +68,19 @@ public class ReleaseProfileTests
     }
 
     [Fact]
+    public void Hsp2FormatWordKeepsBothHsp2Releases()
+    {
+        var profile = ReleaseProfile.Infer(
+            new AxEvidence(CompilerReleases.Word26, 0, false) { RedefinedBuiltin = true }
+        );
+
+        Assert.Equal("2.6-2.61", profile.ToString());
+        Assert.True(profile.RedefinesBuiltins);
+        Assert.Equal("2.61", profile.Pin("2.61")?.ToString());
+        Assert.Null(profile.Pin("3.0"));
+    }
+
+    [Fact]
     public void EvidenceThatRulesOutEveryCandidateIsIgnored()
     {
         ReleaseProfile profile = Infer(0x360, marks: 3);
@@ -100,6 +113,36 @@ public class ReleaseProfileTests
     [Fact]
     public void WithoutFramesNoRuntimeIsDefault() =>
         Assert.False(Infer(0x360).WritesByDefault("hsp3_64", 0x43000));
+
+    [Fact]
+    public void HintPinsACandidateTheEvidenceLeaves()
+    {
+        ReleaseProfile profile = Infer(0x301, marks: 2);
+
+        ReleaseProfile? pinned = profile.Pin("3.32");
+
+        Assert.Equal("3.32", pinned?.ToString());
+    }
+
+    [Fact]
+    public void HintNamesBetaReleasesWithoutTheGreekLetter()
+    {
+        ReleaseProfile profile = Infer(0x360);
+
+        ReleaseProfile? pinned = profile.Pin("3.8B2");
+
+        Assert.Equal("3.8β2", pinned?.ToString());
+    }
+
+    [Fact]
+    public void HintTheEvidenceRulesOutIsRefused()
+    {
+        ReleaseProfile profile = Infer(0x301, marks: 2);
+
+        ReleaseProfile? pinned = profile.Pin("3.4");
+
+        Assert.Null(pinned);
+    }
 
     [Fact]
     public void ReleasesAreInOrder()

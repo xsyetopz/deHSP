@@ -41,6 +41,12 @@ internal sealed record AxEvidence(
     internal bool Utf8Strings { get; init; }
 
     internal bool UsesAwait { get; init; }
+
+    // A #deffunc takes a built-in's name, which only a release that accepts the replacement
+    // compiles.
+    //
+    // #deffunc が組み込み命令の名前を取る。置き換えを受け付けるリリースだけがこれをコンパイルする。
+    internal bool RedefinedBuiltin { get; init; }
 }
 
 // The releases that could have written one AX, and the questions the decompiler's stages ask of
@@ -76,6 +82,8 @@ internal sealed class ReleaseProfile
 
     internal bool RecordsStringEnds =>
         All(r => r.Records == NormalBuildRecords.ModulesAndStringEnds);
+
+    internal bool RedefinesBuiltins => All(r => r.RedefinesBuiltins);
 
     // True when every candidate writes this runtime and these boot bits for a source that names
     // no runtime, so the source needs neither the #runtime line nor the #bootopt for those bits.
@@ -144,8 +152,33 @@ internal sealed class ReleaseProfile
             candidates = Keep(candidates, r => r.Frames == frames);
         }
 
+        if (evidence.RedefinedBuiltin)
+        {
+            candidates = Keep(candidates, r => r.RedefinesBuiltins);
+        }
+
         return new ReleaseProfile(candidates);
     }
+
+    // The release the caller names, when the evidence left it a candidate. A hint is advisory:
+    // it settles what the AX cannot show, such as 3.2 against 3.32, and never overrides what the
+    // AX does show, so a wrong hint costs nothing but the warning its null return leads to.
+    //
+    // 呼び出し側が指定したリリース。証拠がそれを候補に残した時だけ使う。指定は助言であり、
+    // 3.2 と 3.32 のように AX が示せないことを決め、AX が示すことは覆さない。そのため誤った
+    // 指定の損は、null を返した結果の警告だけである。
+    internal ReleaseProfile? Pin(string hint)
+    {
+        ImmutableArray<CompilerRelease> pinned = [.. Candidates.Where(r => Names(r, hint))];
+        return pinned.IsEmpty ? null : new ReleaseProfile(pinned);
+    }
+
+    // "3.8b2" names 3.8β2, since a command line may not carry the Greek letter.
+    //
+    // コマンドラインがギリシャ文字を通さないことがあるため、"3.8b2" は 3.8β2 を指す。
+    private static bool Names(CompilerRelease release, string hint) =>
+        release.Name.Equals(hint, StringComparison.OrdinalIgnoreCase)
+        || release.Name.Replace('β', 'b').Equals(hint, StringComparison.OrdinalIgnoreCase);
 
     private static ImmutableArray<CompilerRelease> Keep(
         ImmutableArray<CompilerRelease> candidates,

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using HspDecompiler.Core.Ax3.Reading;
 
 namespace HspDecompiler.Core.Ax3.Data.PP;
 
@@ -12,8 +13,9 @@ internal class PlugIn : Preprocessor
     private string? _dllName;
     private string? _exportName;
 
-    internal static PlugIn FromBinaryReader(BinaryReader reader, AxData parent, int index)
+    internal static PlugIn FromBinaryReader(Ax3ImageReader image, int index)
     {
+        BinaryReader reader = image.Reader;
         _ = reader.ReadInt32();
         var ret = new PlugIn(index);
         int dllNameOffset = reader.ReadInt32();
@@ -22,8 +24,8 @@ internal class PlugIn : Preprocessor
         //
         // HPIDAT.p_libptr。ランタイムが埋めるライブラリのハンドル。
         _ = reader.ReadInt32();
-        ret._dllName = parent.ReadStringLiteral(dllNameOffset);
-        ret._exportName = parent.ReadStringLiteral(exportNameOffset);
+        ret._dllName = image.ReadStringLiteral(dllNameOffset);
+        ret._exportName = image.ReadStringLiteral(exportNameOffset);
         return ret;
     }
 

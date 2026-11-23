@@ -115,14 +115,9 @@
   <data name="RegionPlugin" xml:space="preserve"><value>plugin definition region</value></data>
   <data name="RegionParameter" xml:space="preserve"><value>function parameter definition region</value></data>
 
-  <!-- AxData validation -->
-  <data name="ArgumentNullReader" xml:space="preserve"><value>reader cannot be null</value></data>
-  <data name="ArgumentNullDictionary" xml:space="preserve"><value>dictionary cannot be null</value></data>
-  <data name="LoadStartNotCalled" xml:space="preserve"><value>LoadStart has not been called</value></data>
-  <data name="HeaderNotLoaded" xml:space="preserve"><value>Header has not been loaded</value></data>
-
   <!-- Syntactic analysis -->
   <data name="RpnConversionFailed" xml:space="preserve"><value>Failed to convert to reverse Polish notation</value></data>
+  <data name="CompilerHintIgnored" xml:space="preserve"><value>The compiler hint {0} does not fit this AX ({1}); the inferred release is kept</value></data>
   <data name="StructNotInHspSpec" xml:space="preserve"><value>#struct output by deHSP is not included in HSP's published declaration specification</value></data>
   <data name="AnalysisFailedEndNotStored" xml:space="preserve"><value>Analysis failed: end position not stored</value></data>
   <data name="AnalysisFailedScopeEndExceedsCode" xml:space="preserve"><value>Analysis failed: {0}: scope end exceeds code end</value></data>
