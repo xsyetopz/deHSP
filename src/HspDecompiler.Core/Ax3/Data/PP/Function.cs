@@ -392,7 +392,7 @@ internal class Function : Preprocessor
     // モジュール内で宣言したインポートは、指定しなければそのモジュールのローカルになる。
     private static string Global(bool inModule) => inModule ? "global " : string.Empty;
 
-    private bool IsMethod => _functionParams.Count != 0 && _functionParams[0].IsModuleType;
+    internal bool IsMethod => _functionParams.Count != 0 && _functionParams[0].IsModuleType;
 
     // With useModuleStyle the declaration sits inside a rebuilt #module block.
     //

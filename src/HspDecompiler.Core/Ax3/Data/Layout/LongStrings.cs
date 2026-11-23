@@ -66,6 +66,66 @@ internal static class LongStrings
         return builder.ToString();
     }
 
+    // The "\n" escapes of each "..." literal of a statement, in order.
+    //
+    // 文の各 "..." リテラルが持つ "\n" エスケープの数(順序どおり)。
+    internal static int[] Escapes(string text)
+    {
+        var counts = new List<int>();
+        int i = 0;
+        while (i < text.Length)
+        {
+            if (text[i] is not ('"' or '\''))
+            {
+                i++;
+                continue;
+            }
+
+            int end = SkipQuoted(text, i);
+            if (text[i] == '"')
+            {
+                counts.Add(CountEscapes(text[i..end]));
+            }
+
+            i = end;
+        }
+
+        return [.. counts];
+    }
+
+    // Rewrites the "..." literals that the map names by their position among them, each with
+    // its own number of line breaks.
+    //
+    // マップが "..." リテラル中の位置で指すリテラルを、それぞれの改行の数で書き換える。
+    internal static string RenderAt(string text, IReadOnlyDictionary<int, int> breaks)
+    {
+        var builder = new StringBuilder(text.Length);
+        int i = 0;
+        int literal = 0;
+        while (i < text.Length)
+        {
+            char c = text[i];
+            if (c is not ('"' or '\''))
+            {
+                builder.Append(c);
+                i++;
+                continue;
+            }
+
+            int end = SkipQuoted(text, i);
+            string quoted = text[i..end];
+            builder.Append(
+                c == '"' && breaks.TryGetValue(literal, out int count)
+                    ? Long(quoted, count)
+                    : quoted
+            );
+            literal += c == '"' ? 1 : 0;
+            i = end;
+        }
+
+        return builder.ToString();
+    }
+
     // The index just past the literal that starts at the given quote.
     //
     // 指定した引用符で始まるリテラルの直後の位置。

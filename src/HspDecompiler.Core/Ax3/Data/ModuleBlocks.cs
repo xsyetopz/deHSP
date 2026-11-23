@@ -74,7 +74,10 @@ internal static class ModuleBlocks
         return null;
     }
 
-    private static void Apply(List<LogicalLine> lines, AxData data, List<Block> blocks)
+    // A function declared with #deffunc without "local" is a global symbol.
+    //
+    // "local" を付けずに #deffunc で宣言した関数はグローバルシンボルである。
+    internal static void AddGlobalFunctions(AxData data)
     {
         foreach (Function function in data.Functions.Where(f => f.IsUserFunction))
         {
@@ -83,7 +86,11 @@ internal static class ModuleBlocks
                 data.Scope.AddGlobalFunction(name);
             }
         }
+    }
 
+    private static void Apply(List<LogicalLine> lines, AxData data, List<Block> blocks)
+    {
+        AddGlobalFunctions(data);
         var structs = new HashSet<Function>();
         int anonymous = 0;
         foreach (Block block in blocks)
@@ -105,7 +112,12 @@ internal static class ModuleBlocks
                 block.StartOffset
             );
             lines[block.End] = new EndOfModule(block.EndOffset);
-            data.Scope.HasUnusedModule |= !IsUsed(data, block, members);
+            data.Scope.HasUnusedModule |= !IsUsed(
+                data,
+                members,
+                block.StartOffset,
+                block.EndOffset
+            );
         }
 
         AssignOwners(data, blocks);
@@ -122,13 +134,14 @@ internal static class ModuleBlocks
     // hspcmp の optcode は、宣言した関数の呼び出しも名前の使用も無いモジュールを削除する
     // (codegen.cpp の GenerateCodePP_module)。そのため、そのようなモジュールがあれば optcode は
     // 切られていた。
-    private static bool IsUsed(AxData data, Block block, Function? members) =>
+    internal static bool IsUsed(AxData data, Function? members, int startOffset, int endOffset) =>
         members?.FirstUseOffset >= 0
         || data.Functions.Exists(f =>
             f.IsUserFunction
             && f.FirstUseOffset >= 0
-            && f.Label is { } label
-            && block.Holds(label.TokenOffset)
+            && f.Label is { TokenOffset: var offset }
+            && offset >= startOffset
+            && offset < endOffset
         );
 
     // A recorded name says which module a label belongs to; a label without one belongs to

@@ -78,16 +78,7 @@ internal class Ax3Decoder : IAxDecoder, IIncludeSource
             List<LogicalLine> lines = await synt.AnalyzeAsync(stream, data, logger, progress, ct)
                 .ConfigureAwait(false);
             logger.Write(Strings.CreatingOutputFile);
-            List<string> directives = CompileDirectives(data);
-            if (names != null)
-            {
-                stringLines.AddRange(Layout(lines, directives, data, names, restored));
-            }
-            else
-            {
-                stringLines.AddRange(directives);
-                stringLines.AddRange(Indented(lines, data));
-            }
+            stringLines.AddRange(Write(lines, data, names, restored));
         }
         catch (SystemException e)
         {
@@ -95,6 +86,39 @@ internal class Ax3Decoder : IAxDecoder, IIncludeSource
         }
 
         return stringLines;
+    }
+
+    // A debug build places each line by its record. A normal build from hspcmp 3.1 to 3.32
+    // records only its #module, #global and {"..."} lines, which MarkedLayout rebuilds when they
+    // fit; other builds write the lines in order.
+    //
+    // デバッグビルドは各行を記録に従って置く。hspcmp 3.1〜3.32 の通常ビルドは #module・
+    // #global・{"..."} の行だけを記録し、収まれば MarkedLayout がそれを組み直す。それ以外の
+    // ビルドは行を順に書く。
+    private List<string> Write(
+        List<LogicalLine> lines,
+        AxData data,
+        IncludeNames? names,
+        HashSet<int> restored
+    )
+    {
+        if (names != null)
+        {
+            return Layout(lines, CompileDirectives(data), data, names, restored);
+        }
+
+        if (
+            data.DebugInfo.Marks.Count > 0
+            && MarkedLayout.Match(lines, data, HasUncalledImport(data)) is { } marked
+            && marked.Write(CompileDirectives(data), MainFileName) is { } result
+        )
+        {
+            Includes = result.Includes;
+            return result.Main;
+        }
+
+        data.Scope.HasUnusedModule = false;
+        return [.. CompileDirectives(data), .. Indented(lines, data)];
     }
 
     private static IEnumerable<string> Indented(List<LogicalLine> lines, AxData data) =>
