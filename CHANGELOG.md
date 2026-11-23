@@ -25,7 +25,9 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
 - `--utf8` (`DecompilerOptions.Utf8Output`) writes the source as UTF-8 without a BOM
   instead of Shift_JIS. `DecompilerPipeline.DecodeAsync` has an overload that takes the output
   encoding. Lines the encoding cannot hold are logged as warnings.
-- Strings compiled as UTF-8 decode as UTF-8 and emit `#cmpopt utf8 1`.
+- Strings compiled as UTF-8 decode as UTF-8 and emit `#cmpopt utf8 1`. hsp64 programs
+  from hspcmp 3.8β2 hold UTF-8 strings without the utf8 boot flag; they decode as UTF-8
+  too and emit no `#cmpopt utf8 1`, which would set the flag.
 - The decompiled source restores the compiler options the AX records:
   - `#bootopt` lines for hsp64, nogdip, float32, orgrnd, ioresume and utf8.
   - `#bootopt notimer 1`, written only next to an `await`.

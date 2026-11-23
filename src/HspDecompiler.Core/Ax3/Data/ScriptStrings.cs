@@ -30,16 +30,20 @@ internal sealed class ScriptStrings
         return text;
     }
 
-    // hspcmp writes the UTF-8 boot bit only into an AX with a #runtime, and a UTF-8 compile always
-    // sets it there (hsc3.cpp, codegen.cpp), so with a runtime the bit decides and without one the
-    // bytes alone do. Shift_JIS text with any lead byte from 0x81 to 0x9F is never valid UTF-8,
-    // and the rest rarely is, so one invalid string settles the encoding as Shift_JIS.
+    // hspcmp writes boot bits only into an AX with a #runtime, so with a runtime the bits decide
+    // and without one the bytes alone do. `#cmpopt utf8 1` sets the UTF-8 bit (hsc3.cpp,
+    // codegen.cpp), and hspcmp 3.8 beta 2 stores UTF-8 strings for every HSP64 program even
+    // without it, so either bit counts as a UTF-8 runtime. Shift_JIS text with any lead byte from
+    // 0x81 to 0x9F is never valid UTF-8, and the rest rarely is, so one invalid string settles the
+    // encoding as Shift_JIS.
     //
-    // hspcmp は UTF-8 の起動ビットを #runtime のある AX にだけ書き、UTF-8 でコンパイルすると
-    // そこでは必ず立てる(hsc3.cpp、codegen.cpp)。そのためランタイムがあればビットで判断し、
-    // 無ければバイト列だけで判断する。0x81〜0x9F の先頭バイトを含む Shift_JIS は UTF-8 として
-    // 正しくならず、それ以外もまれなため、不正な文字列が 1 つでもあれば Shift_JIS と決める。
-    internal void Resolve(bool hasRuntime, bool utf8BootBit)
+    // hspcmp は起動ビットを #runtime のある AX にだけ書くため、ランタイムがあればビットで
+    // 判断し、無ければバイト列だけで判断する。`#cmpopt utf8 1` は UTF-8 ビットを立て
+    // (hsc3.cpp、codegen.cpp)、hspcmp 3.8 beta 2 はそれが無くても HSP64 のプログラムでは
+    // 常に UTF-8 の文字列を格納するため、どちらのビットも UTF-8 ランタイムとみなす。
+    // 0x81〜0x9F の先頭バイトを含む Shift_JIS は UTF-8 として正しくならず、それ以外も
+    // まれなため、不正な文字列が 1 つでもあれば Shift_JIS と決める。
+    internal void Resolve(bool hasRuntime, bool utf8Runtime)
     {
         bool anyNonAscii = false;
         foreach (byte[] text in _texts)
@@ -57,7 +61,7 @@ internal sealed class ScriptStrings
             anyNonAscii = true;
         }
 
-        IsUtf8 = anyNonAscii && (utf8BootBit || !hasRuntime);
+        IsUtf8 = anyNonAscii && (utf8Runtime || !hasRuntime);
         if (IsUtf8)
         {
             Encoding = s_utf8;

@@ -79,7 +79,7 @@ the AX records, so hspcmp builds it the same way:
 | `#cmpopt optcode 0` | has an uncalled `#func` or `#cfunc`, or stores a string twice |
 | `#cmpopt varname 1` | holds variable names |
 | `#cmpopt optprm 0` | has no single-literal parameter flags |
-| `#cmpopt utf8 1` | holds UTF-8 strings |
+| `#cmpopt utf8 1` | holds UTF-8 strings, unless it is an hsp64 program without the utf8 boot flag |
 | `#bootopt ...` | has boot flags set (hsp64, nogdip, float32, orgrnd, ioresume, utf8, notimer) |
 | `#runtime "..."` | names a runtime |
 
@@ -99,6 +99,12 @@ breaks:
   runs to the end of the line.
 - hspcmp 3.8β2 detects UTF-8 and converts it to the Windows code page, so characters
   outside that code page turn into `?`.
+
+The Shift_JIS output of a program with UTF-8 strings also recompiles, but hspcmp converts
+its strings to UTF-8 through the Windows code page. Only a Japanese system (code page 932)
+rebuilds the same bytes that way; on any other system use `--utf8`. hspcmp 3.8β2 stores
+UTF-8 strings for every hsp64 program, so this applies to its output even without
+`#cmpopt utf8 1`.
 
 ## Project Structure
 

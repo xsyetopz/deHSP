@@ -45,8 +45,10 @@ internal class Ax3Decoder : IAxDecoder
             logger.Write(Strings.LexicalAnalysis);
             var lex = new LexicalAnalyzer(_dictionary!);
             TokenCollection stream = lex.Analyze(data);
-            bool utf8Boot = (data.Header!.BootOption & BootOptionDirectives.Utf8) != 0;
-            data.ScriptStrings.Resolve(data.Runtime != null, utf8Boot);
+            data.ScriptStrings.Resolve(
+                data.Runtime != null,
+                BootOptionDirectives.IsUtf8Runtime(data.Header!.BootOption)
+            );
             data.LoadEnd();
             logger.Write(Strings.SyntacticAnalysis);
             var synt = new SyntacticAnalyzer();

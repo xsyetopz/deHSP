@@ -30,16 +30,28 @@ internal static class BootOptionDirectives
         (IoResume, "#bootopt ioresume 1"),
     ];
 
+    // hspcmp 3.8 beta 2 stores UTF-8 strings for every HSP64 program, with or without the UTF-8
+    // bit, so a runtime with either bit reads its strings as UTF-8.
+    //
+    // hspcmp 3.8 beta 2 は UTF-8 ビットの有無にかかわらず HSP64 のプログラムでは常に UTF-8 の
+    // 文字列を格納するため、どちらかのビットを持つランタイムは文字列を UTF-8 として読む。
+    internal static bool IsUtf8Runtime(uint bootOption) => (bootOption & (Utf8 | Hsp64)) != 0;
+
     internal static List<string> Build(uint bootOption, bool utf8Strings, bool usesAwait)
     {
         var lines = new List<string>();
 
         // `#cmpopt utf8 1` converts the script strings and also sets the UTF-8 bit, so the bit
-        // needs its own #bootopt only when the strings stayed Shift_JIS.
+        // needs its own #bootopt only when the strings stayed Shift_JIS. An HSP64 program with the
+        // bit clear got UTF-8 strings from hspcmp 3.8 beta 2 without the directive, and writing it
+        // would set the bit.
         //
         // `#cmpopt utf8 1` はスクリプト文字列を変換し UTF-8 ビットも立てるため、文字列が
-        // Shift_JIS のままの時だけビットに #bootopt を別に書く。
-        if (utf8Strings)
+        // Shift_JIS のままの時だけビットに #bootopt を別に書く。ビットの無い HSP64 の
+        // プログラムはディレクティブ無しで hspcmp 3.8 beta 2 から UTF-8 の文字列を得ており、
+        // 書けばビットが立ってしまう。
+        bool hsp64WithoutUtf8Bit = (bootOption & (Utf8 | Hsp64)) == Hsp64;
+        if (utf8Strings && !hsp64WithoutUtf8Bit)
         {
             lines.Add(Utf8StringsDirective);
         }

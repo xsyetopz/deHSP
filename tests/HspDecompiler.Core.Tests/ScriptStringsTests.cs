@@ -9,7 +9,7 @@ public class ScriptStringsTests
     private static readonly byte[] s_utf8Text = "日本"u8.ToArray();
     private static readonly byte[] s_shiftJisText = ShiftJisHelper.Encoding.GetBytes("日本");
 
-    private static ScriptStrings Resolved(bool hasRuntime, bool utf8BootBit, params byte[][] texts)
+    private static ScriptStrings Resolved(bool hasRuntime, bool utf8Runtime, params byte[][] texts)
     {
         var strings = new ScriptStrings();
         foreach (byte[] text in texts)
@@ -17,7 +17,7 @@ public class ScriptStringsTests
             strings.Add(text);
         }
 
-        strings.Resolve(hasRuntime, utf8BootBit);
+        strings.Resolve(hasRuntime, utf8Runtime);
         return strings;
     }
 
@@ -31,7 +31,7 @@ public class ScriptStringsTests
     }
 
     [Fact]
-    public void ValidUtf8WithRuntimeNeedsTheBootBit()
+    public void ValidUtf8WithRuntimeNeedsAUtf8Runtime()
     {
         Assert.False(Resolved(true, false, s_utf8Text).IsUtf8);
         Assert.True(Resolved(true, true, s_utf8Text).IsUtf8);
