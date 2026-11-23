@@ -1,13 +1,11 @@
 using System;
+using HspDecompiler.Core.Pipeline;
 using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.DpmToAx.Crypto;
 
 internal class HspCryptoTransform
 {
-    private const string Hsp2Magic = "HSP2";
-    private const string Hsp3Magic = "HSP3";
-
     private XorAddTransform _xorAdd;
 
     internal XorAddTransform XorAdd
@@ -47,8 +45,16 @@ internal class HspCryptoTransform
         byte[] encrypted,
         Func<byte[], bool> validator
     ) =>
-        CrackEncryption(System.Text.Encoding.ASCII.GetBytes(Hsp3Magic), encrypted, validator)
-        ?? CrackEncryption(System.Text.Encoding.ASCII.GetBytes(Hsp2Magic), encrypted, validator);
+        CrackEncryption(
+            System.Text.Encoding.ASCII.GetBytes(AxFormats.Ax3Magic),
+            encrypted,
+            validator
+        )
+        ?? CrackEncryption(
+            System.Text.Encoding.ASCII.GetBytes(AxFormats.Ax2Magic),
+            encrypted,
+            validator
+        );
 
     internal static HspCryptoTransform? CrackEncryption(
         byte[] plain,

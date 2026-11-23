@@ -16,7 +16,7 @@ internal sealed class UserFunctionPrimitive : FunctionPrimitive
         : base(dataSet)
     {
         _scope = dataSet._parent!.Scope;
-        _func = dataSet._parent!.GetUserFunction(Value);
+        _func = dataSet._parent!.GetFunction(Value);
         _func?.MarkUsedAt(TokenOffset);
     }
 
@@ -33,7 +33,7 @@ internal sealed class DllFunctionPrimitive : FunctionPrimitive
         : base(dataSet)
     {
         _scope = dataSet._parent!.Scope;
-        _func = dataSet._parent!.GetDllFunction(Value);
+        _func = dataSet._parent!.GetFunction(Value);
         _func?.MarkUsedAt(TokenOffset);
     }
 
@@ -63,7 +63,7 @@ internal sealed class ComFunctionPrimitive : FunctionPrimitive
     internal ComFunctionPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet)
     {
-        _func = dataSet._parent!.GetDllFunction(Value - 0x1000);
+        _func = dataSet._parent!.GetFunction(Value - 0x1000);
         _func?.MarkUsedAt(TokenOffset);
     }
 

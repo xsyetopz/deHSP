@@ -3,14 +3,13 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using HspDecompiler.Core.Abstractions;
+using HspDecompiler.Core.Releases;
 
 namespace HspDecompiler.Core.Ax2.Data;
 
 internal readonly record struct SourceLine(string Text, int Anchor);
 
 internal readonly record struct FileSwitch(int Offset, string Name);
-
-internal sealed record Ax2Source(List<string> Lines, List<IncludeFile> Includes);
 
 // hspcmp 2.x appends literals, #func names and #deffunc names to the data segment in source
 // order and never reuses an entry, so the first data offset a line introduces places it in the
@@ -25,8 +24,6 @@ internal sealed record Ax2Source(List<string> Lines, List<IncludeFile> Includes)
 // ため、最初の切り替えはメインファイルへの戻りになる。
 internal sealed class IncludeLayout
 {
-    private const string ImplicitHeader = "hspdef.as";
-
     private static readonly SearchValues<char> s_pathChars = SearchValues.Create("/\\:*?\"<>|");
 
     private readonly Segment _root;
@@ -70,7 +67,7 @@ internal sealed class IncludeLayout
         return merged;
     }
 
-    internal static Ax2Source Split(
+    internal static DecodedSource Split(
         List<SourceLine> lines,
         List<FileSwitch> switches,
         string? mainFileName
@@ -78,7 +75,7 @@ internal sealed class IncludeLayout
     {
         var layout = new IncludeLayout(BuildTree(switches), mainFileName);
         List<string> main = layout.Emit(layout._root, lines, 0, lines.Count);
-        return new Ax2Source(main, layout._includes);
+        return new DecodedSource(main, layout._includes);
     }
 
     private static int NextAnchor(List<SourceLine> lines, int from)
@@ -222,7 +219,11 @@ internal sealed class IncludeLayout
     private bool IsImplicitHeader(Segment child) =>
         (child.Parent == _root)
         && (_root.Children[0] == child)
-        && string.Equals(child.Name, ImplicitHeader, StringComparison.OrdinalIgnoreCase);
+        && string.Equals(
+            child.Name,
+            CompilerReleases.ImplicitHeader,
+            StringComparison.OrdinalIgnoreCase
+        );
 
     // Only a plain file name beside the main file is written; a path, a clash with the main file
     // or a second copy with other contents stays inline instead.
@@ -237,7 +238,11 @@ internal sealed class IncludeLayout
             || name.AsSpan().ContainsAny(s_pathChars)
             || name.Any(char.IsControl)
             || string.Equals(name, _mainFileName, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(name, ImplicitHeader, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(
+                name,
+                CompilerReleases.ImplicitHeader,
+                StringComparison.OrdinalIgnoreCase
+            )
         )
         {
             return false;

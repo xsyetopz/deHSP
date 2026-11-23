@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text;
 using HspDecompiler.Core.Ax3.Dictionary;
 using HspDecompiler.Core.Pipeline;
+using HspDecompiler.Core.Releases;
 using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax3.Data;
@@ -34,13 +35,17 @@ internal abstract class PrimitiveToken
         _value = dataSet._value;
         _name = dataSet._name;
         Style = dataSet._parent?.Style ?? SourceStyle.Default;
-        FormatVersion = dataSet._parent?.Header?.Version ?? 0;
+        _data = dataSet._parent;
     }
 
-    // The AX format version, which tells which hspdef.as macros the compiler had.
+    private readonly AxData? _data;
+
+    // The releases that could have written the AX, which tell which hspdef.as macros the
+    // compiler had. Read when the token renders, after the whole AX is known.
     //
-    // AX の形式のバージョン。コンパイラにどの hspdef.as マクロがあったかを示す。
-    internal uint FormatVersion { get; }
+    // AX を書いた可能性のあるリリース。コンパイラにどの hspdef.as マクロがあったかを示す。
+    // AX 全体が分かった後、トークンを書く時に読む。
+    internal ReleaseProfile Release => _data?.Release ?? ReleaseProfile.Unknown;
 
     internal SourceStyle Style { get; } = SourceStyle.Default;
 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using HspDecompiler.Core.Abstractions;
 using HspDecompiler.Core.Ax2.Data;
 using Xunit;
 
@@ -51,10 +52,10 @@ public class IncludeLayoutTests
         List<SourceLine> lines = [new("mes 1", 0), new("stop", -1)];
 
         // Act
-        Ax2Source source = IncludeLayout.Split(lines, [], "main.as");
+        DecodedSource source = IncludeLayout.Split(lines, [], "main.as");
 
         // Assert
-        Assert.Equal(["mes 1", "stop"], source.Lines);
+        Assert.Equal(["mes 1", "stop"], source.Main);
         Assert.Empty(source.Includes);
     }
 }

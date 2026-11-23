@@ -70,10 +70,15 @@ internal sealed class MarkEvents
 
     // withLone admits labels alone as dropped modules, which only optcode leaves behind;
     // withUnused admits goto blocks no code uses, which only a build without optcode keeps.
+    // Strings take records only when every candidate release records where {"..."} ends: an AX
+    // that 3.21 could have written gets its records from blocks and line-record macros, which
+    // recompile the same on 3.1 to 3.32.
     //
     // withLone は単独のラベルを削られたモジュールとして認める。それを残すのは optcode だけで
     // ある。withUnused はどのコードも使わない goto ブロックを認める。それを残すのは optcode の
-    // 無いビルドだけである。
+    // 無いビルドだけである。文字列が記録を受け取るのは、すべての候補リリースが {"..."} の
+    // 終わりを記録する時だけである。3.21 が書けた AX はブロックと行の記録のマクロから記録を
+    // 得て、3.1〜3.32 のどれでも同じに再コンパイルされる。
     internal static MarkEvents Build(RowTable table, AxData data, bool withLone, bool withUnused)
     {
         List<MarkedRow> rows = table.Rows;
@@ -100,13 +105,14 @@ internal sealed class MarkEvents
             }
         }
 
-        return Collect(rows, starts, ends);
+        return Collect(rows, starts, ends, data.Release.RecordsStringEnds);
     }
 
     private static MarkEvents Collect(
         List<MarkedRow> rows,
         Dictionary<int, MarkBlock> starts,
-        Dictionary<int, MarkBlock> ends
+        Dictionary<int, MarkBlock> ends,
+        bool strings
     )
     {
         var events = new List<MarkEvent>();
@@ -127,7 +133,7 @@ internal sealed class MarkEvents
                 blocks[index] = blocks[index] with { End = events.Count - 1 };
             }
 
-            int[] escapes = rows[i].Escapes;
+            int[] escapes = strings ? rows[i].Escapes : [];
             for (int ordinal = 0; ordinal < escapes.Length; ordinal++)
             {
                 events.Add(new MarkEvent(MarkKind.Text, i, i, -1, ordinal, escapes[ordinal]));

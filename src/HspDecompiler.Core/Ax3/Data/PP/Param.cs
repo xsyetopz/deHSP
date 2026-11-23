@@ -51,7 +51,7 @@ internal class Param : Preprocessor
             return;
         }
 
-        _module = parent.GetUserFunction(_deffuncIndex);
+        _module = parent.GetFunction(_deffuncIndex);
         if (_module == null)
         {
             return;

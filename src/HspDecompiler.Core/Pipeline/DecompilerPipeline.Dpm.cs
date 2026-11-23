@@ -276,11 +276,7 @@ public sealed partial class DecompilerPipeline
             {
                 using var ms = new MemoryStream(decryptedData);
                 using var br = new BinaryReader(ms, ShiftJisHelper.Encoding);
-                string fileMagic = DetectFileFormat(br);
-                if (
-                    !fileMagic.StartsWith(Hsp2Magic, StringComparison.Ordinal)
-                    && !fileMagic.StartsWith(Hsp3Magic, StringComparison.Ordinal)
-                )
+                if (AxFormats.Detect(br) == null)
                 {
                     return false;
                 }

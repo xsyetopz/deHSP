@@ -3,12 +3,15 @@ using System.Linq;
 using HspDecompiler.Core.Ax3.Data;
 using HspDecompiler.Core.Ax3.Data.Layout;
 using HspDecompiler.Core.Ax3.Data.Line;
+using HspDecompiler.Core.Releases;
 using Xunit;
 
 namespace HspDecompiler.Core.Tests.Ax3;
 
 public class MarkedLayoutTests
 {
+    private static AxData Hsp33() => new() { Release = new([CompilerReleases.Hsp33]) };
+
     private static MarkedRow Row(RowKind kind, params int[] escapes) =>
         new(new CommentLine("x"), kind, escapes);
 
@@ -41,13 +44,27 @@ public class MarkedLayoutTests
     public void StringRecordTakesTheLiteralWhoseBreaksReachIt()
     {
         var table = new RowTable([Row(RowKind.Directive), Row(RowKind.Code, 0, 2)]);
-        var events = MarkEvents.Build(table, new AxData(), false, false);
+        var events = MarkEvents.Build(table, Hsp33(), false, false);
 
-        MarkChoice[]? choices = MarkMatcher.Match(table, events, [4]);
+        MarkChoice[]? choices = MarkMatcher.Match(table, events, [4], false);
 
         Assert.NotNull(choices);
         Assert.Equal(1, events.Events[choices[0].Event].Ordinal);
         Assert.False(choices[0].NewPart);
+    }
+
+    [Fact]
+    public void StringTakesNoRecordWhenSomeCandidateDoesNotRecordStrings()
+    {
+        var table = new RowTable([Row(RowKind.Directive), Row(RowKind.Code, 0, 2)]);
+        var data = new AxData { Release = new([CompilerReleases.Hsp321, CompilerReleases.Hsp33]) };
+        var events = MarkEvents.Build(table, data, false, false);
+
+        MarkChoice[]? choices = MarkMatcher.Match(table, events, [4], true);
+
+        Assert.Empty(events.Events);
+        Assert.NotNull(choices);
+        Assert.True(choices[0].Free);
     }
 
     [Fact]
@@ -59,9 +76,9 @@ public class MarkedLayoutTests
             Row(RowKind.Directive),
             Row(RowKind.Code, 0),
         ]);
-        var events = MarkEvents.Build(table, new AxData(), false, false);
+        var events = MarkEvents.Build(table, Hsp33(), false, false);
 
-        MarkChoice[]? choices = MarkMatcher.Match(table, events, [1]);
+        MarkChoice[]? choices = MarkMatcher.Match(table, events, [1], false);
 
         Assert.NotNull(choices);
         Assert.True(choices[0].NewPart);
@@ -71,9 +88,60 @@ public class MarkedLayoutTests
     public void RecordWithoutAnyEventFindsNoLayout()
     {
         var table = new RowTable([Row(RowKind.Code)]);
-        var events = MarkEvents.Build(table, new AxData(), false, false);
+        var events = MarkEvents.Build(table, Hsp33(), false, false);
 
-        Assert.Null(MarkMatcher.Match(table, events, [1]));
+        Assert.Null(MarkMatcher.Match(table, events, [1], false));
+    }
+
+    [Fact]
+    public void RecordWithoutAnyEventIsFreeAfterTheMacroDefinition()
+    {
+        var table = new RowTable([Row(RowKind.Code), Row(RowKind.Code)]);
+        var events = MarkEvents.Build(table, Hsp33(), false, false);
+
+        MarkChoice[]? choices = MarkMatcher.Match(table, events, [3], true);
+
+        Assert.NotNull(choices);
+        Assert.Equal(new MarkChoice(-1, false, true), choices[0]);
+    }
+
+    [Fact]
+    public void FreeRecordNeedsALineBetweenTheDefinitionAndItself()
+    {
+        var table = new RowTable([Row(RowKind.Code)]);
+        var events = MarkEvents.Build(table, Hsp33(), false, false);
+
+        Assert.Null(MarkMatcher.Match(table, events, [2], true));
+    }
+
+    [Fact]
+    public void FreeRecordFollowsTheRowsOfTheEventBeforeIt()
+    {
+        var table = new RowTable([Row(RowKind.Code, 1), Row(RowKind.Code)]);
+        var events = MarkEvents.Build(table, Hsp33(), false, false);
+
+        MarkChoice[]? choices = MarkMatcher.Match(table, events, [3, 5], true);
+
+        Assert.NotNull(choices);
+        Assert.False(choices[0].Free);
+        Assert.Equal(new MarkChoice(0, false, true), choices[1]);
+    }
+
+    [Fact]
+    public void LineRecordMacroUseStandsOnTheLineBeforeItsRecord()
+    {
+        List<List<string>>? parts = Place([
+            Item(LineRecordMacro.Definition(), RowKind.Directive, 1),
+            Item(new CommentLine("a"), RowKind.Code),
+            Item(LineRecordMacro.Use(), RowKind.Directive, 3),
+            Item(new CommentLine("b"), RowKind.Code),
+        ]);
+
+        Assert.NotNull(parts);
+        Assert.Equal(
+            ["#define global __line_record(%1) %c", "//a", "\t__line_record", "//b"],
+            parts[0]
+        );
     }
 
     [Fact]

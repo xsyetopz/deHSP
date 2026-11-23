@@ -31,9 +31,6 @@ namespace HspDecompiler.Core.Pipeline;
 /// </summary>
 public sealed partial class DecompilerPipeline
 {
-    private const string Hsp2Magic = "HSP2";
-    private const string Hsp3Magic = "HSP3";
-
     private static readonly CompositeFormat s_dictionaryLoadSuccessFormat = CompositeFormat.Parse(
         Strings.DictionaryLoadSuccess
     );
@@ -249,25 +246,26 @@ public sealed partial class DecompilerPipeline
         CancellationToken ct
     )
     {
-        string magic = DetectFileFormat(reader);
+        string magic = AxFormats.Peek(reader);
         string? explicitDir = string.IsNullOrEmpty(options.OutputDirectory)
             ? null
             : Path.TrimEndingDirectorySeparator(options.OutputDirectory)
                 + Path.DirectorySeparatorChar;
 
-        if (
-            magic.StartsWith(Hsp2Magic, StringComparison.Ordinal)
-            || magic.StartsWith(Hsp3Magic, StringComparison.Ordinal)
-        )
+        if (AxFormats.Of(magic) is { } format)
         {
-            return await DecompileAxAsync(reader, magic, explicitDir, options, decompilerOutput, ct)
+            return await DecompileAxAsync(
+                    reader,
+                    format,
+                    explicitDir,
+                    options,
+                    decompilerOutput,
+                    ct
+                )
                 .ConfigureAwait(false);
         }
 
-        if (
-            !magic.StartsWith("MZ", StringComparison.Ordinal)
-            && !magic.StartsWith("DPM", StringComparison.Ordinal)
-        )
+        if (!AxFormats.IsContainer(magic))
         {
             throw new HspDecoderException(Strings.UnrecognizedFileFormat);
         }
@@ -290,7 +288,7 @@ public sealed partial class DecompilerPipeline
     // デコンパイルしたソースの警告ログのパスを返す。
     private async Task<string> DecompileAxAsync(
         BinaryReader reader,
-        string magic,
+        AxFormat format,
         string? explicitDir,
         DecompilerOptions options,
         DecompilerResult decompilerOutput,
@@ -305,7 +303,7 @@ public sealed partial class DecompilerPipeline
         string outputPath = BuildAutoIncrementFileName(
             explicitDir ?? InputDirectory(options),
             InputBaseName(options),
-            SourceExtension(magic)
+            AxFormats.SourceExtension(format)
         );
         decompilerOutput.OutputPath = outputPath;
         await DecodeAsync(reader, outputPath, SourceEncoding(options), ct).ConfigureAwait(false);
@@ -320,9 +318,6 @@ public sealed partial class DecompilerPipeline
 
     private static string InputBaseName(DecompilerOptions options) =>
         Path.GetFileNameWithoutExtension(options.InputPath);
-
-    private static string SourceExtension(string axMagic) =>
-        axMagic.StartsWith(Hsp2Magic, StringComparison.Ordinal) ? ".as" : ".hsp";
 
     // Returns false when nothing past the extraction is left to decompile.
     //
@@ -373,7 +368,7 @@ public sealed partial class DecompilerPipeline
             string outputPath = BuildAutoIncrementFileName(
                 outputDir,
                 Path.GetFileNameWithoutExtension(entry.FileName),
-                SourceExtension(DetectFileFormat(axReader))
+                AxFormats.SourceExtension(AxFormats.Detect(axReader))
             );
             await DecodeAsync(axReader, outputPath, SourceEncoding(options), ct)
                 .ConfigureAwait(false);
@@ -398,14 +393,6 @@ public sealed partial class DecompilerPipeline
         }
 
         decompilerOutput.Warnings.AddRange(_logger.Warnings);
-    }
-
-    private static string DetectFileFormat(BinaryReader reader)
-    {
-        char[] buffer = reader.ReadChars(4);
-        string magic = new(buffer);
-        reader.BaseStream.Seek(0, SeekOrigin.Begin);
-        return magic;
     }
 
     /// <summary>
@@ -499,9 +486,8 @@ public sealed partial class DecompilerPipeline
         _logger.Write(Strings.Decompiling);
         _logger.StartSection();
 
-        IAxDecoder decoder = CreateDecoder(reader, Path.GetFileName(outputPath));
-        List<string> lines = await decoder
-            .DecodeAsync(reader, _logger, _progress, ct)
+        DecodedSource source = await CreateDecoder(reader, Path.GetFileName(outputPath))
+            .DecodeSourceAsync(reader, _logger, _progress, ct)
             .ConfigureAwait(false);
 
         _logger.EndSection();
@@ -515,33 +501,26 @@ public sealed partial class DecompilerPipeline
             )
         );
 
-        WarnUnencodableLines(lines, sourceEncoding);
-        WriteOutputLines(lines, outputPath, sourceEncoding);
-        if (decoder is IIncludeSource source)
-        {
-            WriteIncludeFiles(
-                source.Includes,
-                Path.GetDirectoryName(outputPath) ?? ".",
-                sourceEncoding
-            );
-        }
+        WarnUnencodableLines(source.Main, sourceEncoding);
+        WriteOutputLines(source.Main, outputPath, sourceEncoding);
+        WriteIncludeFiles(
+            source.Includes,
+            Path.GetDirectoryName(outputPath) ?? ".",
+            sourceEncoding
+        );
 
         _logger.Write(Strings.OutputComplete);
     }
 
-    private IAxDecoder CreateDecoder(BinaryReader reader, string? mainFileName = null)
+    private ISourceDecoder CreateDecoder(BinaryReader reader, string? mainFileName = null)
     {
-        long startPosition = reader.BaseStream.Position;
-        char[] buffer = reader.ReadChars(4);
-        string magic = new(buffer);
-        reader.BaseStream.Seek(startPosition, SeekOrigin.Begin);
-
-        if (magic.Equals(Hsp2Magic, StringComparison.Ordinal))
+        AxFormat? format = AxFormats.Detect(reader);
+        if (format == AxFormat.Ax2)
         {
             return new Ax2Decoder { MainFileName = mainFileName };
         }
 
-        if (magic.Equals(Hsp3Magic, StringComparison.Ordinal))
+        if (format == AxFormat.Ax3)
         {
             var decoder = new Ax3Decoder
             {

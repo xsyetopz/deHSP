@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using HspDecompiler.Core.Abstractions;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Resources;
 
@@ -392,12 +393,12 @@ internal class AxData
         return switches;
     }
 
-    internal Ax2Source BuildSource(string? mainFileName)
+    internal DecodedSource BuildSource(string? mainFileName)
     {
         List<SourceLine> declarations = GetDeclarations();
         List<SourceLine> merged = IncludeLayout.Merge(_lines, declarations);
-        Ax2Source source = IncludeLayout.Split(merged, GetFileSwitches(), mainFileName);
-        source.Lines.InsertRange(0, _undefs);
+        DecodedSource source = IncludeLayout.Split(merged, GetFileSwitches(), mainFileName);
+        source.Main.InsertRange(0, _undefs);
         return source;
     }
 

@@ -224,7 +224,7 @@ internal class SyntacticAnalyzer
         }
 
         data.DeleteInvisibleLabels();
-        data.RenameLables();
+        data.RenameLabels();
         int i = 0;
         foreach (Label label in data.Labels)
         {

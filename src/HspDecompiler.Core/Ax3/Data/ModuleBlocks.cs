@@ -110,14 +110,11 @@ internal static class ModuleBlocks
                 isAnonymous,
                 members,
                 block.StartOffset
-            );
+            )
+            {
+                Used = IsUsed(data, members, block.StartOffset, block.EndOffset),
+            };
             lines[block.End] = new EndOfModule(block.EndOffset);
-            data.Scope.HasUnusedModule |= !IsUsed(
-                data,
-                members,
-                block.StartOffset,
-                block.EndOffset
-            );
         }
 
         AssignOwners(data, blocks);

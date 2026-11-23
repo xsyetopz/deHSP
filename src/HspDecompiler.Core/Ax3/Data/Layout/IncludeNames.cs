@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
+using HspDecompiler.Core.Releases;
 
 namespace HspDecompiler.Core.Ax3.Data.Layout;
 
@@ -16,8 +17,6 @@ namespace HspDecompiler.Core.Ax3.Data.Layout;
 // メインファイルのディレクトリの下にある名前はそのディレクトリからの相対で書く。
 internal sealed class IncludeNames
 {
-    private const string ImplicitHeader = "hspdef.as";
-
     private static readonly SearchValues<char> s_badChars = SearchValues.Create(":*?\"<>|");
 
     private readonly List<string> _paths;
@@ -30,7 +29,8 @@ internal sealed class IncludeNames
         _paths = [.. paths];
         HeaderFile =
             _paths.Count > 0
-            && FileName(_paths[0]).Equals(ImplicitHeader, StringComparison.OrdinalIgnoreCase)
+            && FileName(_paths[0])
+                .Equals(CompilerReleases.ImplicitHeader, StringComparison.OrdinalIgnoreCase)
                 ? 0
                 : -1;
         MainFile = HeaderFile + 1;

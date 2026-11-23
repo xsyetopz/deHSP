@@ -9,17 +9,22 @@ using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax2;
 
-internal sealed class Ax2Decoder : IAxDecoder, IIncludeSource
+internal sealed class Ax2Decoder : ISourceDecoder
 {
     internal string? MainFileName { get; init; }
 
-    public IReadOnlyList<IncludeFile> Includes { get; private set; } = [];
-
-    public Task<List<string>> DecodeAsync(
+    public async Task<List<string>> DecodeAsync(
         BinaryReader reader,
         IDecompilerLogger logger,
         IProgressReporter progress,
         CancellationToken ct = default
+    ) => (await DecodeSourceAsync(reader, logger, progress, ct).ConfigureAwait(false)).Main;
+
+    public Task<DecodedSource> DecodeSourceAsync(
+        BinaryReader reader,
+        IDecompilerLogger logger,
+        IProgressReporter progress,
+        CancellationToken ct
     )
     {
         AxData data;
@@ -36,8 +41,6 @@ internal sealed class Ax2Decoder : IAxDecoder, IIncludeSource
             throw new HspDecoderException("AxData", Strings.UnexpectedError, e);
         }
 
-        Ax2Source source = data.BuildSource(MainFileName);
-        Includes = source.Includes;
-        return Task.FromResult(source.Lines);
+        return Task.FromResult(data.BuildSource(MainFileName));
     }
 }

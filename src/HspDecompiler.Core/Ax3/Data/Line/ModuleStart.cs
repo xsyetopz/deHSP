@@ -25,6 +25,13 @@ internal sealed class ModuleStart : LogicalLine
 
     internal string Name { get; }
 
+    // False when nothing calls a function the module declares or names the module, which
+    // hspcmp's optcode would have dropped (ModuleBlocks.IsUsed).
+    //
+    // モジュールが宣言する関数の呼び出しもモジュール名の使用も無い時は false。hspcmp の optcode
+    // なら削っていたモジュールである(ModuleBlocks.IsUsed)。
+    internal bool Used { get; init; } = true;
+
     internal override int TokenOffset => _tokenOffset;
 
     internal override int TabCount => 0;

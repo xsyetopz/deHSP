@@ -4,10 +4,14 @@ using System.Linq;
 
 namespace HspDecompiler.Core.Ax3.Data.Layout;
 
-// The event that wrote one record, and whether its row starts a new include file.
+// The event that wrote one record, and whether its row starts a new include file. A free record
+// came from no event: a line record macro writes it right after the rows of Event, which may be
+// -1 for the start of the source.
 //
-// 1 つの記録を書いた位置と、その行が新しい取り込みファイルを始めるかどうか。
-internal readonly record struct MarkChoice(int Event, bool NewPart);
+// 1 つの記録を書いた位置と、その行が新しい取り込みファイルを始めるかどうか。自由な記録はどの
+// 位置からも来ていない。行の記録マクロが Event の行の直後でそれを書く。Event はソースの先頭を
+// 表す -1 のこともある。
+internal readonly record struct MarkChoice(int Event, bool NewPart, bool Free);
 
 // Gives each line record of a normal build the event that wrote it. The records come in source
 // order, so the events they take keep that order, a #module takes the #global of its own block
@@ -17,45 +21,61 @@ internal readonly record struct MarkChoice(int Event, bool NewPart);
 // on start a new file; that costs more than any choice of events, so it happens only when no
 // layout of one file fits. Of the layouts that fit, the one with the lowest cost wins.
 //
+// With free records on, a record may also come from no event, as a "%c" macro of the original
+// source wrote it (LineRecordMacro). The macro use takes the line before the record on its own,
+// after the rows of the last event and before the rest, and its definition takes line 1, so the
+// first event starts on line 2 at the earliest. Such a record costs more than any string, and
+// less than a new file.
+//
 // 通常ビルドの各行の記録に、それを書いた位置を割り当てる。記録はソース順に並ぶため、割り当てる
 // 位置もその順を守り、#module の次は同じブロックの #global を取る。各位置は自分の行に収まる
 // 必要がある。前の位置からの行は、空行を落としコードをつないでも少なくともその行数を要する。
 // その行に収まらない記録は、行を 1 から数え直す取り込みファイルから来たため、その位置からの
 // 行は新しいファイルを始める。これはどの位置の選び方よりも費用が高く、1 つのファイルでは
 // 収まらない時だけ起きる。収まる配置の中で費用が最も低いものを選ぶ。
+//
+// 自由な記録を許すと、記録はどの位置からも来ないこともできる。元のソースの "%c" マクロが書いた
+// 記録である(LineRecordMacro)。マクロの使用は記録の前の行を単独で占め、最後の位置の行の後、
+// 残りの行の前に置く。定義は 1 行目を占めるため、最初の位置は早くとも 2 行目に来る。そうした
+// 記録はどの文字列よりも高く、新しいファイルよりは安い。
 internal sealed class MarkMatcher
 {
     private const int PartCost = 1000;
+    private const int FreeCost = 100;
 
     private readonly RowTable _table;
     private readonly List<MarkEvent> _events;
     private readonly List<MarkBlock> _blocks;
+    private readonly bool _free;
 
-    private MarkMatcher(RowTable table, MarkEvents events)
+    private MarkMatcher(RowTable table, MarkEvents events, bool free)
     {
         _table = table;
         _events = events.Events;
         _blocks = events.Blocks;
+        _free = free;
     }
 
     internal static MarkChoice[]? Match(
         RowTable table,
         MarkEvents events,
-        IReadOnlyList<int> marks
-    ) => new MarkMatcher(table, events).Run(marks);
+        IReadOnlyList<int> marks,
+        bool free
+    ) => new MarkMatcher(table, events, free).Run(marks);
 
     private MarkChoice[]? Run(IReadOnlyList<int> marks)
     {
         var layers = new List<Layer>();
         var previous = new Layer();
-        previous.Relax(-1, -1, 0, -1, false);
-        int line = 0;
+        previous.Relax(-1, -1, 0, -1, false, false);
+        int line = _free ? 1 : 0;
         foreach (int mark in marks)
         {
             var layer = new Layer();
             for (int i = 0; i < previous.Nodes.Count; i++)
             {
                 Direct(previous.Nodes[i], i, line, mark, layer);
+                Free(previous.Nodes[i], i, line, mark, layer);
             }
 
             Sweep(previous.Nodes, line, mark, layer);
@@ -93,11 +113,24 @@ internal sealed class MarkMatcher
         for (int k = layers.Count - 1; k >= 0; k--)
         {
             Node node = layers[k].Nodes[best];
-            choices[k] = new MarkChoice(node.Event, node.NewPart);
+            choices[k] = new MarkChoice(node.Event, node.NewPart, node.Free);
             best = node.Previous;
         }
 
         return choices;
+    }
+
+    // A free record from a node: its macro use stands on the line before the record, after the
+    // node's own line, and the rows after the node follow the use.
+    //
+    // ノードからの自由な記録。マクロの使用は記録の前の行、ノード自身の行より後に立ち、ノードの
+    // 後の行はその使用の後に続く。
+    private void Free(Node node, int index, int line, int mark, Layer layer)
+    {
+        if (_free && mark - 1 > LineOf(node, line))
+        {
+            layer.Relax(node.Event, node.Open, node.Cost + FreeCost, index, false, true);
+        }
     }
 
     // Targets a sweep does not cover: the rest of an open block, the strings later in the same
@@ -107,6 +140,7 @@ internal sealed class MarkMatcher
     // 行につながりうる次の空でない行の位置である。
     private void Direct(Node node, int index, int line, int mark, Layer layer)
     {
+        line = LineOf(node, line);
         if (node.Open >= 0)
         {
             int end = _blocks[node.Open].End;
@@ -115,7 +149,7 @@ internal sealed class MarkMatcher
                 if ((_events[t].Kind == MarkKind.Text || t == end) && Fits(node, t, line, mark))
                 {
                     int open = t == end ? -1 : node.Open;
-                    layer.Relax(t, open, node.Cost + _events[t].Cost, index, false);
+                    layer.Relax(t, open, node.Cost + _events[t].Cost, index, false, false);
                 }
             }
 
@@ -129,7 +163,7 @@ internal sealed class MarkMatcher
             MarkEvent target = _events[t];
             if (target.Kind != MarkKind.End && Fits(node, t, line, mark))
             {
-                layer.Relax(t, OpenAfter(target), node.Cost + target.Cost, index, false);
+                layer.Relax(t, OpenAfter(target), node.Cost + target.Cost, index, false, false);
             }
         }
     }
@@ -149,7 +183,8 @@ internal sealed class MarkMatcher
         {
             int start = LastRow(nodes[i]) + 1;
             int filled = _table.NextFilled(start);
-            reach[i] = mark - line + _table.Before(start) - Correction(nodes[i], filled);
+            reach[i] =
+                mark - LineOf(nodes[i], line) + _table.Before(start) - Correction(nodes[i], filled);
         }
 
         int[] byFilled = [.. free.OrderBy(i => _table.NextFilled(LastRow(nodes[i]) + 1))];
@@ -223,7 +258,7 @@ internal sealed class MarkMatcher
         }
 
         int cost = nodes[node].Cost + _events[target].Cost + (newPart ? PartCost : 0);
-        layer.Relax(target, OpenAfter(_events[target]), cost, node, newPart);
+        layer.Relax(target, OpenAfter(_events[target]), cost, node, newPart, false);
     }
 
     private bool Fits(Node node, int target, int line, int mark)
@@ -232,7 +267,7 @@ internal sealed class MarkMatcher
         int lastRow = LastRow(node);
         if (next.First <= lastRow)
         {
-            return next.Kind == MarkKind.Text
+            return !node.Free && next.Kind == MarkKind.Text
                 ? mark >= line && mark - line <= next.Escapes
                 : next.Kind == MarkKind.End && mark > line;
         }
@@ -273,34 +308,47 @@ internal sealed class MarkMatcher
     }
 
     private bool Joinable(Node node) =>
-        node.Event >= 0 && _events[node.Event].Kind == MarkKind.Text;
+        !node.Free && node.Event >= 0 && _events[node.Event].Kind == MarkKind.Text;
+
+    // The line after which a node's rows follow: its record's line, or for a free record the
+    // line of its macro use before it.
+    //
+    // ノードの行が続く直前の行。その記録の行、自由な記録ではその前のマクロの使用の行。
+    private static int LineOf(Node node, int line) => node.Free ? line - 1 : line;
 
     private int LastRow(Node node) => node.Event < 0 ? -1 : _events[node.Event].Last;
 
     private int FilledRow(Node node) => _table.NextFilled(LastRow(node) + 1);
 
-    private sealed record Node(int Event, int Open, int Cost, int Previous, bool NewPart);
+    private sealed record Node(
+        int Event,
+        int Open,
+        int Cost,
+        int Previous,
+        bool NewPart,
+        bool Free
+    );
 
     private sealed class Layer
     {
-        private readonly Dictionary<(int Event, int Open), int> _index = [];
+        private readonly Dictionary<(int Event, int Open, bool Free), int> _index = [];
 
         internal List<Node> Nodes { get; } = [];
 
-        internal void Relax(int target, int open, int cost, int previous, bool newPart)
+        internal void Relax(int target, int open, int cost, int previous, bool newPart, bool free)
         {
-            if (_index.TryGetValue((target, open), out int at))
+            if (_index.TryGetValue((target, open, free), out int at))
             {
                 if (cost < Nodes[at].Cost)
                 {
-                    Nodes[at] = new Node(target, open, cost, previous, newPart);
+                    Nodes[at] = new Node(target, open, cost, previous, newPart, free);
                 }
 
                 return;
             }
 
-            _index[(target, open)] = Nodes.Count;
-            Nodes.Add(new Node(target, open, cost, previous, newPart));
+            _index[(target, open, free)] = Nodes.Count;
+            Nodes.Add(new Node(target, open, cost, previous, newPart, free));
         }
     }
 

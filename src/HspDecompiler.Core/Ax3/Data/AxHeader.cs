@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using HspDecompiler.Core.Exceptions;
+using HspDecompiler.Core.Pipeline;
 using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax3.Data;
@@ -54,12 +55,13 @@ internal sealed class AxHeader
 
     private void CheckHeader()
     {
-        if (_fileType.Equals("HSP2", StringComparison.Ordinal))
+        AxFormat? format = AxFormats.Of(_fileType);
+        if (format == AxFormat.Ax2)
         {
             throw HspDecoderException(Strings.CompiledWithHsp2OrEarlier);
         }
 
-        if (!_fileType.Equals("HSP3", StringComparison.Ordinal))
+        if (format != AxFormat.Ax3)
         {
             throw HspDecoderException(Strings.InvalidFileFormat);
         }
@@ -101,16 +103,10 @@ internal sealed class AxHeader
     private readonly uint[] _data = new uint[25];
     internal const uint HeaderSize = 0x60;
 
-    // The format version hspcmp writes: 0x300 for 3.0, 0x301 for 3.1 to 3.4, 0x350 for 3.5 and
-    // 0x360 for 3.6 and later.
+    // The format version hspcmp writes, which several releases share (CompilerRelease.FormatWord).
     //
-    // hspcmp が書き込む形式のバージョン。3.0 は 0x300、3.1〜3.4 は 0x301、3.5 は 0x350、
-    // 3.6 以降は 0x360。
+    // hspcmp が書き込む形式のバージョン。複数のリリースが共有する(CompilerRelease.FormatWord)。
     internal uint Version => _data[1];
-
-    internal const uint Version31 = 0x301;
-    internal const uint Version35 = 0x350;
-    internal const uint Version36 = 0x360;
 
     internal uint AllDataSize => _data[3];
     internal uint CodeStart => _data[4];

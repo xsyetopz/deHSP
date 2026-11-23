@@ -7,8 +7,6 @@ using HspDecompiler.Core.Pipeline;
 
 namespace HspDecompiler.Core.Ax3.Data.Layout;
 
-internal sealed record SourceLayoutResult(List<string> Main, List<IncludeFile> Includes);
-
 // Rebuilds the files and line layout of a debug build from its line table. Each code line goes
 // to the file and line whose code range holds its first token; every other line goes to the file
 // of the code after it. Each expanded #include goes back on its line of the parent, and each
@@ -27,7 +25,7 @@ internal sealed record SourceLayoutResult(List<string> Main, List<IncludeFile> I
 // ファイルを見つけて宣言済みのインポートを除いた場合を除き、その #include はコメントにする。
 internal static class SourceLayout
 {
-    internal static SourceLayoutResult Build(
+    internal static DecodedSource Build(
         List<LogicalLine> lines,
         List<string> header,
         AxData data,
@@ -81,7 +79,7 @@ internal static class SourceLayout
             }
         }
 
-        return new SourceLayoutResult(main, includes);
+        return new DecodedSource(main, includes);
     }
 
     private static List<LayoutItem> Classify(

@@ -9,6 +9,7 @@ using HspDecompiler.Core.Ax3.Data.PP;
 using HspDecompiler.Core.Encoding;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Pipeline;
+using HspDecompiler.Core.Releases;
 using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax3.Data;
@@ -44,6 +45,11 @@ internal class AxData
 
     internal SourceStyle Style { get; init; } = SourceStyle.Default;
 
+    // The releases that could have written this AX; every release until the code is read.
+    //
+    // この AX を書いた可能性のあるリリース。コードを読むまではすべてのリリース。
+    internal ReleaseProfile Release { get; set; } = ReleaseProfile.Unknown;
+
     internal List<Function> Modules => _modules;
 
     internal List<PlugIn> PlugIns => _plugIns;
@@ -66,12 +72,7 @@ internal class AxData
 
     internal Label GetLabel(int index) => Labels[index];
 
-    internal Function? GetUserFunction(int index) =>
-        index < 0 ? null
-        : index >= _functions.Count ? null
-        : _functions[index];
-
-    internal Function? GetDllFunction(int index) =>
+    internal Function? GetFunction(int index) =>
         index < 0 ? null
         : index >= _functions.Count ? null
         : _functions[index];
@@ -577,7 +578,7 @@ internal class AxData
     //
     // デバッグセグメントが名付けたラベルはその名前を使う。残りはコード順に番号を振り、
     // 復元したラベルが既に使った名前の番号は飛ばす。
-    internal void RenameLables()
+    internal void RenameLabels()
     {
         if (_labels.Count <= 0)
         {

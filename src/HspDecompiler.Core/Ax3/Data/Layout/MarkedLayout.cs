@@ -58,11 +58,18 @@ internal sealed class MarkedLayout
         _scope = scope;
     }
 
+    internal bool HasUnusedModule =>
+        _items.Exists(item => item.Line is ModuleStart { Used: false });
+
     // Matches the records and rebuilds the chosen blocks in the data, or returns null when no
-    // layout fits them. keepsImports says optcode was off, so no module was dropped.
+    // layout fits them. keepsImports says optcode was off, so no module was dropped. Free
+    // records, which a macro of the original source wrote, are tried only when no layout fits
+    // without them, since they cost a line for the macro's definition.
     //
     // 記録を照合し、選んだブロックをデータの中で組み直す。収まる配置が無ければ null を返す。
     // keepsImports は optcode が切られていたことを示し、その時はモジュールは削られていない。
+    // 元のソースのマクロが書いた自由な記録は、マクロの定義に 1 行を要するため、それ無しでは
+    // 収まる配置が無い時だけ試す。
     internal static MarkedLayout? Match(List<LogicalLine> lines, AxData data, bool keepsImports)
     {
         var headers = new List<LogicalLine>();
@@ -71,16 +78,25 @@ internal sealed class MarkedLayout
         (bool Lone, bool Unused)[] attempts = keepsImports
             ? [(false, true)]
             : [(true, true), (true, false), (false, true)];
-        foreach ((bool lone, bool unused) in attempts)
+        foreach (bool free in (bool[])[false, true])
         {
-            var events = MarkEvents.Build(table, data, lone, unused);
-            if (
-                MarkMatcher.Match(table, events, marks) is { } choices
-                && IsConsistent(events, choices)
-            )
+            foreach ((bool lone, bool unused) in attempts)
             {
-                List<MarkedItem> items = MarkedModules.Apply(table, events, choices, marks, data);
-                return new MarkedLayout(items, headers, data.Scope);
+                var events = MarkEvents.Build(table, data, lone, unused);
+                if (
+                    MarkMatcher.Match(table, events, marks, free) is { } choices
+                    && IsConsistent(events, choices)
+                )
+                {
+                    List<MarkedItem> items = MarkedModules.Apply(
+                        table,
+                        events,
+                        choices,
+                        marks,
+                        data
+                    );
+                    return new MarkedLayout(items, headers, data.Scope);
+                }
             }
         }
 
@@ -95,6 +111,7 @@ internal sealed class MarkedLayout
     private static bool IsConsistent(MarkEvents events, MarkChoice[] choices)
     {
         IEnumerable<MarkBlock> chosen = choices
+            .Where(choice => !choice.Free)
             .Select(choice => events.Events[choice.Event])
             .Where(e => e.Kind == MarkKind.Start)
             .Select(e => events.Blocks[e.Block]);
@@ -106,13 +123,22 @@ internal sealed class MarkedLayout
     // do not fit the records after all.
     //
     // ソースと後の部分を入れたファイルを書く。結局行が記録に収まらなければ null を返す。
-    internal SourceLayoutResult? Write(List<string> directives, string mainFile)
+    internal DecodedSource? Write(List<string> directives, string mainFile)
     {
         List<string> headers = [.. directives, .. _headers.Select(_scope.Render)];
         string stem = Path.GetFileNameWithoutExtension(mainFile);
         string extension = Path.GetExtension(mainFile);
-        var placer = new MarkedPlacer(_scope, headers);
-        List<List<string>>? parts = placer.Place(_items, part => $"{stem}_{part}{extension}");
+        string PartName(int part) => $"{stem}_{part}{extension}";
+        List<List<string>>? parts = new MarkedPlacer(_scope, headers).Place(
+            LabelsAfterGlobal(_items),
+            PartName
+        );
+        if (parts == null)
+        {
+            _scope.Leave();
+            parts = new MarkedPlacer(_scope, headers).Place(_items, PartName);
+        }
+
         if (parts == null)
         {
             return null;
@@ -124,8 +150,44 @@ internal sealed class MarkedLayout
                 .Skip(1)
                 .Select((lines, i) => new IncludeFile($"{stem}_{i + 1}{extension}", lines)),
         ];
-        return new SourceLayoutResult(parts[0], includes);
+        return new DecodedSource(parts[0], includes);
     }
+
+    // A label on the code a #global falls on goes after the #global when the records leave room:
+    // inside the block it would read "*label_1@", after it the plain global label it is, and both
+    // point at the same code.
+    //
+    // #global と同じコード位置のラベルは、記録に余地があれば #global の後に置く。ブロックの
+    // 中では "*label_1@" と書く必要があるが、後ろなら本来のグローバルラベルのまま書け、どちらも
+    // 同じコードを指す。
+    private static List<MarkedItem> LabelsAfterGlobal(List<MarkedItem> items)
+    {
+        var result = new List<MarkedItem>(items.Count);
+        foreach (MarkedItem item in items)
+        {
+            int first = result.Count;
+            if (item.Line is EndOfModule end)
+            {
+                while (first > 0 && IsLabelAt(result[first - 1], end.ExitOffset))
+                {
+                    first--;
+                }
+            }
+
+            List<MarkedItem> labels = result.GetRange(first, result.Count - first);
+            result.RemoveRange(first, labels.Count);
+            result.Add(item);
+            result.AddRange(labels);
+        }
+
+        return result;
+    }
+
+    private static bool IsLabelAt(MarkedItem item, int offset) =>
+        item is { Target: 0, StartsPart: false, Ends: null }
+        && offset >= 0
+        && item.Line is PreprocessorDeclaration { Declared: Label { Function: null } label }
+        && label.TokenOffset == offset;
 }
 
 // Turns the chosen blocks back into #module and #global and lists the output lines with the
@@ -144,8 +206,16 @@ internal static class MarkedModules
     {
         var lineOf = new Dictionary<int, int>();
         var parts = new HashSet<int>();
+        var macros = new List<(int Row, int Line)>();
         for (int k = 0; k < choices.Length; k++)
         {
+            if (choices[k].Free)
+            {
+                int after = choices[k].Event < 0 ? -1 : events.Events[choices[k].Event].Last;
+                macros.Add((after, marks[k] - 1));
+                continue;
+            }
+
             lineOf[choices[k].Event] = marks[k];
             if (choices[k].NewPart)
             {
@@ -154,6 +224,12 @@ internal static class MarkedModules
         }
 
         var items = new List<MarkedItem>();
+        if (macros.Count > 0)
+        {
+            items.Add(MacroItem(LineRecordMacro.Definition(), 1));
+            AddMacroUses(macros, -1, items);
+        }
+
         var skipped = new HashSet<int>();
         for (int row = 0; row < table.Rows.Count; row++)
         {
@@ -167,6 +243,8 @@ internal static class MarkedModules
             {
                 items[before].StartsPart = true;
             }
+
+            AddMacroUses(macros, row, items);
         }
 
         if (lineOf.Keys.Any(e => events.Events[e].Kind == MarkKind.Start))
@@ -176,6 +254,21 @@ internal static class MarkedModules
 
         return items;
     }
+
+    private static void AddMacroUses(
+        List<(int Row, int Line)> macros,
+        int row,
+        List<MarkedItem> items
+    )
+    {
+        foreach ((int _, int line) in macros.Where(m => m.Row == row))
+        {
+            items.Add(MacroItem(LineRecordMacro.Use(), line));
+        }
+    }
+
+    private static MarkedItem MacroItem(LineRecordMacro line, int target) =>
+        new(line, RowKind.Directive, []) { Target = target };
 
     private static void AddRow(
         RowTable table,
@@ -256,9 +349,11 @@ internal static class MarkedModules
         string name = block.Members?.FunctionName
             ?? LocalModule(data, startOffset, exitOffset)
             ?? string.Empty;
-        var start = new ModuleStart(name, name.Length == 0, block.Members, startOffset);
+        var start = new ModuleStart(name, name.Length == 0, block.Members, startOffset)
+        {
+            Used = block.Used,
+        };
         items.Add(new MarkedItem(start, RowKind.Directive, []) { Target = line });
-        data.Scope.HasUnusedModule |= !block.Used;
     }
 
     // A "local" function keeps its module in its name as "name@module", which names the block

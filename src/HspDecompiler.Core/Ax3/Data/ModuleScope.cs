@@ -21,12 +21,12 @@ internal sealed class ModuleScope
 
     internal string? Current { get; private set; }
 
-    // Set when a rebuilt module has no use that keeps it under hspcmp's optcode.
-    //
-    // 再構築したモジュールに、hspcmp の optcode で残す理由となる使用が無い時に立てる。
-    internal bool HasUnusedModule { get; set; }
-
     internal void AddGlobalFunction(string name) => _globalFunctions.Add(name);
+
+    // Leaves any module a finished pass left open, so the lines can be rendered again.
+    //
+    // 終えた出力が開いたままにしたモジュールを出て、行をもう一度出力できるようにする。
+    internal void Leave() => Current = null;
 
     // Renders one line in order, entering a module at its #module and leaving it at #global.
     //

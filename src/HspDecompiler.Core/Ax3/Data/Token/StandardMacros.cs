@@ -1,20 +1,19 @@
 using System.Collections.Generic;
 using HspDecompiler.Core.Ax3.Data.Primitive;
+using HspDecompiler.Core.Releases;
 
 namespace HspDecompiler.Core.Ax3.Data.Token;
 
 // The hspdef.as macros that expand to a call of a built-in function, such as "dir_exe" for
-// "dirinfo(1)". hspdef.as gained macros over the releases, so each one carries the first AX
-// format version whose compiler always has it. The 0x301 format covers 3.1 to 3.4, and
-// ginfo_newid (3.2) and dir_tv (3.31) arrived inside that range, so they wait for 0x350.
+// "dirinfo(1)". hspdef.as gained macros over the releases, so each one carries the release that
+// added it, and is written only when every release that could have compiled the AX has it.
 //
 // 組み込み関数の呼び出しに展開される hspdef.as のマクロ。"dirinfo(1)" に対する "dir_exe" など。
-// hspdef.as はリリースごとにマクロが増えたため、それぞれにそのマクロを必ず持つコンパイラの
-// 最初の AX 形式バージョンを付ける。0x301 形式は 3.1〜3.4 にまたがり、ginfo_newid(3.2)と
-// dir_tv(3.31)はその途中で加わったため、0x350 からとする。
+// hspdef.as はリリースごとにマクロが増えたため、それぞれにそれを加えたリリースを付け、AX を
+// コンパイルできたすべてのリリースが持つ時だけ書く。
 internal static class StandardMacros
 {
-    private const uint AnyVersion = 0;
+    private static readonly CompilerRelease s_any = CompilerReleases.Hsp30;
 
     private static readonly string[] s_ginfo =
     [
@@ -60,37 +59,37 @@ internal static class StandardMacros
 
     private static readonly Dictionary<
         (string Function, int Argument),
-        (string Name, uint Since)
+        (string Name, CompilerRelease Since)
     > s_calls = Build();
 
     private static readonly string[] s_objinfo = ["objinfo_mode", "objinfo_bmscr", "objinfo_hwnd"];
 
-    private static Dictionary<(string, int), (string, uint)> Build()
+    private static Dictionary<(string, int), (string, CompilerRelease)> Build()
     {
-        var calls = new Dictionary<(string, int), (string, uint)>
+        var calls = new Dictionary<(string, int), (string, CompilerRelease)>
         {
-            [("noteinfo", 0)] = ("notemax", AnyVersion),
-            [("noteinfo", 1)] = ("notesize", AnyVersion),
-            [("dirinfo", 0)] = ("dir_cur", AnyVersion),
-            [("dirinfo", 1)] = ("dir_exe", AnyVersion),
-            [("dirinfo", 2)] = ("dir_win", AnyVersion),
-            [("dirinfo", 3)] = ("dir_sys", AnyVersion),
-            [("dirinfo", 4)] = ("dir_cmdline", AnyVersion),
-            [("dirinfo", 5)] = ("dir_tv", AxHeader.Version35),
-            [("dirinfo", 0x10000)] = ("dir_desktop", AnyVersion),
-            [("dirinfo", 0x10005)] = ("dir_mydoc", AnyVersion),
+            [("noteinfo", 0)] = ("notemax", s_any),
+            [("noteinfo", 1)] = ("notesize", s_any),
+            [("dirinfo", 0)] = ("dir_cur", s_any),
+            [("dirinfo", 1)] = ("dir_exe", s_any),
+            [("dirinfo", 2)] = ("dir_win", s_any),
+            [("dirinfo", 3)] = ("dir_sys", s_any),
+            [("dirinfo", 4)] = ("dir_cmdline", s_any),
+            [("dirinfo", 5)] = ("dir_tv", CompilerReleases.Hsp331),
+            [("dirinfo", 0x10000)] = ("dir_desktop", s_any),
+            [("dirinfo", 0x10005)] = ("dir_mydoc", s_any),
         };
         for (int i = 0; i < s_ginfo.Length; i++)
         {
             calls[("ginfo", i)] = (
                 s_ginfo[i],
-                s_ginfo[i] == "ginfo_newid" ? AxHeader.Version35 : AnyVersion
+                s_ginfo[i] == "ginfo_newid" ? CompilerReleases.Hsp32 : s_any
             );
         }
 
         for (int i = 0; i < s_sensors.Length; i++)
         {
-            calls[("ginfo", 256 + i)] = (s_sensors[i], AxHeader.Version35);
+            calls[("ginfo", 256 + i)] = (s_sensors[i], CompilerReleases.Hsp35);
         }
 
         return calls;
@@ -111,8 +110,8 @@ internal static class StandardMacros
         return
             exps.Count == 1
             && exps[0].Literal?.Integer is { } argument
-            && s_calls.TryGetValue((name, argument), out (string Name, uint Since) macro)
-            && function.FormatVersion >= macro.Since
+            && s_calls.TryGetValue((name, argument), out (string Name, CompilerRelease Since) macro)
+            && function.Release.From(macro.Since)
             ? macro.Name
             : Objinfo(name, exps);
     }
