@@ -44,6 +44,12 @@ internal sealed class DecompileCommand : RootCommand
             "Write UTF-8 without a BOM instead of Shift_JIS; recompile with hspcmp -i or -j",
     };
 
+    private readonly Option<DirectoryInfo> _common = new("--common")
+    {
+        Description =
+            "HSP common directory; restores the #include of a matching common header in a debug build",
+    };
+
     private readonly Option<bool> _verbose = new("--verbose", "-v")
     {
         Description = "Verbose logging",
@@ -58,6 +64,7 @@ internal sealed class DecompileCommand : RootCommand
         Options.Add(_noDecrypt);
         Options.Add(_skipEncrypted);
         Options.Add(_utf8);
+        Options.Add(_common);
         Options.Add(_verbose);
         SetAction(RunAsync);
     }
@@ -87,6 +94,7 @@ internal sealed class DecompileCommand : RootCommand
             AllowDecryption = !parseResult.GetValue(_noDecrypt),
             SkipEncrypted = parseResult.GetValue(_skipEncrypted),
             Utf8Output = parseResult.GetValue(_utf8),
+            CommonDirectory = parseResult.GetValue(_common)?.FullName,
         };
 
         DecompilerResult result = await pipeline.RunAsync(options, ct).ConfigureAwait(false);
