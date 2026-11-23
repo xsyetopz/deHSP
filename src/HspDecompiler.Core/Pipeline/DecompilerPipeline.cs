@@ -326,14 +326,17 @@ public sealed class DecompilerPipeline
         decompilerOutput.DpmFiles.AddRange(dpmResult.Files);
         decompilerOutput.OutputPath = outputDir;
 
+        // A run that extracts nothing fails, so callers such as the CLI never report success
+        // for an archive whose options blocked every entry.
+        // ---
+        // 何も展開しなかった処理は失敗とする。設定がすべてのエントリを止めたアーカイブについて、
+        // CLI などの呼び出し側が成功と報告しないようにするため。
         if (dpmResult.AllEncrypted || dpmResult.Cancelled)
         {
-            decompilerOutput.Success = !dpmResult.AllEncrypted;
-            if (dpmResult.AllEncrypted)
-            {
-                decompilerOutput.ErrorMessage = Strings.AllFilesEncrypted;
-            }
-
+            decompilerOutput.Success = false;
+            decompilerOutput.ErrorMessage = dpmResult.AllEncrypted
+                ? Strings.AllFilesEncrypted
+                : Strings.SomeFilesEncrypted;
             return false;
         }
 
@@ -449,7 +452,7 @@ public sealed class DecompilerPipeline
         dpmResult.EncryptedCount = encryptedCount;
 
         int totalCount = extractor.FileList.Count;
-        if (totalCount == encryptedCount && !options.AllowDecryption)
+        if (totalCount == encryptedCount && !DecryptsEntries(options))
         {
             dpmResult.AllEncrypted = true;
             _logger.Write(Strings.ExtractionCancelled);
@@ -481,6 +484,12 @@ public sealed class DecompilerPipeline
         return dpmResult;
     }
 
+    // SkipEncrypted wins over AllowDecryption, so the flag skips encrypted entries on its own.
+    // ---
+    // SkipEncrypted は AllowDecryption より優先するため、単独でも暗号化されたエントリを飛ばす。
+    private static bool DecryptsEntries(DecompilerOptions options) =>
+        options is { AllowDecryption: true, SkipEncrypted: false };
+
     private static void CreateOutputDirectory(string outputDir)
     {
         try
@@ -510,7 +519,7 @@ public sealed class DecompilerPipeline
         CancellationToken ct
     )
     {
-        if (file.IsEncrypted && !options.AllowDecryption)
+        if (file.IsEncrypted && !DecryptsEntries(options))
         {
             _logger.Write(
                 string.Format(CultureInfo.InvariantCulture, s_fileEncryptedFormat, file.FileName)

@@ -22,8 +22,14 @@ public sealed class DpmExtractionResult
     public int EncryptedCount { get; set; }
 
     /// <summary>
-    /// <para xml:lang="en">Every entry is encrypted and decryption was not allowed, so nothing was extracted.</para>
-    /// <para xml:lang="ja">全エントリが暗号化されており復号が許可されていないため、何も展開しなかった。</para>
+    /// <para xml:lang="en">
+    /// Every entry is encrypted and the options forbid decryption or skip encrypted entries, so
+    /// nothing was extracted.
+    /// </para>
+    /// <para xml:lang="ja">
+    /// 全エントリが暗号化されており、設定が復号を禁止するか暗号化されたエントリを飛ばすため、
+    /// 何も展開しなかった。
+    /// </para>
     /// </summary>
     public bool AllEncrypted { get; set; }
 
