@@ -127,7 +127,7 @@ internal class Token
 
     // hspcmp sets bit 0x02 on the label it appends to repeat, break and continue, so that bit
     // does not mark a line head there.
-    // ---
+    //
     // hspcmp は repeat・break・continue に付けるラベルに 0x02 ビットを立てるため、そこでは
     // このビットは行頭を表さない。
     internal int OwnedLabelIndex => Type == Ax2TokenType.Label ? Value : -1;
@@ -183,7 +183,7 @@ internal class Token
 
     // hspcmp 2.x reads "-11" as a minus operator before 11, so a negative literal in the AX
     // came from hex source such as $fffffff5.
-    // ---
+    //
     // hspcmp 2.x は "-11" を 11 の前のマイナス演算子として読むため、AX の負のリテラルは
     // $fffffff5 のような 16 進表記のソースから来ている。
     private static string IntegerText(int value) =>
@@ -216,7 +216,7 @@ internal class Token
 
     // hspcmp 2.x turns "\n" into CR LF and "\r" into a lone CR, so a CR LF pair goes back to
     // "\n" and any other CR to "\r".
-    // ---
+    //
     // hspcmp 2.x は "\n" を CR LF に、"\r" を単独の CR に変換する。そのため CR LF の組は
     // "\n" に、それ以外の CR は "\r" に戻す。
     private static string Escape(string str)

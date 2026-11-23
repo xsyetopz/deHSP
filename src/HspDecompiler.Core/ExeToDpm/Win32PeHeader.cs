@@ -6,13 +6,13 @@ namespace HspDecompiler.Core.ExeToDpm;
 
 // The type and field names follow the winnt.h structures they read, so the Windows SDK
 // documentation applies to each field.
-// ---
+//
 // 型名とフィールド名は読み取る winnt.h の構造体に合わせているため、各フィールドの意味は
 // Windows SDK のドキュメントに従う。
 internal sealed class IMAGE_NT_HEADERS
 {
     // "PE\0\0" read as a little-endian value.
-    // ---
+    //
     // リトルエンディアンで読んだ "PE\0\0"。
     private const int ImageNtSignature = 0x4550;
     internal uint _signature;
@@ -222,7 +222,7 @@ internal sealed class IMAGE_SECTION_HEADER
 internal sealed class IMAGE_DOS_HEADER
 {
     // "MZ" read as a little-endian value.
-    // ---
+    //
     // リトルエンディアンで読んだ "MZ"。
     private const int ImageDosSignature = 0x5A4D;
     internal ushort _e_magic;
@@ -362,7 +362,7 @@ internal sealed class Win32PeHeader
 
             // Packers such as UPX write their own header right after the section table, so the
             // table is read by the count in the file header instead of up to an all-zero entry.
-            // ---
+            //
             // UPX などのパッカーはセクション表の直後に独自のヘッダーを書くため、全ゼロの項目まで
             // ではなく、ファイルヘッダーのセクション数だけ表を読む。
             IMAGE_FILE_HEADER fileHeader = ret._ntHeader._fileHeader!;

@@ -12,7 +12,7 @@ namespace HspDecompiler.Core.Ax3.Data;
 // literal data at their line. Each import therefore goes before the first later user
 // function, its own first call, and the first line that adds literal data past its name, so
 // recompiling rebuilds the original finfo, LIBDAT and literal-data order.
-// ---
+//
 // hspcmp は #func を記述された行で登録する(codegen.cpp GenerateCodePP_func)。次の関数
 // テーブル枠を取り、名前をリテラルデータに追加する。ユーザー定義関数は最初の呼び出しか
 // #deffunc の早い方で枠を得て(前方参照で予約した枠を GenerateCodePP_deffunc が埋める)、
@@ -80,7 +80,7 @@ internal static class ImportPlacement
         }
 
         // Slots must stay in order even when a later import is called first.
-        // ---
+        //
         // 後の枠のインポートが先に呼ばれても枠の順序を保つ。
         for (int i = imports.Count - 2; i >= 0; i--)
         {
@@ -160,7 +160,7 @@ internal static class ImportPlacement
     }
 
     // Maps a code offset to the index of the line that holds it.
-    // ---
+    //
     // コードオフセットを、それを含む行の番号に対応付ける。
     private sealed class CodeLineIndex
     {
@@ -194,7 +194,7 @@ internal static class ImportPlacement
     }
 
     // Finds the first line that adds literal data after a given offset.
-    // ---
+    //
     // 指定位置より後ろのリテラルデータを追加する最初の行を求める。
     private sealed class DataOrderBound
     {

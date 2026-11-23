@@ -24,7 +24,7 @@ public class DllFunctionNameTests
     public void FallsBackToUnderscoreExportOnCaseInsensitiveCollision()
     {
         // A wrapper "#deffunc openproject" collides with the bare import name.
-        // ---
+        //
         // ラッパーの "#deffunc openproject" が素のインポート名と衝突する。
         var taken = new HashSet<string> { "openproject" };
         Assert.Equal("_OpenProject", AxData.ResolveDllFunctionName("_OpenProject@8", taken));

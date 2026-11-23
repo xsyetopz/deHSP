@@ -24,7 +24,7 @@ internal class AxData
     );
 
     // Record markers of the debug segment, as hspcmp's CToken::PutDI writes them.
-    // ---
+    //
     // hspcmp の CToken::PutDI が書き出すデバッグセグメントのレコード識別子。
     private const byte DebugMarkerBigOffset = 252;
     private const byte DebugMarkerVariable = 253;
@@ -53,7 +53,7 @@ internal class AxData
     internal List<Usedll> Usedlls => _dlls;
 
     // Literal-data offset and code offset of every string and double literal, in code order.
-    // ---
+    //
     // コード中の文字列・実数リテラルごとのリテラルデータ位置とコード位置(コード順)。
     internal List<(int DataOffset, int TokenOffset)> LiteralAnchors { get; } = [];
 
@@ -441,7 +441,7 @@ internal class AxData
     }
 
     // Upper bound for OpenProject_dll2..OpenProject_dllN; past it, func_N reads better.
-    // ---
+    //
     // OpenProject_dll2〜OpenProject_dllN の上限。これを超えるなら func_N の方が読みやすい。
     private const int MaxDllAliasSuffix = 9;
 
@@ -451,7 +451,7 @@ internal class AxData
     // The candidates, in order: the undecorated name (OpenProject), the export without the
     // stdcall suffix (_OpenProject), OpenProject_dll, OpenProject_dll2 to OpenProject_dll9
     // for repeated imports, and last the numbered func_N.
-    // ---
+    //
     // .ax ファイルには作者が付けた別名ではなく DLL のエクスポート名しか残らないため、別名は
     // エクスポート名から作る。HSP の名前は大文字と小文字を区別せず、ラッパースクリプトは
     // "_OpenProject@8" のインポートを "#deffunc openproject" で包むことが多いので、素の名前は
@@ -479,7 +479,7 @@ internal class AxData
             candidates.Add(bare + "_dll");
             // Flattened modules each import the same export (CloseHandle in three #module
             // blocks), so repeats get a number per export.
-            // ---
+            //
             // 展開されたモジュールがそれぞれ同じエクスポートをインポートする(3 つの #module に
             // CloseHandle がある等)ため、重複にはエクスポートごとに番号を付ける。
             for (int n = 2; n <= MaxDllAliasSuffix; n++)
@@ -513,7 +513,7 @@ internal class AxData
 
     // Ordinal exports ("#12") and C++ mangled names ("?Fn@@YAXH@Z") are not valid HSP names,
     // so they fall through to func_N.
-    // ---
+    //
     // 序数のエクスポート("#12")や C++ の装飾名("?Fn@@YAXH@Z")は HSP の名前として無効な
     // ため、func_N に回す。
     private static bool IsHspIdentifier(string name) =>

@@ -41,7 +41,7 @@ internal sealed class ExpressionToken : CodeToken
 
     // Folds the RPN term list into one tree, or returns null when an operator lacks two operands
     // or terms remain.
-    // ---
+    //
     // RPN の項の並びを一つの木にまとめる。演算子に二つのオペランドが無い場合や項が余る場合は
     // null を返す。
     private static ExpressionTermToken? Fold(List<ExpressionTermToken> tokens)

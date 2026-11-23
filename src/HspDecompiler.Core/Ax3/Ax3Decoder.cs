@@ -52,13 +52,13 @@ internal class Ax3Decoder : IAxDecoder
             logger.Write(Strings.CreatingOutputFile);
             // The AX keeps every import the original source declared, so recompiling must not
             // prune unreferenced #func entries (hspcmp codegen.cpp CMPMODE_OPTCODE).
-            // ---
+            //
             // AX には元のソースが宣言した import がすべて残るため、再コンパイル時に未参照の
             // #func を削ってはならない（hspcmp codegen.cpp の CMPMODE_OPTCODE）。
             stringLines.Add(KeepUnusedImportsDirective);
             // hspcmp writes variable names into the debug segment only in debug mode or under
             // varname (codegen.cpp PutDIVars), so names in the AX ask for the same on recompile.
-            // ---
+            //
             // hspcmp が変数名をデバッグ情報に書くのはデバッグモードか varname 指定時だけ
             // （codegen.cpp の PutDIVars）。AX に変数名があれば再コンパイルでも同じ指定をする。
             if (data.HasVariableNames)
@@ -69,7 +69,7 @@ internal class Ax3Decoder : IAxDecoder
             // hspcmp flags a parameter made of one literal by default (codegen.cpp CMPMODE_OPTPRM,
             // EXFLG_0). An AX with no flagged literal had the option off or came from a compiler
             // without it, such as the HSP 3.0 build behind Elona.
-            // ---
+            //
             // hspcmp は既定で 1 つのリテラルだけの引数に印を付ける（codegen.cpp の
             // CMPMODE_OPTPRM、EXFLG_0）。印の付いたリテラルが無い AX は、このオプションを
             // 切ったか、Elona を作った HSP 3.0 のようにこの機能の無いコンパイラで作られている。

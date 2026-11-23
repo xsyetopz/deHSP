@@ -123,7 +123,7 @@ public sealed class EncryptedDpmTests : IDisposable
 
     // Writes a DPMX archive holding the same AX twice: "plain.ax" and "secret.ax", the second
     // always encrypted with a DPMX key and the first only when asked.
-    // ---
+    //
     // 同じ AX を "plain.ax" と "secret.ax" の 2 つとして持つ DPMX アーカイブを書き出す。
     // 後者は常に DPMX の鍵で暗号化し、前者は指定された場合だけ暗号化する。
     private string WriteArchive(bool encryptPlainEntry)

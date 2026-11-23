@@ -87,7 +87,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             pipeline.Initialize();
             // The continuation edits bound collections, which Avalonia allows only on the UI thread.
-            // ---
+            //
             // 継続処理はバインドされたコレクションを書き換える。Avalonia では UI スレッドでのみ許される。
             DecompilerResult result = await Task.Run(() =>
                     pipeline.RunAsync(options, CancellationToken.None)

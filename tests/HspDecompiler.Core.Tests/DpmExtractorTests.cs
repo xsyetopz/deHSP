@@ -15,7 +15,7 @@ public class DpmExtractorTests
         using var bw = new BinaryWriter(ms);
 
         // One unencrypted 100-byte file: header, a 32-byte entry, then the data at offset 48.
-        // ---
+        //
         // 暗号化されていない 100 バイトのファイル 1 つ。ヘッダー、32 バイトのエントリ、
         // オフセット 48 からのデータの順に並ぶ。
         bw.Write("DPMX"u8.ToArray());
@@ -104,7 +104,7 @@ public class DpmExtractorTests
         using var bw = new BinaryWriter(ms);
 
         // The entry's data offset of -1 points before the data section.
-        // ---
+        //
         // エントリのデータ位置 -1 はデータ部より前を指す。
         bw.Write("DPM2"u8.ToArray());
         bw.Write(1);

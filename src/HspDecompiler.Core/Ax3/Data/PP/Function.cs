@@ -27,7 +27,7 @@ internal class Function : Preprocessor
 {
     // The HSP 3 compiler marks the function kind with these sentinels in the dll, function and
     // label index fields of each finfo entry.
-    // ---
+    //
     // HSP 3 コンパイラは finfo 各エントリの dll・関数・ラベル番号欄にこれらの番兵値を書き、関数の
     // 種類を示す。
     private const int DllIndexDeffunc = -1;
@@ -123,7 +123,7 @@ internal class Function : Preprocessor
     internal Label? Label => _label;
 
     // Code offset of the first token that calls this function, or -1 when nothing calls it.
-    // ---
+    //
     // この関数を呼び出す最初のトークンのコードオフセット。呼び出しが無ければ -1。
     internal int FirstUseOffset { get; private set; } = -1;
 

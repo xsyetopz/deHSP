@@ -183,7 +183,7 @@ internal class AxData
         {
             int offset = 4 + (i * 24);
             // HSP 2.x stores module names in the DLL segment.
-            // ---
+            //
             // HSP 2.x はモジュール名を DLL セグメントに格納する。
             _modules[i].Name = ReadString(offset, _dllData!);
         }
@@ -249,7 +249,7 @@ internal class AxData
 
     // HSP 2.61 lets a #deffunc replace a built-in after #undef; the original stays callable
     // as name@hsp, so both the #undef and the @hsp suffix are restored.
-    // ---
+    //
     // HSP 2.61 では #undef の後に #deffunc で組み込み命令を置き換えられる。元の命令は
     // name@hsp で呼べるため、#undef と @hsp の両方を復元する。
     private void MarkShadowedBuiltins()
@@ -299,7 +299,7 @@ internal class AxData
     // hspcmp records every source label in the object table, referenced or not, so an
     // unreferenced one is still restored. Entry 0 is a reserved slot hspcmp leaves
     // uninitialized, and the labels after repeat, break and continue are compiler generated.
-    // ---
+    //
     // hspcmp は参照の有無に関わらずソース上のラベルをすべてオブジェクトテーブルに記録する
     // ため、未参照のラベルも復元する。0 番は hspcmp が初期化しない予約枠で、repeat・break・
     // continue の後ろのラベルはコンパイラが生成したものである。
@@ -322,7 +322,7 @@ internal class AxData
 
     // A #uselib line opens each run of #func lines from one DLL, since that is what selects the
     // DLL the following #func lines bind to. A DLL without functions keeps its line at the top.
-    // ---
+    //
     // #uselib は後続の #func が結び付く DLL を選ぶため、同じ DLL の #func の連なりごとに先頭に
     // 置く。関数の無い DLL は先頭に残す。
     private List<SourceLine> GetDeclarations()
@@ -478,7 +478,7 @@ internal class AxData
         EmitLabel(token);
 
         // hspcmp appends an end token to every script, so the last one is not part of the source.
-        // ---
+        //
         // hspcmp はすべてのスクリプトの末尾に end を追加するため、最後の end はソースに含まれない。
         if (token.IsEnd && cursor.AtEnd)
         {

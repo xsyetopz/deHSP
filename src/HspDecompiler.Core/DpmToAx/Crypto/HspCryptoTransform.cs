@@ -86,7 +86,7 @@ internal class HspCryptoTransform
 
     // The byte-to-byte differences of the known plain text must hit every bit both ways, or
     // the XOR and ADD keys cannot be told apart.
-    // ---
+    //
     // 既知の平文のバイト間の差分がすべてのビットで 0 と 1 の両方を含まないと、XOR と ADD の
     // キーを区別できない。
     private static byte[] GetDifBuffer(byte[] plain, byte[] encrypted)

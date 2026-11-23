@@ -72,7 +72,7 @@ public partial class MainWindow : Window
 
     // Avalonia raises these handlers as async void, so an exception escaping one would end the
     // process. Each body runs through HandleFileAsync, which logs the failure instead.
-    // ---
+    //
     // Avalonia はこれらのハンドラーを async void として呼ぶため、例外が漏れるとプロセスが終了する。
     // 各処理は HandleFileAsync を通し、失敗はログへ書く。
     private async void OnMenuOpen(object? sender, RoutedEventArgs e) =>

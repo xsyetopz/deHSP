@@ -7,7 +7,7 @@ namespace HspDecompiler.Core.Ax3.Data.PP;
 internal class Param : Preprocessor
 {
     // Keeps an unknown parameter type visible in the output instead of dropping it.
-    // ---
+    //
     // 未知の引数型を捨てずに出力へ残すためのコメント。
     private const string InvalidTypeCommentPrefix = "/*不正な型 ";
 

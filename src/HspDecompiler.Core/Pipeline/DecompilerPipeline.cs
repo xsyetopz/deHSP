@@ -228,7 +228,7 @@ public sealed class DecompilerPipeline
     }
 
     // Returns the warning log path, or null when an archive leaves nothing to decompile.
-    // ---
+    //
     // 警告ログのパスを返す。アーカイブにデコンパイル対象が残らない場合は null を返す。
     private async Task<string?> DecompileInputAsync(
         BinaryReader reader,
@@ -274,7 +274,7 @@ public sealed class DecompilerPipeline
     }
 
     // Returns the warning log path for the decompiled source.
-    // ---
+    //
     // デコンパイルしたソースの警告ログのパスを返す。
     private async Task<string> DecompileAxAsync(
         BinaryReader reader,
@@ -310,7 +310,7 @@ public sealed class DecompilerPipeline
         axMagic.StartsWith(Hsp2Magic, StringComparison.Ordinal) ? ".as" : ".hsp";
 
     // Returns false when nothing past the extraction is left to decompile.
-    // ---
+    //
     // 展開後にデコンパイルするものが無い場合は false を返す。
     private async Task<bool> DecompileArchiveAsync(
         BinaryReader reader,
@@ -328,7 +328,7 @@ public sealed class DecompilerPipeline
 
         // A run that extracts nothing fails, so callers such as the CLI never report success
         // for an archive whose options blocked every entry.
-        // ---
+        //
         // 何も展開しなかった処理は失敗とする。設定がすべてのエントリを止めたアーカイブについて、
         // CLI などの呼び出し側が成功と報告しないようにするため。
         if (dpmResult.AllEncrypted || dpmResult.Cancelled)
@@ -485,7 +485,7 @@ public sealed class DecompilerPipeline
     }
 
     // SkipEncrypted wins over AllowDecryption, so the flag skips encrypted entries on its own.
-    // ---
+    //
     // SkipEncrypted は AllowDecryption より優先するため、単独でも暗号化されたエントリを飛ばす。
     private static bool DecryptsEntries(DecompilerOptions options) =>
         options is { AllowDecryption: true, SkipEncrypted: false };
@@ -617,7 +617,7 @@ public sealed class DecompilerPipeline
         return null;
 
         // A key counts only when the whole AX decodes; the magic alone matches many wrong keys.
-        // ---
+        //
         // マジックだけでは誤った鍵も多く一致するため、AX 全体を解析できた鍵だけを採用する。
         bool Validator(byte[] decryptedData)
         {
@@ -635,7 +635,7 @@ public sealed class DecompilerPipeline
                 }
 
                 // CrackEncryption takes a synchronous validator, so the decode blocks here.
-                // ---
+                //
                 // CrackEncryption は同期の検証関数を受け取るため、ここでは解析を同期で待つ。
                 CreateDecoder(br)
                     .DecodeAsync(
@@ -759,7 +759,7 @@ public sealed class DecompilerPipeline
 
     // An include keeps the exact name hspcmp recorded, so an existing file of that name is left
     // alone rather than renamed or overwritten.
-    // ---
+    //
     // 取り込みファイルは hspcmp が記録した名前のままにする必要があるため、同名のファイルが既に
     // あれば名前を変えたり上書きしたりせずに残す。
     private void WriteIncludeFiles(IReadOnlyList<IncludeFile> includes, string directory)

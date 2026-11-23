@@ -185,7 +185,7 @@ internal class SyntacticAnalyzer
     }
 
     // Returns -1 when the jump target lies past the code and -2 when it falls inside a line.
-    // ---
+    //
     // 飛び先がコードの外なら -1、行の途中なら -2 を返す。
     private static int FindScopeEnd(List<LogicalLine> ret, int from, int jumpToOffset)
     {
@@ -209,7 +209,7 @@ internal class SyntacticAnalyzer
     // accepts a second else after an else block ("} else { a } else { b }"), which gives the
     // same layout with an else opening the scope; Elona's start.hsp has one. An else that jumps
     // to the same target is an empty "else {}" nested at the end of the block, not a sibling.
-    // ---
+    //
     // ブロックの終端が else ジャンプの直後なら、そのブロックは else の手前で閉じる。hspcmp は
     // else ブロックの後ろにもう 1 つ else を置く形（"} else { a } else { b }"）も受け付け、
     // else が開いたスコープで同じ配置になる。Elona の start.hsp に実例がある。同じ飛び先へ

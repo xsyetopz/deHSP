@@ -18,7 +18,7 @@ internal sealed record Ax2Source(List<string> Lines, List<IncludeFile> Includes)
 // source. Each switch between files appends the file name there too: the included name on
 // entry, the parent's name again on return. hspcmp includes hspdef.as before the main file by
 // itself, so the first switch is the return into the main file.
-// ---
+//
 // hspcmp 2.x はリテラル・#func 名・#deffunc 名をソース順にデータセグメントへ追加し、同じ
 // エントリを再利用しない。そのため行が最初に持ち込むデータオフセットでソース上の位置が
 // 決まる。ファイルが切り替わるたびにファイル名も追加される。入るときは取り込んだファイル名、
@@ -46,7 +46,7 @@ internal sealed class IncludeLayout
 
     // Declarations go right after the last code line that precedes them in the data segment:
     // as early as the order allows, so each stays ahead of every call the source made after it.
-    // ---
+    //
     // 宣言はデータセグメント上で直前にあるコード行のすぐ後ろに置く。順序が許す限り前に置く
     // ことで、ソースがその後に書いた呼び出しより必ず前に来る。
     internal static List<SourceLine> Merge(List<SourceLine> code, List<SourceLine> declarations)
@@ -165,7 +165,7 @@ internal sealed class IncludeLayout
     // Lines without data after an include's last anchored line, such as the return closing a
     // #deffunc, stay in the include up to the next label, since a parent usually jumps past an
     // include to a label.
-    // ---
+    //
     // データセグメントに何も残さなかった取り込みは、その直前の行のすぐ後ろに置く。取り込みの
     // 最後のアンカー付き行に続くデータを持たない行(#deffunc を閉じる return など)は、次の
     // ラベルまで取り込み側に残す。親は取り込みを飛び越えてラベルへ移ることが多いためである。
@@ -227,7 +227,7 @@ internal sealed class IncludeLayout
 
     // Only a plain file name beside the main file is written; a path, a clash with the main file
     // or a second copy with other contents stays inline instead.
-    // ---
+    //
     // 書き出すのはメインファイルと同じ場所の単純なファイル名だけである。パス、メインファイルと
     // の衝突、内容の異なる二度目の取り込みは展開したまま残す。
     private bool TryAddInclude(string? name, List<string> body)
@@ -276,7 +276,7 @@ internal sealed class IncludeLayout
         internal List<Segment> Children { get; } = [];
 
         // The main file's name first appears on the return from hspdef.as.
-        // ---
+        //
         // メインファイルの名前は hspdef.as からの戻りで初めて現れる。
         internal bool TakeName(string name)
         {

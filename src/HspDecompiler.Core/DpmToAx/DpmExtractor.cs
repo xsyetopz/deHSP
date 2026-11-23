@@ -92,7 +92,7 @@ internal sealed class DpmExtractor
     // DPMX layout: a 16-byte header (magic, unknown, file count, unknown), then one 32-byte
     // entry per file (16-byte name, unknown, encryption key, data offset, size). File data
     // follows the entry table.
-    // ---
+    //
     // DPMX の構造: 16 バイトのヘッダー(マジック、不明、ファイル数、不明)の後に、ファイル
     // ごとに 32 バイトのエントリ(16 バイトの名前、不明、暗号鍵、データ位置、サイズ)が並ぶ。
     // ファイルデータはエントリ表の後ろに続く。
@@ -139,7 +139,7 @@ internal sealed class DpmExtractor
     // header count from the header start; name and directory offsets index the table of
     // NUL-terminated strings, and a directory offset of 0 means the archive root. The entry
     // checksum seeds the per-file key table.
-    // ---
+    //
     // DPM2 の構造: 32 バイトのヘッダー(マジック、エントリ数、文字列表の位置、データ部の位置、
     // 文字列表のサイズ、不明、CRC シード、ソルト)の後に、32 バイトのエントリ(フラグ、名前の
     // 位置、サイズ、不明、データ位置、不明、ディレクトリの位置、チェックサム)が並ぶ。
@@ -237,7 +237,7 @@ internal sealed class DpmExtractor
     }
 
     // HSP runtimes start the program from the archive's "start.ax" entry.
-    // ---
+    //
     // HSP ランタイムはアーカイブ内の "start.ax" からプログラムを開始する。
     internal DpmFileEntry? GetStartAx()
     {
