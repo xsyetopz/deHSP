@@ -21,6 +21,7 @@ public class DecompileAxFileTests
     [InlineData("bootopts", ".hsp", false)]
     [InlineData("uncalledfunc", ".hsp", false)]
     [InlineData("pooledstrings", ".hsp", false)]
+    [InlineData("labels", ".hsp", false)]
     [InlineData("utf8strings", ".hsp", true)]
     public async Task AxFixtureDecompilesToExpectedSourceInMissingOutputDirectory(
         string fixture,

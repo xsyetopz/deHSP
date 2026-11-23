@@ -1,0 +1,16 @@
+#bootopt hsp64 1
+#runtime "hsp3_64"
+
+*label_0
+	mes "a"
+	goto *label_1
+	mes "b"
+*label_1
+	repeat 2
+		mes cnt
+	loop
+	gosub *label_2
+	stop
+*label_2
+	mes "c"
+	return

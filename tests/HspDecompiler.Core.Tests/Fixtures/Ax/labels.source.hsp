@@ -1,0 +1,13 @@
+*unused
+	mes "a"
+	goto *jump
+	mes "b"
+*jump
+	repeat 2
+		mes cnt
+	loop
+	gosub *sub
+	stop
+*sub
+	mes "c"
+	return
