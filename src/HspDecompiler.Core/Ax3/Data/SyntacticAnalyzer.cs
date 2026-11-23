@@ -122,9 +122,7 @@ internal class SyntacticAnalyzer
         {
             foreach (Function module in data.Modules)
             {
-                LogicalLine line = new PreprocessorDeclaration(module);
-                line.AddError(Strings.StructNotInHspSpec);
-                ret.Add(line);
+                ret.Add(new PreprocessorDeclaration(module));
             }
         }
 

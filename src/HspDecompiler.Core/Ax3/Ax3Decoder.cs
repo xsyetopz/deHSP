@@ -79,6 +79,7 @@ internal class Ax3Decoder : IAxDecoder, IIncludeSource
                 .ConfigureAwait(false);
             logger.Write(Strings.CreatingOutputFile);
             stringLines.AddRange(Write(lines, data, names, restored));
+            WarnStructs(stringLines, logger);
         }
         catch (SystemException e)
         {
@@ -119,6 +120,25 @@ internal class Ax3Decoder : IAxDecoder, IIncludeSource
 
         data.Scope.HasUnusedModule = false;
         return [.. CompileDirectives(data), .. Indented(lines, data)];
+    }
+
+    // A #struct line is deHSP's own spelling of a module's members; HSP documents no such
+    // directive. A rebuilt #module writes the members itself and leaves none behind.
+    //
+    // #struct 行はモジュールのメンバーを表す deHSP 独自の書き方で、HSP はこの指示文を文書化
+    // していない。組み直した #module はメンバーを自分で書き、#struct 行を残さない。
+    private void WarnStructs(List<string> main, IDecompilerLogger logger)
+    {
+        foreach (List<string> file in Includes.Select(include => include.Lines).Prepend(main))
+        {
+            for (int i = 0; i < file.Count; i++)
+            {
+                if (file[i].StartsWith("#struct ", StringComparison.Ordinal))
+                {
+                    logger.Warning(Strings.StructNotInHspSpec, i + 1);
+                }
+            }
+        }
     }
 
     private static IEnumerable<string> Indented(List<LogicalLine> lines, AxData data) =>
