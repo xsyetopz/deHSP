@@ -70,7 +70,8 @@ does not load, or an input it cannot decompile.
 dotnet run --project src/HspDecompiler.Gui
 ```
 
-Or drag-and-drop files onto the application window.
+Or drag-and-drop files onto the application window. The Style menu holds the same source style
+settings as the CLI options in [Source style](#source-style).
 
 ## Output
 
@@ -118,8 +119,9 @@ Recompile the output with `hspcmp -d` to get the same debug segment. The debug f
 - The AX does not hold comments, `#define` macros, the case of names, or the alias of a
   `#func` that no common header declares, so those cannot come back.
 - The 64-bit hspcmp 3.8β2 sets hsp64 and `#runtime "hsp3_64"` without being asked; a 32-bit
-  hspcmp needs both lines. The two lines go into the first gap without code. When a source has
-  no such gap, they go after the last line, and a recompile records those extra lines.
+  hspcmp needs the `#runtime "hsp3_64"` line, which sets hsp64 as well. The line goes into the
+  first gap without code. When a source has no such gap, it goes after the last line, and a
+  32-bit recompile records that one extra line.
 
 ### Normal builds from hspcmp 3.1 to 3.32
 
@@ -140,7 +142,15 @@ a module block or a string and rebuilds the source around them:
 Recompiled without `-d` by the same hspcmp, the output gives back the same AX, records
 included; the normal-build fixtures and 80 probe programs checked on hspcmp 3.1, 3.21, 3.3
 and 3.32 do. hspcmp 3.4 and later write no such records. When no layout fits the records,
-deHSP writes the lines in order without the records.
+deHSP writes the lines in order; a recompile then gives the same code and data, and only the
+records differ.
+
+deHSP tells these builds apart by the AX format word, the records and the `optprm` flags, and
+narrows the candidate releases from them. A directive or a macro that only some candidates
+accept is written only when every candidate accepts it. A record that no block or string
+explains came from a macro whose expansion broke into more lines than the source took; the AX
+keeps no macro bodies, so the output defines `#define global __line_record(%1) %c` on line 1
+and writes `__line_record` on the line before each such record.
 
 ### Source style
 

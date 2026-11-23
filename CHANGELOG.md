@@ -48,6 +48,13 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
   releases record each `#module` and `#global` line and, from 3.3, the line each `{"..."}`
   string ends on. The output puts each on its line and splits into `<name>_N.hsp` includes
   where the line numbers restart, so a recompile without `-d` gives back the same AX.
+  - The candidate releases are narrowed from the AX format word, the records and the `optprm`
+    flags, and a directive or macro is written only when every candidate accepts it.
+  - A record that no block or string explains came from a macro that broke into more lines;
+    the output defines `__line_record` and writes it where such a macro stood.
+  - A label on the code a `#global` falls on goes after the `#global`, as `*label_1`.
+  - When no layout fits the records, the lines come out in order and recompile to the same
+    code and data.
 - `--common <dir>` (`DecompilerOptions.CommonDirectory`) points at the HSP `common` directory.
   A debug build gets back the `#include` of a common header that left only definitions, and
   the imports that header declares leave the output.
@@ -55,6 +62,7 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
   that compile to the same bytes either way: `--if-parens`, `--one-line-if`,
   `--paren-negatives`, `--logical`, `--compact`, `--no-macros` and `--hex`. Each spelling was
   checked to compile to the same bytes on hspcmp 3.0a through 3.8β2, in normal and debug builds.
+- The GUI has a Style menu with the same settings as the CLI style options.
 - A debug build writes an `if` or `else` block that stood on one line as `if x : y`, and a
   label pushed onto a statement by a closing brace goes back on its own line.
 - Calls that an `hspdef.as` macro expands to are written as the macro, such as `dir_exe` for
@@ -100,6 +108,9 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
 - `thismod` decompiles as `thismod` instead of a comment that does not compile.
 - A `#module` used only through `newmod` counts as used, so its output no longer gets a
   needless `#cmpopt optcode 0`.
+- An hsp64 program from hspcmp 3.8β2 gets `#runtime "hsp3_64"` without `#bootopt hsp64 1`,
+  since the runtime line sets the bit by itself. A debug build without a free line now
+  recompiles with one extra line record instead of two.
 - The `#struct` warning is logged only for a `#struct` line the output holds, with its line.
 - The GUI logs errors from Open, drag and drop, and About instead of crashing, and keeps
   decompile continuations on the UI thread.
