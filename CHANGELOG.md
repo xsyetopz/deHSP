@@ -47,11 +47,24 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
 - `--common <dir>` (`DecompilerOptions.CommonDirectory`) points at the HSP `common` directory.
   A debug build gets back the `#include` of a common header that left only definitions, and
   the imports that header declares leave the output.
+- Style options (`DecompilerOptions.Style`, a `SourceStyle`) pick the spelling of constructs
+  that compile to the same bytes either way: `--if-parens`, `--one-line-if`,
+  `--paren-negatives`, `--logical`, `--compact`, `--no-macros` and `--hex`. Each spelling was
+  checked to compile to the same bytes on hspcmp 3.0a through 3.8β2, in normal and debug builds.
+- A debug build writes an `if` or `else` block that stood on one line as `if x : y`, and a
+  label pushed onto a statement by a closing brace goes back on its own line.
+- Calls that an `hspdef.as` macro expands to are written as the macro, such as `dir_exe` for
+  `dirinfo(1)`. `ginfo_newid`, `dir_tv` and the sensor macros are written only for AX
+  version 3.5 or later, since some earlier compilers lack them.
 - The CLI exits with 0 on success and 1 on any failure.
 - The public API has XML documentation in English and Japanese.
 
 ### Changed
 
+- The default HSP 3 spelling follows common HSP style. An `if` condition has no
+  parentheses, a negative literal stays bare (`a - -1`), `hspdef.as` macros replace their
+  expansions, and one-line blocks of a debug build use `:`. `--if-parens spaced`,
+  `--paren-negatives`, `--no-macros` and `--one-line-if braces` give back the old spelling.
 - HSP 3 output is closer to what hspcmp compiled:
   - Imports sit where hspcmp registered them.
   - Labels no code refers to stay in the output; labels made by `repeat` and `foreach`
@@ -64,6 +77,10 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
 
 ### Fixed
 
+- Output of HSP 3.0 to 3.4 programs compiles with the compiler that built them. `#cmpopt
+  optprm 0`, which hspcmp 3.1 to 3.21 reject, is written only for AX format 3.5 or later.
+  `#cmpopt optcode 0` is no longer inferred from a repeated string before format 3.6, since
+  older compilers never pool strings, nor written at all for format 3.0, which has no optcode.
 - `--skip-encrypted` skips encrypted entries by itself. Before, it worked only together
   with `--no-decrypt`.
 - Executables packed with UPX are read correctly. The PE section table is now read by its

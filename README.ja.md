@@ -43,15 +43,22 @@ dotnet run --project src/HspDecompiler.Cli -- game.exe -o ./extracted
 
 ```text
 dehsp <入力ファイル> [オプション]
-  -o, --output <output>          出力ディレクトリ
-  -d, --dictionary <dictionary>  独自の辞書 XML（デフォルト: 組み込みの HSP 3.8beta2 の表）
-  --no-decrypt                   暗号化ファイルを復号しない
-  --skip-encrypted               暗号化されていないファイルだけを取り出す
-  --utf8                         Shift_JIS ではなく BOM なしの UTF-8 で書く（hspcmp -i か -j で再コンパイル）
-  --common <common>              HSP の common ディレクトリ。デバッグビルドで一致する共通ヘッダーの #include を戻す
-  -v, --verbose                  詳細なログを出す
-  -?, -h, --help                 ヘルプと使い方を表示
-  --version                      バージョンを表示
+  -o, --output <output>              出力ディレクトリ
+  -d, --dictionary <dictionary>      独自の辞書 XML（デフォルト: 組み込みの HSP 3.8beta2 の表）
+  --no-decrypt                       暗号化ファイルを復号しない
+  --skip-encrypted                   暗号化されていないファイルだけを取り出す
+  --utf8                             Shift_JIS ではなく BOM なしの UTF-8 で書く（hspcmp -i か -j で再コンパイル）
+  --common <common>                  HSP の common ディレクトリ。デバッグビルドで一致する共通ヘッダーの #include を戻す
+  --if-parens <None|Spaced|Tight>    if の条件の括弧: 無し、詰める '(x)'、空ける '( x )'（デフォルト: None）
+  --one-line-if <Braces|Colon>       1 行の if ブロック（デバッグビルド）: コロン 'if x : y'、波括弧（デフォルト: Colon）
+  --paren-negatives                  演算子の隣の負のリテラルを 'a - (-1)' と書く
+  --logical <Doubled|Symbols|Words>  条件をつなぐ & と |: 記号、重ねる '&&'、単語 'and'（デフォルト: Symbols）
+  --compact                          二項演算子を空白無しで書く: 'a+1'
+  --no-macros                        hspdef.as のマクロを展開して書く: 'dir_exe' ではなく 'dirinfo(1)'
+  --hex <All|None|Poke>              整数を 16 進数で書く: 無し、poke（128 以上の poke の値）、すべて（デフォルト: None）
+  -v, --verbose                      詳細なログを出す
+  -?, -h, --help                     ヘルプと使い方を表示
+  --version                          バージョンを表示
 ```
 
 `dehsp` は成功すると 0、失敗すると 1 で終了します。失敗には、引数の誤り、辞書を読み込めない
@@ -78,9 +85,9 @@ HSP 3 のプログラムは 1 つの `.hsp` ファイルになります。HSP 2 
 
 | 行 | AX が次の条件のときに書く |
 | --- | --- |
-| `#cmpopt optcode 0` | 呼ばれない `#func`・`#cfunc` か、何にも使われない `#module` がある、または同じ文字列を 2 回格納している |
+| `#cmpopt optcode 0` | 呼ばれない `#func`・`#cfunc` か、何にも使われない `#module` がある（形式 3.1 以降）、または同じ文字列を 2 回格納している（文字列を共有する最初の 3.6 以降） |
 | `#cmpopt varname 1` | 変数名を含み、デバッグビルドではない |
-| `#cmpopt optprm 0` | 1 つのリテラルだけの引数の印が無い |
+| `#cmpopt optprm 0` | 1 つのリテラルだけの引数の印が無い（形式 3.5 以降。hspcmp 3.1〜3.21 はこの行を拒否する） |
 | `#cmpopt utf8 1` | UTF-8 の文字列を含む（utf8 起動フラグの無い hsp64 のプログラムを除く） |
 | `#bootopt ...` | 起動フラグが立っている（hsp64、nogdip、float32、orgrnd、ioresume、utf8、notimer） |
 | `#runtime "..."` | ランタイム名を持つ |
@@ -114,6 +121,33 @@ hspcmp 3.8β2 でビルドされた 41 KB のプログラムはバイト単位�
 - 64 ビット版の hspcmp 3.8β2 は指定が無くても hsp64 と `#runtime "hsp3_64"` を設定しますが、
   32 ビット版にはこの 2 行が必要です。2 行はコードの無い最初の隙間に入れます。隙間の無い
   ソースでは最後の行の後に置くため、再コンパイルするとその分の行が記録されます。
+
+### ソースの書き方
+
+いくつかの構文は、どう書いても同じバイト列にコンパイルされます。書き方のオプションはその綴りを
+選ぶもので、どれを選んでも同じ AX に戻ります。デフォルトは一般的な HSP の書き方に従います。
+
+| オプション | デフォルト | 他の書き方 |
+| --- | --- | --- |
+| `--if-parens` | `if x == 1 {` | `tight`: `if (x == 1) {`、`spaced`: `if ( x == 1 ) {` |
+| `--one-line-if` | `if x : mes "a"` | `braces`: `if x { mes "a" }` |
+| `--paren-negatives` | `a - -1` | `a - (-1)` |
+| `--logical` | `a == 1 & b == 2` | `doubled`: `(a == 1) && (b == 2)`、`words`: `(a == 1) and (b == 2)` |
+| `--compact` | `a + 1` | `a+1` |
+| `--no-macros` | `dir_exe`、`ginfo_mx` | `dirinfo(1)`、`ginfo(0)` |
+| `--hex` | `poke b, 0, 239` | `poke`: 128 以上の `poke`・`wpoke`・`lpoke` の値を `poke b, 0, 0xEF` と書く、`all`: すべての整数 |
+
+- `--one-line-if colon` はデバッグビルドに使われます。どのブロックが 1 行にあったかは行テーブルで
+  分かるためです。複数行の `{"..."}` 文字列がその行を通る場合、本体に文以外がある場合、`else`
+  が別の行で始まる場合、ブロックは波括弧のままです。
+- `--no-macros` が無ければ、`hspdef.as` のマクロは AX をビルドしたコンパイラが持つ場合だけ
+  書きます。hspcmp 3.0a〜3.4 には `ginfo_newid`・`dir_tv`・`ginfo_accelx` などのセンサーの
+  マクロが無いリリースがあり、3.1〜3.4 は同じ AX バージョンを使うため、これらのマクロは
+  AX バージョン 3.5 以降でだけ書きます。
+
+それぞれの書き方は hspcmp 3.0a、3.1、3.2、3.21、3.3、3.31、3.32、3.4、3.5、3.51、3.6、3.7、
+3.8β2 の通常ビルドとデバッグビルドで確かめ、どの組の書き方もすべてで同じバイト列になりました。
+例外は、3.5 より前のコンパイラで上のマクロが定義されていないことだけです。
 
 ### 文字コード
 

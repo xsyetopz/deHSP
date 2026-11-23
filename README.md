@@ -43,15 +43,22 @@ Options:
 
 ```text
 dehsp <input-file> [options]
-  -o, --output <output>          Output directory
-  -d, --dictionary <dictionary>  Custom dictionary XML (default: built-in HSP 3.8beta2 table)
-  --no-decrypt                   Skip encrypted file decryption
-  --skip-encrypted               Extract only non-encrypted files
-  --utf8                         Write UTF-8 without a BOM instead of Shift_JIS; recompile with hspcmp -i or -j
-  --common <common>              HSP common directory; restores the #include of a matching common header in a debug build
-  -v, --verbose                  Verbose logging
-  -?, -h, --help                 Show help and usage information
-  --version                      Show version information
+  -o, --output <output>              Output directory
+  -d, --dictionary <dictionary>      Custom dictionary XML (default: built-in HSP 3.8beta2 table)
+  --no-decrypt                       Skip encrypted file decryption
+  --skip-encrypted                   Extract only non-encrypted files
+  --utf8                             Write UTF-8 without a BOM instead of Shift_JIS; recompile with hspcmp -i or -j
+  --common <common>                  HSP common directory; restores the #include of a matching common header in a debug build
+  --if-parens <None|Spaced|Tight>    Parentheses around an if condition: none, tight '(x)', spaced '( x )' [default: None]
+  --one-line-if <Braces|Colon>       An if block on one source line (debug builds): colon 'if x : y', braces [default: Colon]
+  --paren-negatives                  Write a negative literal beside an operator as 'a - (-1)'
+  --logical <Doubled|Symbols|Words>  & and | between conditions: symbols, doubled '&&', words 'and' [default: Symbols]
+  --compact                          Write binary operators without spaces: 'a+1'
+  --no-macros                        Write hspdef.as macro calls expanded: 'dirinfo(1)' for 'dir_exe'
+  --hex <All|None|Poke>              Integers in hexadecimal: none, poke (poke values of 128 or more), all [default: None]
+  -v, --verbose                      Verbose logging
+  -?, -h, --help                     Show help and usage information
+  --version                          Show version information
 ```
 
 `dehsp` exits with 0 on success and 1 on any failure: a bad argument, a dictionary that
@@ -77,9 +84,9 @@ the AX records, so hspcmp builds it the same way:
 
 | Line | Written when the AX |
 | --- | --- |
-| `#cmpopt optcode 0` | has an uncalled `#func` or `#cfunc`, a `#module` nothing uses, or stores a string twice |
+| `#cmpopt optcode 0` | has an uncalled `#func` or `#cfunc` or a `#module` nothing uses (format 3.1 or later), or stores a string twice (3.6 or later, the first to pool strings) |
 | `#cmpopt varname 1` | holds variable names and is not a debug build |
-| `#cmpopt optprm 0` | has no single-literal parameter flags |
+| `#cmpopt optprm 0` | has no single-literal parameter flags (format 3.5 or later; hspcmp 3.1 to 3.21 reject the line) |
 | `#cmpopt utf8 1` | holds UTF-8 strings, unless it is an hsp64 program without the utf8 boot flag |
 | `#bootopt ...` | has boot flags set (hsp64, nogdip, float32, orgrnd, ioresume, utf8, notimer) |
 | `#runtime "..."` | names a runtime |
@@ -113,6 +120,35 @@ Recompile the output with `hspcmp -d` to get the same debug segment. The debug f
 - The 64-bit hspcmp 3.8β2 sets hsp64 and `#runtime "hsp3_64"` without being asked; a 32-bit
   hspcmp needs both lines. The two lines go into the first gap without code. When a source has
   no such gap, they go after the last line, and a recompile records those extra lines.
+
+### Source style
+
+Some constructs compile to the same bytes however they are spelled. The style options pick
+the spelling; every choice recompiles to the same AX. The defaults follow common HSP style:
+
+| Option | Default | Other spellings |
+| --- | --- | --- |
+| `--if-parens` | `if x == 1 {` | `tight`: `if (x == 1) {`, `spaced`: `if ( x == 1 ) {` |
+| `--one-line-if` | `if x : mes "a"` | `braces`: `if x { mes "a" }` |
+| `--paren-negatives` | `a - -1` | `a - (-1)` |
+| `--logical` | `a == 1 & b == 2` | `doubled`: `(a == 1) && (b == 2)`; `words`: `(a == 1) and (b == 2)` |
+| `--compact` | `a + 1` | `a+1` |
+| `--no-macros` | `dir_exe`, `ginfo_mx` | `dirinfo(1)`, `ginfo(0)` |
+| `--hex` | `poke b, 0, 239` | `poke`: `poke b, 0, 0xEF` for a `poke`, `wpoke` or `lpoke` value of 128 or more; `all`: every integer |
+
+- `--one-line-if colon` applies to debug builds, where the line table shows which blocks
+  stood on one line. A block keeps its braces when a multi-line `{"..."}` string runs through
+  its line, when its body holds anything but statements, or when its `else` starts on another
+  line.
+- Without `--no-macros`, an `hspdef.as` macro is written only where the compiler that built
+  the AX has it. hspcmp 3.0a to 3.4 lack `ginfo_newid`, `dir_tv` or the sensor macros such
+  as `ginfo_accelx` in some releases, and 3.1 to 3.4 share one AX version, so those macros
+  are written only for AX version 3.5 or later.
+
+Each spelling was checked against hspcmp 3.0a, 3.1, 3.2, 3.21, 3.3, 3.31, 3.32, 3.4, 3.5,
+3.51, 3.6, 3.7 and 3.8β2, in normal and debug builds: each pair of spellings compiled to
+the same bytes on every one. The only exceptions were the macros above on compilers before 3.5,
+which do not define them.
 
 ### Text encoding
 
