@@ -24,6 +24,8 @@ internal sealed class FilePlacer
     private readonly List<string> _lines = [];
     private readonly List<LayoutItem> _pending = [];
     private readonly Queue<LayoutItem> _headers = [];
+    private readonly List<List<LayoutItem>> _members = [];
+    private readonly HashSet<int> _split = [];
     private bool _lastTakesCode;
 
     // Lines the last written item took past its first, for a {"..."} string that spans lines.
@@ -35,6 +37,14 @@ internal sealed class FilePlacer
     //
     // 行を保てなかったアンカーの数。
     internal int Moved { get; private set; }
+
+    // The items on each written line, in order. A line that a multi-line string runs through is
+    // listed in Split.
+    //
+    // 書いた各行の項目(順序どおり)。複数行の文字列が通る行は Split に入る。
+    internal IReadOnlyList<List<LayoutItem>> Members => _members;
+
+    internal IReadOnlySet<int> Split => _split;
 
     internal List<string> Place(IEnumerable<LayoutItem> items, int lineCount)
     {
@@ -180,7 +190,10 @@ internal sealed class FilePlacer
                 prefix.Tabs,
                 anchor.File,
                 anchor.Target
-            );
+            )
+            {
+                Parts = [prefix, anchor],
+            };
 
     // Early lines go right after the written ones, the others right before the anchor.
     //
@@ -230,7 +243,8 @@ internal sealed class FilePlacer
     private void WriteLine(LayoutItem item)
     {
         string[] parts = (new string('\t', item.Tabs) + item.Text).Split('\n');
-        _lines.AddRange(parts);
+        _members.Add([.. item.Parts ?? [item]]);
+        AddLines(parts, 0);
         _extraLines = parts.Length - 1;
         _lastTakesCode = item.Kind is LayoutKind.Code or LayoutKind.Close;
     }
@@ -239,7 +253,8 @@ internal sealed class FilePlacer
     {
         string[] parts = Join(_lines[^1], item.Text).Split('\n');
         _lines[^1] = parts[0];
-        _lines.AddRange(parts[1..]);
+        _members[^1].AddRange(item.Parts ?? [item]);
+        AddLines(parts, 1);
         _extraLines += parts.Length - 1;
         _lastTakesCode = true;
     }
@@ -247,14 +262,32 @@ internal sealed class FilePlacer
     private void AddBlank()
     {
         _lines.Add(string.Empty);
+        _members.Add([]);
         _extraLines = 0;
         _lastTakesCode = false;
+    }
+
+    private void AddLines(string[] parts, int from)
+    {
+        if (parts.Length > 1)
+        {
+            _split.UnionWith(Enumerable.Range(_lines.Count - from, parts.Length));
+        }
+
+        for (int i = from; i < parts.Length; i++)
+        {
+            _lines.Add(parts[i]);
+            if (i > 0)
+            {
+                _members.Add([]);
+            }
+        }
     }
 
     // hspcmp reads "{" and "}" as statements of their own, so they need no ':' beside them.
     //
     // hspcmp は "{" と "}" をそれ自体で文として読むため、その隣に ':' は要らない。
-    private static string Join(string first, string second) =>
+    internal static string Join(string first, string second) =>
         first.EndsWith('{')
         || second.StartsWith('}')
         || (first.EndsWith('}') && second.StartsWith("else", System.StringComparison.Ordinal))

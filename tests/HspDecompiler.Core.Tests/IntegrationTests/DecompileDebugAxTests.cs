@@ -27,6 +27,7 @@ public class DecompileDebugAxTests
     [InlineData("dbgmodules")]
     [InlineData("dbgmodinclude", "sub")]
     [InlineData("dbgmodinner", "inner")]
+    [InlineData("dbgcolon")]
     public async Task DebugBuildDecompilesToItsSourceLayout(
         string fixture,
         params string[] includes

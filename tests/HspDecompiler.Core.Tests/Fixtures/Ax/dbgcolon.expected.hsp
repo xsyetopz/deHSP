@@ -1,0 +1,20 @@
+	a = 1 : b = 2
+	if a : mes "one"
+	if a : mes "x" : else : mes "y"
+	if a : if b : mes "nested"
+	if a {
+		if b : mes "inner"
+	}
+	if a { mes "brace" } : mes "after"
+	if a { mes "c" } else {
+		mes "d"
+	}
+	if a {
+	}
+	if b { s = {"two
+line"} }
+	if a { if b { mes "e" } : mes "f" }
+	if a : mes "g" : if b : mes "h" : else : mes "i"
+*lbl
+	if a : b = 0 : goto *lbl
+	stop

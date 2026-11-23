@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Text;
 using HspDecompiler.Core.Ax3.Dictionary;
+using HspDecompiler.Core.Pipeline;
 using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax3.Data;
@@ -32,7 +33,16 @@ internal abstract class PrimitiveToken
         _flag = dataSet._flag;
         _value = dataSet._value;
         _name = dataSet._name;
+        Style = dataSet._parent?.Style ?? SourceStyle.Default;
+        FormatVersion = dataSet._parent?.Header?.Version ?? 0;
     }
+
+    // The AX format version, which tells which hspdef.as macros the compiler had.
+    //
+    // AX の形式のバージョン。コンパイラにどの hspdef.as マクロがあったかを示す。
+    internal uint FormatVersion { get; }
+
+    internal SourceStyle Style { get; } = SourceStyle.Default;
 
     protected string _dicValueName = "null";
     protected readonly int _type;

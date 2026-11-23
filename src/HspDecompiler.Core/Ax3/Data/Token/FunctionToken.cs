@@ -31,10 +31,17 @@ internal sealed class FunctionToken : OperandToken
             return _primitive!.ToString();
         }
 
-        var builder = new StringBuilder(_primitive!.ToString());
+        if (_primitive!.Style.StandardMacros && StandardMacros.Spell(_primitive, _arg) is { } macro)
+        {
+            return macro;
+        }
+
+        var builder = new StringBuilder(_primitive.ToString());
         builder.Append(_arg);
         return builder.ToString();
     }
+
+    internal ArgumentToken? Arguments => _arg;
 
     internal override int Priority => 100;
 

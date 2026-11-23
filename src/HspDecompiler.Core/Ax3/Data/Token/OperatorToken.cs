@@ -1,4 +1,5 @@
 using HspDecompiler.Core.Ax3.Data.Primitive;
+using HspDecompiler.Core.Pipeline;
 
 namespace HspDecompiler.Core.Ax3.Data.Token;
 
@@ -11,6 +12,8 @@ internal sealed class OperatorToken : ExpressionTermToken
 
     private readonly OperatorPrimitive? _primitive;
     internal override int TokenOffset => _primitive!.TokenOffset;
+
+    internal SourceStyle Style => _primitive!.Style;
 
     public override string ToString() => _primitive!.ToString();
 

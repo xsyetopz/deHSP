@@ -1,6 +1,7 @@
 using System.Text;
 using HspDecompiler.Core.Ax3.Data.Primitive;
 using HspDecompiler.Core.Ax3.Data.Token;
+using HspDecompiler.Core.Pipeline;
 
 namespace HspDecompiler.Core.Ax3.Data.Line;
 
@@ -41,13 +42,20 @@ internal sealed class IfStatement : LogicalLine
         var builder = new StringBuilder(_ifToken!.ToString());
         if (_arg != null)
         {
-            builder.Append(" (");
-            builder.Append(_arg);
-            builder.Append(" )");
+            builder.Append(Condition(_arg.ToString().TrimStart(' '), _ifToken.Style.IfParentheses));
         }
         builder.Append(" {");
         return builder.ToString();
     }
+
+    private static string Condition(string condition, IfParentheses parentheses) =>
+        parentheses switch
+        {
+            IfParentheses.None => " " + condition,
+            IfParentheses.Tight => " (" + condition + ")",
+            IfParentheses.Spaced => " ( " + condition + " )",
+            _ => throw new System.ArgumentOutOfRangeException(nameof(parentheses)),
+        };
 
     internal override void CheckLabel() => _arg?.CheckLabel();
 

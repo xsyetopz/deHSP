@@ -8,6 +8,7 @@ using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.PP;
 using HspDecompiler.Core.Encoding;
 using HspDecompiler.Core.Exceptions;
+using HspDecompiler.Core.Pipeline;
 using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax3.Data;
@@ -40,6 +41,8 @@ internal class AxData
     internal DebugInfo DebugInfo => _debugInfo;
 
     internal ModuleScope Scope { get; } = new();
+
+    internal SourceStyle Style { get; init; } = SourceStyle.Default;
 
     internal List<Function> Modules => _modules;
 

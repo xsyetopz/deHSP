@@ -4,7 +4,7 @@
 	t = v
 	val = t
 	gcount@ += 1
-	if ( v > 3 ) { goto *skip }
+	if v > 3 : goto *skip
 	val = 0
 *skip
 	return

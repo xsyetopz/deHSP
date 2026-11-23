@@ -1,0 +1,16 @@
+	a = 1 : b = 2
+	if (a == 1) && (b == 2) { mes "and" }
+	if a == 1 | b != 2 { mes "or" } else { mes "neither" }
+	c = a & 3 | b
+	d = a - (-1) + b * -2
+	e = strlen("x")-1
+	mes dir_exe + dir_cur + dir_tv
+	mes ginfo_mx
+	mes ginfo_accelx
+	mes objinfo(0, 2)
+	sdim buf, 64
+	poke buf, 0, 0xEF
+	poke buf, 1, 65
+	wpoke buf, 2, 0x1234
+	x = 255 : y = -5 : z = 16
+	stop

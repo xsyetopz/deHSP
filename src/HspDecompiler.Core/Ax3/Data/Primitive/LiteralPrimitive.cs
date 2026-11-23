@@ -1,5 +1,6 @@
 using System.Globalization;
 using HspDecompiler.Core.Ax3.Data.PP;
+using HspDecompiler.Core.Pipeline;
 
 namespace HspDecompiler.Core.Ax3.Data.Primitive;
 
@@ -46,7 +47,17 @@ internal sealed class IntegerPrimitive : LiteralPrimitive
     internal override bool IsNegativeNumber => (Value < 0);
     internal override bool IsMinusOne => Value == -1;
 
-    public override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
+    internal bool Hex { get; set; }
+
+    // A negative value stays decimal: its hex spelling would be a 32-bit pattern such as
+    // 0xFFFFFFFF that does not read as the number.
+    //
+    // 負の値は 10 進数のまま。16 進数で書くと 0xFFFFFFFF のような 32 ビットのパターンになり、
+    // 数として読めない。
+    public override string ToString() =>
+        Value >= 0 && (Hex || (Style.HexLiterals == HexLiterals.All && Value >= 10))
+            ? "0x" + Value.ToString("X", CultureInfo.InvariantCulture)
+            : Value.ToString(CultureInfo.InvariantCulture);
 }
 
 internal sealed class DoublePrimitive : LiteralPrimitive

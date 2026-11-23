@@ -81,4 +81,14 @@ public sealed class DecompilerOptions
     /// </para>
     /// </summary>
     public string? CommonDirectory { get; set; }
+
+    /// <summary>
+    /// <para xml:lang="en">
+    /// How the HSP 3 source spells constructs that compile to the same bytes either way.
+    /// </para>
+    /// <para xml:lang="ja">
+    /// どちらでも同じバイト列にコンパイルされる構文を、HSP 3 のソースでどう綴るか。
+    /// </para>
+    /// </summary>
+    public SourceStyle Style { get; set; } = new();
 }

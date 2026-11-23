@@ -16,6 +16,7 @@ internal sealed class ArgumentToken : CodeToken
     private readonly bool _hasBrackets;
     private readonly bool _firstArgIsNull;
     internal List<ExpressionToken> Exps => _exps!;
+    internal bool HasBrackets => _hasBrackets;
     internal override int TokenOffset =>
         (_exps == null) || (_exps.Count == 0) ? -1 : _exps[0].TokenOffset;
 

@@ -3,10 +3,11 @@ using System.Linq;
 using HspDecompiler.Core.Abstractions;
 using HspDecompiler.Core.Ax3.Data.Line;
 using HspDecompiler.Core.Ax3.Data.PP;
+using HspDecompiler.Core.Pipeline;
 
 namespace HspDecompiler.Core.Ax3.Data.Layout;
 
-internal sealed record SourceLayoutResult(List<string> Main, List<IncludeFile> Includes, int Moved);
+internal sealed record SourceLayoutResult(List<string> Main, List<IncludeFile> Includes);
 
 // Rebuilds the files and line layout of a debug build from its line table. Each code line goes
 // to the file and line whose code range holds its first token; every other line goes to the file
@@ -56,7 +57,6 @@ internal static class SourceLayout
 
         var main = new List<string>();
         var includes = new List<IncludeFile>();
-        int moved = 0;
         foreach ((int file, List<LayoutItem> fileItems) in byFile.OrderBy(entry => entry.Key))
         {
             if (file == names.HeaderFile || IsCommonWithoutCode(file, names, byFile))
@@ -66,7 +66,11 @@ internal static class SourceLayout
 
             var placer = new FilePlacer();
             List<string> placed = placer.Place(fileItems, LineCount(info, file, names.MainFile));
-            moved += placer.Moved;
+            if (data.Style.OneLineIf == OneLineIf.Colon)
+            {
+                ColonIfs.Apply(placed, placer.Members, placer.Split, fileItems);
+            }
+
             if (file == names.MainFile)
             {
                 main = placed;
@@ -77,7 +81,7 @@ internal static class SourceLayout
             }
         }
 
-        return new SourceLayoutResult(main, includes, moved);
+        return new SourceLayoutResult(main, includes);
     }
 
     private static List<LayoutItem> Classify(
@@ -95,9 +99,13 @@ internal static class SourceLayout
         ModuleScope scope = data.Scope;
         List<DebugLine> code = [.. data.DebugInfo.Lines.Where(record => record.CodeSize > 0)];
         var breaks = new Dictionary<int, Queue<int>>();
+        var blocks = new Stack<int>();
+        int closed = -1;
         foreach (LogicalLine line in lines.Where(line => line.Visible))
         {
-            items.Add(Classify(line, scope, code, breaks));
+            LayoutItem item = Classify(line, scope, code, breaks);
+            closed = Number(line, item, items.Count, blocks, closed);
+            items.Add(item);
         }
 
         AssignFiles(items, first, mainFile);
@@ -117,7 +125,7 @@ internal static class SourceLayout
     )
     {
         string text = scope.Render(line);
-        if (line.TokenOffset >= 0 && Find(code, line.TokenOffset) is DebugLine record)
+        if (line.TokenOffset >= 0 && Find(code, line.TokenOffset) is { } record)
         {
             if (!breaks.TryGetValue(record.CodeOffset, out Queue<int>? pending))
             {
@@ -148,6 +156,39 @@ internal static class SourceLayout
             _ => LayoutKind.Other,
         };
         return new LayoutItem(kind, text, line.TabCount, -1, 0);
+    }
+
+    // Numbers each if or else block whose close the analysis placed by the index of its open,
+    // so ColonIfs can find its open and close; returns the block the line closed, for an else
+    // right after it.
+    //
+    // 解析が閉じ括弧を置いた if・else ブロックに開始の位置で番号を振り、ColonIfs が開始と
+    // 閉じ括弧を見つけられるようにする。直後の else のため、この行が閉じたブロックを返す。
+    private static int Number(
+        LogicalLine line,
+        LayoutItem item,
+        int index,
+        Stack<int> blocks,
+        int closed
+    )
+    {
+        if (line is IfStatement { ScopeEndIsDefined: true } statement)
+        {
+            item.Opens = index;
+            if (statement.IsElseStatement && closed >= 0)
+            {
+                item.Continues = closed;
+            }
+
+            blocks.Push(item.Opens);
+        }
+        else if (line is ScopeEnd && blocks.Count > 0)
+        {
+            item.Closes = blocks.Pop();
+            return item.Closes;
+        }
+
+        return -1;
     }
 
     private static DebugLine? Find(List<DebugLine> code, int offset)

@@ -21,7 +21,21 @@ internal sealed class LiteralToken : OperandToken
             ? ""
             : _token.ToString();
 
-    internal override int Priority => IsNegativeNumber ? -1 : 100;
+    internal override int Priority =>
+        IsNegativeNumber && _token!.Style.ParenthesizeNegatives ? -1 : 100;
+
+    // An integer that is not a label or a symbol, or null.
+    //
+    // ラベルや記号ではない整数。それ以外は null。
+    internal int? Integer => _token is IntegerPrimitive integer ? integer.Value : null;
+
+    internal void WriteInHex()
+    {
+        if (_token is IntegerPrimitive integer)
+        {
+            integer.Hex = true;
+        }
+    }
 
     internal override void CheckLabel()
     {

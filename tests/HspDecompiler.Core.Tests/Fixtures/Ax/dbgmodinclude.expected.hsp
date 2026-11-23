@@ -10,7 +10,7 @@
 #func global MessageBeep "MessageBeep" int
 #deffunc tick int n
 	num += n
-	if ( num > 2 ) { gosub *init@ }
+	if num > 2 : gosub *init@
 	goto *done
 *done
 	return

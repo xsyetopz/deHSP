@@ -5,4 +5,6 @@ internal abstract class OperandToken : ExpressionTermToken
     internal override bool IsOperand => true;
 
     internal override bool IsOperator => false;
+
+    internal virtual bool IsComparison => false;
 }

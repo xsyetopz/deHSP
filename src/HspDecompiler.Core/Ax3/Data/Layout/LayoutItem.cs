@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace HspDecompiler.Core.Ax3.Data.Layout;
 
 // How an output line may move when the source layout is rebuilt. Code, an #include and a
@@ -50,6 +52,22 @@ internal sealed class LayoutItem
     //
     // #global が立つコード位置。それ以外の行では -1。
     internal int CodeOffset { get; init; } = -1;
+
+    // The if or else block this line opens or closes, numbered in source order, or -1. An else
+    // that follows the close of an if continues that block's chain.
+    //
+    // この行が開く・閉じる if または else のブロックの番号(ソース順)。無ければ -1。if の閉じ
+    // 括弧の直後の else は、そのブロックの連なりを続ける。
+    internal int Opens { get; set; } = -1;
+
+    internal int Closes { get; set; } = -1;
+
+    internal int Continues { get; set; } = -1;
+
+    // The items a joined line was built from, such as a label and the statement it names.
+    //
+    // つないだ行の元になった項目。ラベルとそれが指す文など。
+    internal IReadOnlyList<LayoutItem>? Parts { get; init; }
 
     internal bool IsAnchor =>
         Kind is LayoutKind.Code or LayoutKind.Include or LayoutKind.ModuleStart;

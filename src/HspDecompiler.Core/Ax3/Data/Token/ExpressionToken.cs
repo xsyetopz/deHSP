@@ -70,6 +70,11 @@ internal sealed class ExpressionToken : CodeToken
         return stack.Count == 1 ? stack.Pop() : null;
     }
 
+    // The literal the expression consists of, or null when it holds more than one term.
+    //
+    // 式を成すリテラル。項が二つ以上なら null。
+    internal LiteralToken? Literal => _tokens.Count == 1 ? _tokens[0] as LiteralToken : null;
+
     internal override int TokenOffset => _tokens.Count == 0 ? -1 : _tokens[0].TokenOffset;
 
     internal string ToString(bool getRpnConverted)

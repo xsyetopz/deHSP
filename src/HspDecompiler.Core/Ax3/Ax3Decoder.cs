@@ -10,6 +10,7 @@ using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.Layout;
 using HspDecompiler.Core.Ax3.Data.PP;
 using HspDecompiler.Core.Exceptions;
+using HspDecompiler.Core.Pipeline;
 using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax3;
@@ -34,12 +35,9 @@ internal class Ax3Decoder : IAxDecoder, IIncludeSource
     // 共通ヘッダーの #include を復元するのに使う。
     internal string? CommonDirectory { get; init; }
 
-    public IReadOnlyList<IncludeFile> Includes { get; private set; } = [];
+    internal SourceStyle Style { get; init; } = SourceStyle.Default;
 
-    // Anchors the debug layout could not keep on their recorded line.
-    //
-    // デバッグ情報の配置で記録された行に置けなかったアンカーの数。
-    internal int MovedLines { get; private set; }
+    public IReadOnlyList<IncludeFile> Includes { get; private set; } = [];
 
     internal Hsp3Dictionary? Dictionary
     {
@@ -54,7 +52,7 @@ internal class Ax3Decoder : IAxDecoder, IIncludeSource
         CancellationToken ct = default
     )
     {
-        var data = new AxData();
+        var data = new AxData { Style = Style };
         var stringLines = new List<string>();
         try
         {
@@ -117,7 +115,6 @@ internal class Ax3Decoder : IAxDecoder, IIncludeSource
     {
         SourceLayoutResult result = SourceLayout.Build(lines, directives, data, names, restored);
         Includes = result.Includes;
-        MovedLines = result.Moved;
         return result.Main;
     }
 

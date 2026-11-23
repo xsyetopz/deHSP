@@ -64,6 +64,7 @@ public sealed partial class DecompilerPipeline
     private readonly IProgressReporter _progress;
     private Hsp3Dictionary? _dictionary;
     private string? _commonDirectory;
+    private SourceStyle _style = SourceStyle.Default;
 
     /// <summary>
     /// <para xml:lang="en">Creates a pipeline that reports to the given logger and progress sink.</para>
@@ -202,6 +203,7 @@ public sealed partial class DecompilerPipeline
         ArgumentNullException.ThrowIfNull(options);
 
         _commonDirectory = options.CommonDirectory;
+        _style = options.Style;
         var decompilerOutput = new DecompilerResult();
 
         try
@@ -546,6 +548,7 @@ public sealed partial class DecompilerPipeline
                 Dictionary = _dictionary,
                 MainFileName = mainFileName ?? "start.hsp",
                 CommonDirectory = _commonDirectory,
+                Style = _style,
             };
             return decoder;
         }

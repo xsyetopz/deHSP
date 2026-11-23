@@ -1,12 +1,12 @@
 	var_0 = 14
 	var_1 = 531
-	if ( var_0 == 14 ) {
+	if var_0 == 14 {
 		mes 1
-		if ( var_1 == 528 ) {
+		if var_1 == 528 {
 			mes 2
 		}
 		else {
-			if ( var_1 == 531 ) {
+			if var_1 == 531 {
 				mes 3
 			}
 			else {
