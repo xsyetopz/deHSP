@@ -26,18 +26,6 @@ public sealed class DecompilerOptions
 
     /// <summary>
     /// <para xml:lang="en">
-    /// Path of the dictionary the host loaded. The pipeline does not read it; load a dictionary
-    /// with <see cref="DecompilerPipeline.Initialize(string)"/>.
-    /// </para>
-    /// <para xml:lang="ja">
-    /// ホストが読み込んだ辞書のパス。パイプラインはこの値を読まない。辞書は
-    /// <see cref="DecompilerPipeline.Initialize(string)"/> で読み込む。
-    /// </para>
-    /// </summary>
-    public string? DictionaryPath { get; set; }
-
-    /// <summary>
-    /// <para xml:lang="en">
     /// Whether to decrypt encrypted archive entries. When false, an archive whose entries are all
     /// encrypted yields nothing, and one with some encrypted entries is cancelled unless
     /// <see cref="SkipEncrypted"/> is set.
@@ -52,25 +40,13 @@ public sealed class DecompilerOptions
 
     /// <summary>
     /// <para xml:lang="en">
-    /// When <see cref="AllowDecryption"/> is false, extract the plain entries and skip the
-    /// encrypted ones instead of cancelling.
+    /// Extract only the plain entries and skip the encrypted ones, whatever
+    /// <see cref="AllowDecryption"/> says. An archive with no plain entry yields nothing.
     /// </para>
     /// <para xml:lang="ja">
-    /// <see cref="AllowDecryption"/> が false の時、展開を中止せずに暗号化されていないエントリだけを
-    /// 取り出し、暗号化されたエントリを飛ばす。
+    /// <see cref="AllowDecryption"/> の値にかかわらず、暗号化されていないエントリだけを取り出し、
+    /// 暗号化されたエントリを飛ばす。暗号化されていないエントリが無いアーカイブからは何も取り出さない。
     /// </para>
     /// </summary>
     public bool SkipEncrypted { get; set; }
-
-    /// <summary>
-    /// <para xml:lang="en">
-    /// Whether the host wants detailed logging. The pipeline does not read it; the CLI uses it to
-    /// print warnings as they occur.
-    /// </para>
-    /// <para xml:lang="ja">
-    /// ホストが詳細なログを求めるかどうか。パイプラインはこの値を読まない。CLI は警告を発生時に
-    /// 表示するために使う。
-    /// </para>
-    /// </summary>
-    public bool Verbose { get; set; }
 }

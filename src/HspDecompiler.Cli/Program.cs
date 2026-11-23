@@ -30,7 +30,7 @@ var skipEncOpt = new Option<bool>("--skip-encrypted")
 };
 var verboseOpt = new Option<bool>("--verbose", VerboseAliases) { Description = "Verbose logging" };
 
-var rootCommand = new RootCommand("HSP Decompiler - Decompile HSP2/HSP3 compiled files")
+var rootCommand = new RootCommand("deHSP - decompile HSP 2 and HSP 3 programs")
 {
     inputArg,
     outputOpt,
@@ -65,10 +65,8 @@ rootCommand.SetAction(
         {
             InputPath = input.FullName,
             OutputDirectory = output?.FullName,
-            DictionaryPath = dictPath,
             AllowDecryption = !noDecrypt,
             SkipEncrypted = skipEnc,
-            Verbose = verbose,
         };
 
         DecompilerResult result = await pipeline.RunAsync(options, ct).ConfigureAwait(false);
