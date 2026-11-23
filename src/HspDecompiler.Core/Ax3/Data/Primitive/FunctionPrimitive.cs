@@ -32,14 +32,16 @@ internal sealed class DllFunctionPrimitive : FunctionPrimitive
     internal DllFunctionPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet)
     {
+        _scope = dataSet._parent!.Scope;
         _func = dataSet._parent!.GetDllFunction(Value);
         _func?.MarkUsedAt(TokenOffset);
     }
 
     private readonly Function? _func;
+    private readonly ModuleScope _scope;
 
     public override string ToString() =>
-        _func == null ? DefaultName : _func.FunctionName ?? DefaultName;
+        _func?.FunctionName is { } name ? _scope.Import(name) : DefaultName;
 }
 
 internal sealed class PlugInFunctionPrimitive : FunctionPrimitive

@@ -53,6 +53,22 @@ public class ModuleScopeTests
         Assert.Equal("twice@lib", scope.Function("twice@lib"));
     }
 
+    [Fact]
+    public void ImportInsideModuleTakesGlobalScope()
+    {
+        ModuleScope scope = Inside("mymod");
+
+        Assert.Equal("GetTickCount@", scope.Import("GetTickCount"));
+    }
+
+    [Fact]
+    public void ImportOutsideModuleStaysBare()
+    {
+        var scope = new ModuleScope();
+
+        Assert.Equal("GetTickCount", scope.Import("GetTickCount"));
+    }
+
     [Theory]
     [InlineData("skip", "mymod", "skip")]
     [InlineData("init", null, "init@")]

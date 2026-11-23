@@ -75,6 +75,16 @@ internal sealed class ModuleScope
         return at >= 0 && IsCurrent(name[(at + 1)..]) ? name[..at] : name;
     }
 
+    // An import resolves inside a module only through the global scope: hspcmp 3.1 to 3.8
+    // reject a bare call there to a #func declared outside, while "name@" builds the same bytes
+    // as a "#func global" declaration.
+    //
+    // インポートはモジュール内ではグローバルスコープを通してしか解決されない。hspcmp 3.1〜3.8 は
+    // 外で宣言した #func をそこで裸で呼ぶとエラーにし、"名前@" は "#func global" 宣言と同じ
+    // バイト列になる。
+    internal string Import(string name) =>
+        Current == null || name.Contains('@', StringComparison.Ordinal) ? name : name + "@";
+
     internal string Label(string name, string? owner) =>
         owner == null ? (Current == null ? name : name + "@")
         : IsCurrent(owner) ? name
