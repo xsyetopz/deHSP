@@ -66,18 +66,12 @@ internal class Ax3Decoder : ISourceDecoder
             logger.Write(Strings.LexicalAnalysis);
             var lex = new LexicalAnalyzer(_dictionary!);
             TokenCollection stream = lex.Analyze(data);
-            data.Release = ReleaseProfile.Infer(
-                new AxEvidence(
-                    data.Header!.Version,
-                    data.DebugInfo.HasLines ? 0 : data.DebugInfo.Marks.Count,
-                    data.HasSingleItemFlags,
-                    FramesOf(data)
-                )
-            );
             data.ScriptStrings.Resolve(
                 data.Runtime != null,
                 BootOptionDirectives.IsUtf8Runtime(data.Header!.BootOption)
             );
+            AxEvidence evidence = EvidenceReader.Read(data);
+            data.Release = ReleaseProfile.Infer(evidence);
             IncludeNames? names = data.DebugInfo.HasLines ? IncludeNamesOf(data) : null;
             HashSet<int> restored =
                 names == null ? [] : CommonIncludes.Attach(data, names, CommonDirectory);
@@ -88,7 +82,7 @@ internal class Ax3Decoder : ISourceDecoder
             List<LogicalLine> lines = await synt.AnalyzeAsync(stream, data, logger, progress, ct)
                 .ConfigureAwait(false);
             logger.Write(Strings.CreatingOutputFile);
-            DecodedSource source = Write(lines, data, names, restored);
+            DecodedSource source = Write(lines, data, evidence, names, restored);
             WarnStructs(source, logger);
             return source;
         }
@@ -108,6 +102,7 @@ internal class Ax3Decoder : ISourceDecoder
     private DecodedSource Write(
         List<LogicalLine> lines,
         AxData data,
+        AxEvidence evidence,
         IncludeNames? names,
         HashSet<int> restored
     )
@@ -117,22 +112,25 @@ internal class Ax3Decoder : ISourceDecoder
             bool unused = lines.Exists(line => line is ModuleStart { Used: false });
             return SourceLayout.Build(
                 lines,
-                CompileDirectives(data, unused),
+                CompileDirectives(data, evidence, unused),
                 data,
                 names,
                 restored
             );
         }
 
-        return Marked(lines, data)
-            ?? DecodedSource.Single([.. CompileDirectives(data, false), .. Indented(lines, data)]);
+        return Marked(lines, data, evidence)
+            ?? DecodedSource.Single([
+                .. CompileDirectives(data, evidence, false),
+                .. Indented(lines, data),
+            ]);
     }
 
-    private DecodedSource? Marked(List<LogicalLine> lines, AxData data) =>
+    private DecodedSource? Marked(List<LogicalLine> lines, AxData data, AxEvidence evidence) =>
         data.DebugInfo.Marks.Count > 0
         && data.Release.MayWriteNormalBuildRecords
-        && MarkedLayout.Match(lines, data, DirectivePlanner.HasUncalledImport(data)) is { } marked
-            ? marked.Write(CompileDirectives(data, marked.HasUnusedModule), MainFileName)
+        && MarkedLayout.Match(lines, data, evidence.UncalledImport) is { } marked
+            ? marked.Write(CompileDirectives(data, evidence, marked.HasUnusedModule), MainFileName)
             : null;
 
     // The warning names the written line, which exists only once a layout has placed every
@@ -159,15 +157,6 @@ internal class Ax3Decoder : ISourceDecoder
         }
     }
 
-    // The parameter layout the first user function that tells the two apart shows.
-    //
-    // 2 つの並べ方を区別できる最初のユーザー関数が示す引数の並べ方。
-    private static FrameLayout? FramesOf(AxData data) =>
-        data
-            .Functions.Where(f => f.IsUserFunction)
-            .Select(f => FrameLayouts.Of(f.Parameters.Select(p => p.TypeCode), f.FrameSize))
-            .FirstOrDefault(layout => layout != null);
-
     private static IEnumerable<string> Indented(List<LogicalLine> lines, AxData data) =>
         lines
             .Where(line => line.Visible)
@@ -176,6 +165,9 @@ internal class Ax3Decoder : ISourceDecoder
     private IncludeNames IncludeNamesOf(AxData data) =>
         new([.. data.DebugInfo.FileNames.Select(data.DecodeName)], MainFileName);
 
-    private static List<string> CompileDirectives(AxData data, bool unusedModule) =>
-        DirectivePlanner.Plan(DirectivePlanner.FactsOf(data, unusedModule));
+    private static List<string> CompileDirectives(
+        AxData data,
+        AxEvidence evidence,
+        bool unusedModule
+    ) => DirectivePlanner.Plan(DirectivePlanner.FactsOf(data, evidence, unusedModule));
 }

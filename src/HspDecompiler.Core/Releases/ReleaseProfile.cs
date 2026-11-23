@@ -4,21 +4,44 @@ using System.Linq;
 
 namespace HspDecompiler.Core.Releases;
 
-// What one AX shows about the compiler that wrote it, gathered once after the code is read.
+// What one AX shows about the compiler that wrote it and the options it ran with, gathered once
+// after the code is read (Ax3.EvidenceReader). The release inference reads FormatWord,
+// NormalBuildMarks, SingleItemFlags and Frames; the directive planner reads the rest as well.
 // FormatWord is the header version. NormalBuildMarks counts the line records of a build without
 // -d, SingleItemFlags says some one-literal parameter carries hspcmp's optprm flag, and Frames is
-// the parameter layout a user function shows, if any does.
+// the parameter layout a user function shows, if any does. RepeatedStrings, UncalledImport,
+// VariableNames, Utf8Strings and UsesAwait record what optcode, varname, UTF-8 output and await
+// left in the AX; DebugLines says the AX is a -d build.
 //
-// 1 つの AX が書いたコンパイラについて示すこと。コードを読んだ後に一度だけ集める。FormatWord は
-// ヘッダーのバージョン、NormalBuildMarks は -d 無しのビルドの行の記録の数、SingleItemFlags は
-// 1 リテラルの引数のどれかに hspcmp の optprm の印があること、Frames はユーザー関数が示す引数の
-// 並べ方(示すものがあれば)。
+// 1 つの AX が書いたコンパイラと、その時のオプションについて示すこと。コードを読んだ後に一度
+// だけ集める(Ax3.EvidenceReader)。リリースの推定は FormatWord・NormalBuildMarks・
+// SingleItemFlags・Frames を読み、指示文の計画はそれ以外も読む。FormatWord はヘッダーの
+// バージョン、NormalBuildMarks は -d 無しのビルドの行の記録の数、SingleItemFlags は 1 リテラルの
+// 引数のどれかに hspcmp の optprm の印があること、Frames はユーザー関数が示す引数の並べ方
+// (示すものがあれば)。RepeatedStrings・UncalledImport・VariableNames・Utf8Strings・UsesAwait は
+// optcode・varname・UTF-8 出力・await が AX に残したもの、DebugLines は AX が -d のビルドである
+// こと。
 internal sealed record AxEvidence(
     uint FormatWord,
     int NormalBuildMarks,
     bool SingleItemFlags,
     FrameLayout? Frames = null
-);
+)
+{
+    internal bool RepeatedStrings { get; init; }
+
+    internal bool UncalledImport { get; init; }
+
+    internal bool VariableNames { get; init; }
+
+    internal bool DebugLines { get; init; }
+
+    internal uint BootOption { get; init; }
+
+    internal bool Utf8Strings { get; init; }
+
+    internal bool UsesAwait { get; init; }
+}
 
 // The releases that could have written one AX, and the questions the decompiler's stages ask of
 // them. Several releases share a format word, so a stage asks whether every candidate does a

@@ -5,22 +5,17 @@ using HspDecompiler.Core.Releases;
 
 namespace HspDecompiler.Core.Ax3;
 
-// The facts the compile directives depend on. Each one is read from the AX except
-// UnusedModule, which the layout finds while it rebuilds the #module blocks.
+// The facts the compile directives depend on: the candidate releases, what the AX shows, and
+// UnusedModule, which the layout finds while it rebuilds the #module blocks. DefaultBootBits are
+// the boot bits every candidate writes for a source that names no #runtime.
 //
-// コンパイル指示文が依存する事実。UnusedModule 以外は AX から読む。UnusedModule はレイアウトが
-// #module ブロックを組み直す時に見つける。
+// コンパイル指示文が依存する事実。候補のリリース、AX が示すこと、そしてレイアウトが #module
+// ブロックを組み直す時に見つける UnusedModule。DefaultBootBits は #runtime を指定しない
+// ソースにすべての候補が書く起動ビット。
 internal sealed record DirectiveFacts(
     ReleaseProfile Release,
-    bool RepeatedStrings,
-    bool UncalledImport,
+    AxEvidence Evidence,
     bool UnusedModule,
-    bool VariableNames,
-    bool DebugLines,
-    bool SingleItemFlags,
-    uint BootOption,
-    bool Utf8Strings,
-    bool UsesAwait,
     uint DefaultBootBits
 );
 
@@ -36,20 +31,8 @@ internal static class DirectivePlanner
     internal const string KeepVariableNamesDirective = "#cmpopt varname 1";
     internal const string PlainParametersDirective = "#cmpopt optprm 0";
 
-    internal static DirectiveFacts FactsOf(AxData data, bool unusedModule) =>
-        new(
-            data.Release,
-            data.HasRepeatedStrings,
-            HasUncalledImport(data),
-            unusedModule,
-            data.HasVariableNames,
-            data.DebugInfo.HasLines,
-            data.HasSingleItemFlags,
-            data.Header!.BootOption,
-            data.ScriptStrings.IsUtf8,
-            data.UsesAwait,
-            DefaultBootBitsOf(data)
-        );
+    internal static DirectiveFacts FactsOf(AxData data, AxEvidence evidence, bool unusedModule) =>
+        new(data.Release, evidence, unusedModule, DefaultBootBitsOf(data));
 
     // True when every candidate compiler writes the AX's runtime for a source that names none,
     // so the #runtime line can go.
@@ -80,8 +63,8 @@ internal static class DirectivePlanner
         // ソースでも切る。ただしすべての候補リリースがそれを削るか共有する時だけで、3.5 の重複
         // した文字列や 3.0a が残した import は何も示さない。
         ReleaseProfile release = facts.Release;
-        bool pooled = release.PoolsStrings && facts.RepeatedStrings;
-        bool dropped = release.DropsUnused && (facts.UncalledImport || facts.UnusedModule);
+        bool pooled = release.PoolsStrings && facts.Evidence.RepeatedStrings;
+        bool dropped = release.DropsUnused && (facts.Evidence.UncalledImport || facts.UnusedModule);
         if (pooled || dropped)
         {
             directives.Add(KeepUnusedImportsDirective);
@@ -96,7 +79,7 @@ internal static class DirectivePlanner
         // （codegen.cpp の PutDIVars）。AX に変数名があれば再コンパイルでも同じ指定をする。行の
         // 記録はデバッグモードでしか作られず、そのモードは変数名も書くため、その AX には指定が
         // 要らず、ソースの先頭行はソース自身のコードに空けておける。
-        if (facts.VariableNames && !facts.DebugLines)
+        if (facts.Evidence.VariableNames && !facts.Evidence.DebugLines)
         {
             directives.Add(KeepVariableNamesDirective);
         }
@@ -113,16 +96,16 @@ internal static class DirectivePlanner
         // 3.0a は指定を無視し、3.1〜3.21 は拒否する(CompilerRelease.Optprm)ため、すべての
         // 候補リリースが知っている時だけ書く。optprm 0 の 3.3 のビルドは 3.21 のビルドと同じ AX
         // になる。
-        if (!facts.SingleItemFlags && release.KnowsOptprm)
+        if (!facts.Evidence.SingleItemFlags && release.KnowsOptprm)
         {
             directives.Add(PlainParametersDirective);
         }
 
         directives.AddRange(
             BootOptionDirectives.Build(
-                facts.BootOption,
-                facts.Utf8Strings,
-                facts.UsesAwait,
+                facts.Evidence.BootOption,
+                facts.Evidence.Utf8Strings,
+                facts.Evidence.UsesAwait,
                 facts.DefaultBootBits
             )
         );

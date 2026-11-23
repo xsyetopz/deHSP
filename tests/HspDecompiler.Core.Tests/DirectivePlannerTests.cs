@@ -14,20 +14,17 @@ public class DirectivePlannerTests
         bool names = false,
         bool debug = false,
         bool flags = true
-    ) =>
-        new(
-            ReleaseProfile.Infer(new AxEvidence(word, 0, flags)),
-            repeated,
-            uncalled,
-            unusedModule,
-            names,
-            debug,
-            flags,
-            0,
-            false,
-            false,
-            0
-        );
+    )
+    {
+        var evidence = new AxEvidence(word, 0, flags)
+        {
+            RepeatedStrings = repeated,
+            UncalledImport = uncalled,
+            VariableNames = names,
+            DebugLines = debug,
+        };
+        return new(ReleaseProfile.Infer(evidence), evidence, unusedModule, 0);
+    }
 
     [Theory]
     [InlineData(0x300u, false)]
