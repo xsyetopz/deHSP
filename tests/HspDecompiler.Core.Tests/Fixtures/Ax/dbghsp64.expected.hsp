@@ -1,0 +1,31 @@
+#module mymod
+#deffunc setv int v
+	val = v
+	gcount@ += 1
+	return
+#defcfunc getv
+	return val
+#global
+	gcount = 0
+	setv 5
+	mes getv()
+	mes gcount
+#module
+#deffunc anon str s
+	mes s
+	return
+#global
+	anon "z"
+#module obj x_
+#modinit int a
+	x_ = a
+	return
+#modfunc show
+	mes x_
+	return
+#global
+	newmod o, obj, 3
+	show o
+	stop
+#bootopt hsp64 1
+#runtime "hsp3_64"

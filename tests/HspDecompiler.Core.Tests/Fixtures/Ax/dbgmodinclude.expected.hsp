@@ -1,0 +1,28 @@
+#cmpopt optcode 0
+	gosub *init
+#module unused
+#deffunc never
+	mes "never"
+	return
+#global
+#module lib
+#uselib "user32.dll"
+#func global MessageBeep "MessageBeep" int
+#deffunc tick int n
+	num += n
+	if ( num > 2 ) { gosub *init@ }
+	goto *done
+*done
+	return
+#defcfunc count
+	return num
+#global
+#include "sub.hsp"
+	tick 3
+	mes count() + num@lib
+	mes twice(4)
+	gosub *inner@helper
+	stop
+*init
+	mes "init"
+	return

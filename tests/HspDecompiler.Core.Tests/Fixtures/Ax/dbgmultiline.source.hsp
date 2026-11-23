@@ -1,0 +1,20 @@
+; probe
+#include "sub.hsp"
+
+*main
+	a = 1 : b = 2
+	; comment
+	if a {
+		mes "x"
+	} else {
+		mes "y"
+	}
+	foo a, "q"
+	s = {"multi
+line"}
+	gosub *sub2
+	stop
+
+*sub2
+	mes s
+	return

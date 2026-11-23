@@ -1,0 +1,40 @@
+	gcount = 1
+#module mymod
+#deffunc setv int v, local t
+	t = v
+	val = t
+	gcount@ += 1
+	if ( v > 3 ) { goto *skip }
+	val = 0
+*skip
+	return
+#defcfunc getv
+	return val
+#deffunc local helper
+	return
+#global
+	setv 5
+	mes getv() + val@mymod
+#module obj x_, y_
+#modinit int a
+	x_ = a : y_ = a * 2
+	return
+#modcfunc total
+	return x_ + y_
+#modterm
+	mes "bye"
+	return
+#modfunc show
+	mes total(thismod)
+	return
+#global
+#module
+#deffunc anon
+	mes "a"
+	return
+#global
+	newmod o, obj, 3
+	show o
+	mes total(o)
+	anon
+	stop

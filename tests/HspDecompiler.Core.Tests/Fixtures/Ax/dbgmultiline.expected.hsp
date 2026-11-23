@@ -1,0 +1,20 @@
+
+#include "sub.hsp"
+
+*main
+	a = 1 : b = 2
+
+	if ( a ) {
+		mes "x"
+	} else {
+		mes "y"
+	}
+	foo a, "q"
+	s = {"multi
+line"}
+	gosub *sub2
+	stop
+
+*sub2
+	mes s
+	return

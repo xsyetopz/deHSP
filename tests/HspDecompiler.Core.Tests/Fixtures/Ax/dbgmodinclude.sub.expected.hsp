@@ -1,0 +1,8 @@
+#module helper
+#defcfunc twice int v
+	k = v * 2
+	return k
+*inner
+	mes "inner"
+	return
+#global

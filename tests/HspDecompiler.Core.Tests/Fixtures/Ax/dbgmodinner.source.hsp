@@ -1,0 +1,26 @@
+#deffunc show
+	mes "global show"
+	return
+#module a
+#deffunc seta int v
+	show@a = v
+	val = v
+	return
+#include "inner.hsp"
+#global
+#module
+#deffunc anon2
+	mes val@a
+	return
+#global
+#module b
+#deffunc useb
+	mes show@a + val@a
+	show
+	return
+#global
+	seta 4
+	geta2
+	useb
+	anon2
+	stop

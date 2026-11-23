@@ -1,0 +1,3 @@
+#deffunc geta2
+	mes val * 2
+	return
