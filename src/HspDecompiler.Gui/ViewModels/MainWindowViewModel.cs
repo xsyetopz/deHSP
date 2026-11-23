@@ -25,8 +25,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isProcessing;
 
-    public ObservableCollection<DpmFileEntry> DpmFiles { get; } =
-        new ObservableCollection<DpmFileEntry>();
+    public ObservableCollection<DpmFileEntry> DpmFiles { get; } = [];
 
     public async Task ProcessFileAsync(string filePath)
     {
@@ -45,29 +44,21 @@ public partial class MainWindowViewModel : ViewModelBase
             var progress = new GuiProgressReporter();
             var pipeline = new DecompilerPipeline(logger, progress);
 
-            string dictPath = Path.Combine(AppContext.BaseDirectory, "Dictionary.csv");
-
             var options = new DecompilerOptions
             {
                 InputPath = filePath,
-                OutputDirectory = Path.GetDirectoryName(filePath) ?? "",
-                DictionaryPath = dictPath,
                 AllowDecryption = true,
                 SkipEncrypted = false,
             };
 
-            DecompilerResult result = await Task.Run(async () =>
-                    !pipeline.Initialize(dictPath)
-                        ? new DecompilerResult
-                        {
-                            Success = false,
-                            ErrorMessage = Strings.FailedToLoadDictionary,
-                        }
-                        : await pipeline
-                            .RunAsync(options, CancellationToken.None)
-                            .ConfigureAwait(false)
+            pipeline.Initialize();
+            // The continuation edits bound collections, which Avalonia allows only on the UI thread.
+            // ---
+            // 継続処理はバインドされたコレクションを書き換える。Avalonia では UI スレッドでのみ許される。
+            DecompilerResult result = await Task.Run(() =>
+                    pipeline.RunAsync(options, CancellationToken.None)
                 )
-                .ConfigureAwait(false);
+                .ConfigureAwait(true);
 
             foreach (DpmFileEntry file in result.DpmFiles)
             {
