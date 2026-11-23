@@ -11,6 +11,10 @@ namespace HspDecompiler.Core.Ax2;
 
 internal sealed class Ax2Decoder : IAxDecoder
 {
+    internal string? MainFileName { get; init; }
+
+    internal IReadOnlyList<IncludeFile> Includes { get; private set; } = [];
+
     public Task<List<string>> DecodeAsync(
         BinaryReader reader,
         IDecompilerLogger logger,
@@ -32,6 +36,8 @@ internal sealed class Ax2Decoder : IAxDecoder
             throw new HspDecoderException("AxData", Strings.UnexpectedError, e);
         }
 
-        return Task.FromResult(data.GetLines());
+        Ax2Source source = data.BuildSource(MainFileName);
+        Includes = source.Includes;
+        return Task.FromResult(source.Lines);
     }
 }

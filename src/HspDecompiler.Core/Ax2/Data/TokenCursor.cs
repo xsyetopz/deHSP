@@ -14,6 +14,8 @@ internal class TokenCursor
 
     internal int Index => _index;
 
+    internal bool AtEnd => _nextToken == null;
+
     internal int Percent => (int)((double)_nextOffset * 100.0 / _data.TokenData.Length);
 
     internal void SetZero()
@@ -46,7 +48,7 @@ internal class TokenCursor
             if (ret.NextIsUnenableLabel)
             {
                 ret._isLineend = false;
-                _ = GetNext();
+                ret._hiddenLabelIndex = GetNext()?.OwnedLabelIndex ?? -1;
                 if ((_nextToken == null) || (_nextToken.IsLinehead))
                 {
                     ret._isLineend = true;

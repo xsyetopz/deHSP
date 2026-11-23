@@ -14,6 +14,8 @@ internal struct Func
         set => _name = value;
     }
 
+    internal int NameOffset { readonly get; set; }
+
     internal int HikiType
     {
         readonly get => _hikiType;

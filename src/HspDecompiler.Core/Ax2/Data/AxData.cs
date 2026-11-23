@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Resources;
 
@@ -65,39 +66,31 @@ internal class AxData
         try
         {
             Header head = _header;
-            _tokenData = new byte[head.ScriptByte];
-            stream.Seek(startPosition + head.ScriptOffset, SeekOrigin.Begin);
-            stream.ReadExactly(_tokenData, 0, head.ScriptByte);
-
-            _dllData = new byte[head.DllByte];
-            stream.Seek(startPosition + head.DllOffset, SeekOrigin.Begin);
-            stream.ReadExactly(_dllData, 0, head.DllByte);
-
-            _funcData = new byte[head.FuncByte];
-            stream.Seek(startPosition + head.FuncOffset, SeekOrigin.Begin);
-            stream.ReadExactly(_funcData, 0, head.FuncByte);
-
-            _deffuncData = new byte[head.DeffuncByte];
-            stream.Seek(startPosition + head.DeffuncOffset, SeekOrigin.Begin);
-            stream.ReadExactly(_deffuncData, 0, head.DeffuncByte);
-
-            _moduleData = new byte[head.ModuleByte];
-            stream.Seek(startPosition + head.ModuleOffset, SeekOrigin.Begin);
-            stream.ReadExactly(_moduleData, 0, head.ModuleByte);
-
-            _labelData = new byte[head.LabelByte];
-            stream.Seek(startPosition + head.LabelOffset, SeekOrigin.Begin);
-            stream.ReadExactly(_labelData, 0, head.LabelByte);
-
-            _stringData = new byte[head.TextByte];
-            stream.Seek(startPosition + head.TextOffset, SeekOrigin.Begin);
-            stream.ReadExactly(_stringData, 0, head.TextByte);
+            _tokenData = ReadSegment(stream, startPosition + head.ScriptOffset, head.ScriptByte);
+            _dllData = ReadSegment(stream, startPosition + head.DllOffset, head.DllByte);
+            _funcData = ReadSegment(stream, startPosition + head.FuncOffset, head.FuncByte);
+            _deffuncData = ReadSegment(
+                stream,
+                startPosition + head.DeffuncOffset,
+                head.DeffuncByte
+            );
+            _moduleData = ReadSegment(stream, startPosition + head.ModuleOffset, head.ModuleByte);
+            _labelData = ReadSegment(stream, startPosition + head.LabelOffset, head.LabelByte);
+            _stringData = ReadSegment(stream, startPosition + head.TextOffset, head.TextByte);
         }
         catch (Exception e)
         {
             throw new HspDecoderException("AxHeader", Strings.UnexpectedErrorDuringStreamRead, e);
         }
         stream.Seek(startPosition, SeekOrigin.Begin);
+    }
+
+    private static byte[] ReadSegment(Stream stream, long position, int size)
+    {
+        byte[] segment = new byte[size];
+        stream.Seek(position, SeekOrigin.Begin);
+        stream.ReadExactly(segment, 0, size);
+        return segment;
     }
 
     #region create
@@ -172,6 +165,7 @@ internal class AxData
             _funcs[i].HikiType = BitConverter.ToInt16(_funcData!, offset);
             offset += 4;
             int funcnameOffset = BitConverter.ToInt32(_funcData!, offset);
+            _funcs[i].NameOffset = funcnameOffset;
             _funcs[i].Name = ReadString(funcnameOffset);
         }
     }
@@ -188,7 +182,9 @@ internal class AxData
         for (int i = 0; i < _header.ModuleCount; i++)
         {
             int offset = 4 + (i * 24);
-            // Pre-existing: modules are stored in dllData in the HSP2 format (shared segment).
+            // HSP 2.x stores module names in the DLL segment.
+            // ---
+            // HSP 2.x はモジュール名を DLL セグメントに格納する。
             _modules[i].Name = ReadString(offset, _dllData!);
         }
     }
@@ -209,6 +205,7 @@ internal class AxData
             _deffuncs[i].HikiCount = BitConverter.ToInt16(_deffuncData!, offset);
             offset += 2;
             int deffuncnameOffset = BitConverter.ToInt32(_deffuncData!, offset);
+            _deffuncs[i].NameOffset = deffuncnameOffset;
             _deffuncs[i].Name = ReadString(deffuncnameOffset);
             _labels[labelIndex].Name = _deffuncs[i].ToString();
         }
@@ -216,7 +213,11 @@ internal class AxData
 
     #endregion
 
-    private readonly List<string> _lines = new();
+    private readonly List<string> _undefs = [];
+    private readonly List<SourceLine> _lines = [];
+    private readonly HashSet<int> _referencedText = [];
+    private readonly HashSet<string> _shadowedBuiltins = new(StringComparer.Ordinal);
+    private int _lineAnchor = -1;
 
     internal void Decompile()
     {
@@ -225,6 +226,8 @@ internal class AxData
 
         var cursor = new TokenCursor(this);
         _lines.Clear();
+        _undefs.Clear();
+        _referencedText.Clear();
 
         ReadLabels();
         ReadDlls();
@@ -232,24 +235,39 @@ internal class AxData
         ReadModules();
         ReadDeffuncs();
 
-        if (_dlls != null)
-        {
-            for (int i = 0; i < _dlls.Length; i++)
-            {
-                _lines.Add(_dlls[i].ToString());
-                if (_funcs != null)
-                {
-                    for (int j = 0; j < _funcs.Length; j++)
-                    {
-                        if (_funcs[j].DllIndex == i)
-                        {
-                            _lines.Add(_funcs[j].ToString());
-                        }
-                    }
-                }
-            }
-        }
+        MarkShadowedBuiltins();
+        ScanTokens(cursor);
+        EnableLabels();
 
+        SourceLine? line;
+        cursor.SetZero();
+        while ((line = GetLine(cursor)) != null)
+        {
+            _lines.Add(line.Value);
+        }
+    }
+
+    // HSP 2.61 lets a #deffunc replace a built-in after #undef; the original stays callable
+    // as name@hsp, so both the #undef and the @hsp suffix are restored.
+    // ---
+    // HSP 2.61 では #undef の後に #deffunc で組み込み命令を置き換えられる。元の命令は
+    // name@hsp で呼べるため、#undef と @hsp の両方を復元する。
+    private void MarkShadowedBuiltins()
+    {
+        _shadowedBuiltins.Clear();
+        foreach (Deffunc deffunc in _deffuncs ?? [])
+        {
+            if (Token.IsBuiltinName(deffunc.Name) && _shadowedBuiltins.Add(deffunc.Name))
+            {
+                _undefs.Add("#undef " + deffunc.Name);
+            }
+
+            _referencedText.Add(deffunc.NameOffset);
+        }
+    }
+
+    private void ScanTokens(TokenCursor cursor)
+    {
         cursor.SetZero();
         Token? token;
         try
@@ -260,43 +278,120 @@ internal class AxData
                 {
                     _labels![token.LabelIndex].LoadCount += 1;
                 }
+
+                if (token._hiddenLabelIndex != -1)
+                {
+                    _labels![token._hiddenLabelIndex].IsCompilerGenerated = true;
+                }
+
+                if (token.StringOffset >= 0)
+                {
+                    _referencedText.Add(token.StringOffset);
+                }
             }
         }
         catch (Exception e)
         {
             throw new HspDecoderException("AxHeader", Strings.UnrecoverableErrorDuringLabelRead, e);
         }
-
-        for (int i = 0; i < _labels!.Length; i++)
-        {
-            _labels[i].Enabled = _labels[i].LoadCount > 0;
-        }
-
-        string? line;
-        cursor.SetZero();
-        while ((line = GetLine(cursor)) != null)
-        {
-            _lines.Add(line);
-        }
-
-        return;
     }
 
-    private void AddLabel(TokenCursor cursor)
+    // hspcmp records every source label in the object table, referenced or not, so an
+    // unreferenced one is still restored. Entry 0 is a reserved slot hspcmp leaves
+    // uninitialized, and the labels after repeat, break and continue are compiler generated.
+    // ---
+    // hspcmp は参照の有無に関わらずソース上のラベルをすべてオブジェクトテーブルに記録する
+    // ため、未参照のラベルも復元する。0 番は hspcmp が初期化しない予約枠で、repeat・break・
+    // continue の後ろのラベルはコンパイラが生成したものである。
+    private void EnableLabels()
     {
+        int tokenCount = TokenData.Length / 2;
         for (int i = 0; i < _labels!.Length; i++)
         {
-            if (!_labels[i].Enabled)
-            {
-                continue;
-            }
+            Label label = _labels[i];
+            label.Enabled =
+                (label.LoadCount > 0)
+                || (
+                    (i != 0)
+                    && !label.IsCompilerGenerated
+                    && (label.TokenIndex >= 0)
+                    && (label.TokenIndex <= tokenCount)
+                );
+        }
+    }
 
-            if (cursor.Index >= _labels[i].TokenIndex)
+    // A #uselib line opens each run of #func lines from one DLL, since that is what selects the
+    // DLL the following #func lines bind to. A DLL without functions keeps its line at the top.
+    // ---
+    // #uselib は後続の #func が結び付く DLL を選ぶため、同じ DLL の #func の連なりごとに先頭に
+    // 置く。関数の無い DLL は先頭に残す。
+    private List<SourceLine> GetDeclarations()
+    {
+        var declarations = new List<SourceLine>();
+        Func[] funcs = _funcs ?? [];
+        Dll[] dlls = _dlls ?? [];
+        for (int i = 0; i < dlls.Length; i++)
+        {
+            if (!Array.Exists(funcs, f => f.DllIndex == i))
             {
-                _lines.Add(_labels[i].ToString() ?? string.Empty);
-                _labels[i].Enabled = false;
+                declarations.Add(new SourceLine(dlls[i].ToString(), -1));
             }
         }
+
+        int currentDll = -1;
+        foreach (Func func in funcs.OrderBy(f => f.NameOffset))
+        {
+            _referencedText.Add(func.NameOffset);
+            if (
+                (func.DllIndex != currentDll)
+                && (func.DllIndex >= 0)
+                && (func.DllIndex < dlls.Length)
+            )
+            {
+                currentDll = func.DllIndex;
+                declarations.Add(new SourceLine(dlls[currentDll].ToString(), func.NameOffset));
+            }
+
+            declarations.Add(new SourceLine(func.ToString(), func.NameOffset));
+        }
+
+        return declarations;
+    }
+
+    private List<FileSwitch> GetFileSwitches()
+    {
+        var switches = new List<FileSwitch>();
+        int offset = 0;
+        while (offset < _stringData!.Length)
+        {
+            int end = Array.IndexOf(_stringData, (byte)0, offset);
+            if (end < 0)
+            {
+                end = _stringData.Length;
+            }
+
+            if (!_referencedText.Contains(offset))
+            {
+                string text = ReadString(offset);
+                if (IncludeLayout.IsSourceFileName(text))
+                {
+                    switches.Add(new FileSwitch(offset, text));
+                }
+            }
+
+            offset = end + 1;
+        }
+
+        return switches;
+    }
+
+    internal Ax2Source BuildSource(string? mainFileName)
+    {
+        List<SourceLine> declarations = GetDeclarations();
+        List<SourceLine> merged = IncludeLayout.Merge(_lines, declarations);
+        Ax2Source source = IncludeLayout.Split(merged, GetFileSwitches(), mainFileName);
+        source.Lines.InsertRange(0, _undefs);
+        return source;
     }
 
     private static string GetTab(int tab)
@@ -306,7 +401,7 @@ internal class AxData
     }
 
     private int _tabNo = 1;
-    private readonly List<int> _ifEnd = new();
+    private readonly List<int> _ifEnd = [];
 
     private void EmitLabel(Token token)
     {
@@ -319,7 +414,10 @@ internal class AxData
 
             if (token.Id == _labels[i].TokenIndex)
             {
-                _lines.Add(_labels[i].Name);
+                int deffunc = _labels[i].Deffunc;
+                int anchor =
+                    (deffunc >= 0) && (_deffuncs != null) ? _deffuncs[deffunc].NameOffset : -1;
+                _lines.Add(new SourceLine(_labels[i].Name, anchor));
                 _labels[i].Enabled = false;
             }
         }
@@ -328,6 +426,7 @@ internal class AxData
     private string FormatTokenOutput(Token first, TokenCursor cursor)
     {
         string line = GetTab(_tabNo) + first.GetString();
+        NoteAnchor(first);
 
         if (first._isLineend)
         {
@@ -338,6 +437,7 @@ internal class AxData
         while ((token = cursor.GetNext()) != null)
         {
             string add = token.GetString();
+            NoteAnchor(token);
             line += token.IsArg ? ", " : " ";
             line += add;
             if (token._isLineend)
@@ -348,7 +448,15 @@ internal class AxData
         return line;
     }
 
-    private string? GetLine(TokenCursor cursor)
+    private void NoteAnchor(Token token)
+    {
+        if ((_lineAnchor < 0) && (token.StringOffset >= 0))
+        {
+            _lineAnchor = token.StringOffset;
+        }
+    }
+
+    private SourceLine? GetLine(TokenCursor cursor)
     {
         Token? token = cursor.GetNext();
         if (token == null)
@@ -361,13 +469,21 @@ internal class AxData
             if ((token.Id == _ifEnd[i]) || (token.IfJumpId == _ifEnd[i]))
             {
                 _tabNo--;
-                _lines.Add(GetTab(_tabNo) + "}");
+                _lines.Add(new SourceLine(GetTab(_tabNo) + "}", -1));
                 _ifEnd.RemoveAt(i);
                 i--;
             }
         }
 
         EmitLabel(token);
+
+        // hspcmp appends an end token to every script, so the last one is not part of the source.
+        // ---
+        // hspcmp はすべてのスクリプトの末尾に end を追加するため、最後の end はソースに含まれない。
+        if (token.IsEnd && cursor.AtEnd)
+        {
+            return null;
+        }
 
         bool tabPlus = token.TabPlus;
         int ifJumpTo = token._ifJumpTo;
@@ -376,6 +492,7 @@ internal class AxData
             _tabNo--;
         }
 
+        _lineAnchor = -1;
         string line = FormatTokenOutput(token, cursor);
 
         if (tabPlus)
@@ -388,7 +505,7 @@ internal class AxData
             line += " {";
             _ifEnd.Add(ifJumpTo);
         }
-        return line;
+        return new SourceLine(line, _lineAnchor);
     }
 
     internal string? GetDeffuncName(int index) =>
@@ -399,5 +516,5 @@ internal class AxData
     internal string? GetFuncName(int index) =>
         _funcs == null || (index >= _funcs.Length) || (index < 0) ? null : _funcs[index].Name;
 
-    internal List<string> GetLines() => _lines;
+    internal bool IsShadowedBuiltin(string name) => _shadowedBuiltins.Contains(name);
 }

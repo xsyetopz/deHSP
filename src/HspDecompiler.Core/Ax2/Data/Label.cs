@@ -40,9 +40,11 @@ internal class Label
         set => _loadCount = value;
     }
 
+    internal bool IsCompilerGenerated { get; set; }
+
     internal bool Enabled
     {
-        get => _deffunc != -1 ? true : _enabled;
+        get => _deffunc != -1 || _enabled;
         set => _enabled = value;
     }
 }
