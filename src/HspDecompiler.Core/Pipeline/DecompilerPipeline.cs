@@ -10,7 +10,6 @@ using System.Xml;
 using System.Xml.Schema;
 using HspDecompiler.Core.Abstractions;
 using HspDecompiler.Core.Ax2;
-using HspDecompiler.Core.Ax2.Data;
 using HspDecompiler.Core.Ax3;
 using HspDecompiler.Core.DpmToAx;
 using HspDecompiler.Core.Encoding;
@@ -64,6 +63,7 @@ public sealed partial class DecompilerPipeline
     private readonly IDecompilerLogger _logger;
     private readonly IProgressReporter _progress;
     private Hsp3Dictionary? _dictionary;
+    private string? _commonDirectory;
 
     /// <summary>
     /// <para xml:lang="en">Creates a pipeline that reports to the given logger and progress sink.</para>
@@ -201,6 +201,7 @@ public sealed partial class DecompilerPipeline
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        _commonDirectory = options.CommonDirectory;
         var decompilerOutput = new DecompilerResult();
 
         try
@@ -514,10 +515,10 @@ public sealed partial class DecompilerPipeline
 
         WarnUnencodableLines(lines, sourceEncoding);
         WriteOutputLines(lines, outputPath, sourceEncoding);
-        if (decoder is Ax2Decoder ax2)
+        if (decoder is IIncludeSource source)
         {
             WriteIncludeFiles(
-                ax2.Includes,
+                source.Includes,
                 Path.GetDirectoryName(outputPath) ?? ".",
                 sourceEncoding
             );
@@ -540,7 +541,12 @@ public sealed partial class DecompilerPipeline
 
         if (magic.Equals(Hsp3Magic, StringComparison.Ordinal))
         {
-            var decoder = new Ax3Decoder { Dictionary = _dictionary };
+            var decoder = new Ax3Decoder
+            {
+                Dictionary = _dictionary,
+                MainFileName = mainFileName ?? "start.hsp",
+                CommonDirectory = _commonDirectory,
+            };
             return decoder;
         }
 
@@ -603,7 +609,11 @@ public sealed partial class DecompilerPipeline
     {
         foreach (IncludeFile include in includes)
         {
-            string path = Path.Combine(directory, include.Name);
+            // A rebuilt HSP 3 include can sit in a subdirectory that hspcmp wrote with '\\'.
+            //
+            // 復元した HSP 3 の取り込みファイルは、hspcmp が '\\' で書いたサブディレクトリに
+            // 置かれ得る。
+            string path = Path.Combine(directory, include.Name.Replace('\\', '/'));
             if (File.Exists(path))
             {
                 _logger.Warning(
@@ -619,6 +629,7 @@ public sealed partial class DecompilerPipeline
             _logger.Write(
                 string.Format(CultureInfo.InvariantCulture, s_outputtingToFormat, include.Name)
             );
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             WriteOutputLines(include.Lines, path, encoding);
         }
     }

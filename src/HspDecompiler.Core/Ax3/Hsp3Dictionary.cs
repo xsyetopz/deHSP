@@ -202,6 +202,21 @@ internal class Hsp3Dictionary
     internal bool ParamLookUp(int paramKey, out string? paramTypeName) =>
         _paramDictionary.TryGetValue(paramKey, out paramTypeName);
 
+    // Every keyword and parameter type, lowered, which a recovered name must not shadow.
+    //
+    // 復元した名前が隠してはならない全キーワードと引数型を小文字で返す。
+    internal HashSet<string> GetAllNames()
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (HspDictionaryValue value in _codeDictionary.Values)
+        {
+            names.Add(value._name.ToLowerInvariant());
+        }
+
+        names.UnionWith(_paramDictionary.Values.Select(name => name.ToLowerInvariant()));
+        return names;
+    }
+
     internal List<string> GetAllFuncName()
     {
         var functionNames = new List<string>();

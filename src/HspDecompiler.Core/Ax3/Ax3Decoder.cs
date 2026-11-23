@@ -1,24 +1,45 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HspDecompiler.Core.Abstractions;
 using HspDecompiler.Core.Ax3.Data;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
+using HspDecompiler.Core.Ax3.Data.Layout;
 using HspDecompiler.Core.Ax3.Data.PP;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax3;
 
-internal class Ax3Decoder : IAxDecoder
+internal class Ax3Decoder : IAxDecoder, IIncludeSource
 {
     internal const string KeepUnusedImportsDirective = "#cmpopt optcode 0";
     internal const string KeepVariableNamesDirective = "#cmpopt varname 1";
     internal const string PlainParametersDirective = "#cmpopt optprm 0";
 
     private Hsp3Dictionary? _dictionary;
+
+    // The name the main source is written under; a rebuilt include must not take it.
+    //
+    // メインのソースを書き出す名前。復元した取り込みファイルはこの名前を使えない。
+    internal string MainFileName { get; init; } = "start.hsp";
+
+    // The directory of the caller's common files (hspcmp --compath), used to restore the
+    // #include of a common header that left no code.
+    //
+    // 呼び出し側の共通ファイルのディレクトリ(hspcmp の --compath)。コードを残さなかった
+    // 共通ヘッダーの #include を復元するのに使う。
+    internal string? CommonDirectory { get; init; }
+
+    public IReadOnlyList<IncludeFile> Includes { get; private set; } = [];
+
+    // Anchors the debug layout could not keep on their recorded line.
+    //
+    // デバッグ情報の配置で記録された行に置けなかったアンカーの数。
+    internal int MovedLines { get; private set; }
 
     internal Hsp3Dictionary? Dictionary
     {
@@ -49,20 +70,25 @@ internal class Ax3Decoder : IAxDecoder
                 data.Runtime != null,
                 BootOptionDirectives.IsUtf8Runtime(data.Header!.BootOption)
             );
+            IncludeNames? names = data.DebugInfo.HasLines ? IncludeNamesOf(data) : null;
+            HashSet<int> restored =
+                names == null ? [] : CommonIncludes.Attach(data, names, CommonDirectory);
+            DebugNames.ApplyParameterNames(data);
             data.LoadEnd();
             logger.Write(Strings.SyntacticAnalysis);
             var synt = new SyntacticAnalyzer();
             List<LogicalLine> lines = await synt.AnalyzeAsync(stream, data, logger, progress, ct)
                 .ConfigureAwait(false);
             logger.Write(Strings.CreatingOutputFile);
-            stringLines.AddRange(CompileDirectives(data));
-            foreach (LogicalLine line in lines)
+            List<string> directives = CompileDirectives(data);
+            if (names != null)
             {
-                if (line.Visible)
-                {
-                    string str = new('\t', line.TabCount);
-                    stringLines.Add(str + line);
-                }
+                stringLines.AddRange(Layout(lines, directives, data, names, restored));
+            }
+            else
+            {
+                stringLines.AddRange(directives);
+                stringLines.AddRange(Indented(lines, data));
             }
         }
         catch (SystemException e)
@@ -73,35 +99,60 @@ internal class Ax3Decoder : IAxDecoder
         return stringLines;
     }
 
+    private static IEnumerable<string> Indented(List<LogicalLine> lines, AxData data) =>
+        lines
+            .Where(line => line.Visible)
+            .Select(line => new string('\t', line.TabCount) + data.Scope.Render(line));
+
+    private IncludeNames IncludeNamesOf(AxData data) =>
+        new([.. data.DebugInfo.FileNames.Select(data.DecodeName)], MainFileName);
+
+    private List<string> Layout(
+        List<LogicalLine> lines,
+        List<string> directives,
+        AxData data,
+        IncludeNames names,
+        HashSet<int> restored
+    )
+    {
+        SourceLayoutResult result = SourceLayout.Build(lines, directives, data, names, restored);
+        Includes = result.Includes;
+        MovedLines = result.Moved;
+        return result.Main;
+    }
+
     private static List<string> CompileDirectives(AxData data)
     {
         List<string> directives = [];
 
         // hspcmp's default optcode drops each #func and #cfunc the source never names (except
-        // onexit ones) and stores each repeated string once (codegen.cpp CMPMODE_OPTCODE). An
-        // uncalled import or a repeated string in the AX means optcode was off, so the source
-        // turns it off too; otherwise the default reproduces the pooled data segment. hspcmp 3.5
-        // never pools, so its repeated strings ask for optcode 0, which it compiles to the same
-        // bytes. The output never holds #module blocks, so optcode's module pruning cannot apply.
+        // onexit ones), each #module nothing refers to, and stores each repeated string once
+        // (codegen.cpp CMPMODE_OPTCODE). An uncalled import, an unused module or a repeated
+        // string in the AX means optcode was off, so the source turns it off too; otherwise the
+        // default reproduces the pooled data segment. hspcmp 3.5 never pools, so its repeated
+        // strings ask for optcode 0, which it compiles to the same bytes.
         //
         // hspcmp の既定の optcode は、ソースが一度も名前を出さない #func・#cfunc(onexit 以外)
-        // を削り、同じ文字列を一度だけ格納する(codegen.cpp の CMPMODE_OPTCODE)。呼ばれない
-        // import か重複した文字列が AX にあれば optcode は切られていたため、ソースでも切る。
-        // それ以外は既定のままにすると共有されたデータセグメントを再現できる。hspcmp 3.5 は
-        // 文字列を共有しないため重複から optcode 0 を書くが、3.5 はそれでも同じバイト列を
-        // 出力する。出力に #module
-        // ブロックは無いため、optcode によるモジュールの削除は起きない。
-        if (data.HasRepeatedStrings || HasUncalledImport(data))
+        // と、何からも参照されない #module を削り、同じ文字列を一度だけ格納する(codegen.cpp の
+        // CMPMODE_OPTCODE)。呼ばれない import・使われないモジュール・重複した文字列が AX に
+        // あれば optcode は切られていたため、ソースでも切る。それ以外は既定のままにすると共有
+        // されたデータセグメントを再現できる。hspcmp 3.5 は文字列を共有しないため重複から
+        // optcode 0 を書くが、3.5 はそれでも同じバイト列を出力する。
+        if (data.HasRepeatedStrings || HasUncalledImport(data) || data.Scope.HasUnusedModule)
         {
             directives.Add(KeepUnusedImportsDirective);
         }
 
         // hspcmp writes variable names into the debug segment only in debug mode or under
-        // varname (codegen.cpp PutDIVars), so names in the AX ask for the same on recompile.
+        // varname (codegen.cpp PutDIVars), so names in the AX ask for the same on recompile. Line
+        // records come only from debug mode, which writes the names already, so such an AX
+        // needs no directive, and the source keeps its first line free for its own code.
         //
         // hspcmp が変数名をデバッグ情報に書くのはデバッグモードか varname 指定時だけ
-        // （codegen.cpp の PutDIVars）。AX に変数名があれば再コンパイルでも同じ指定をする。
-        if (data.HasVariableNames)
+        // （codegen.cpp の PutDIVars）。AX に変数名があれば再コンパイルでも同じ指定をする。行の
+        // 記録はデバッグモードでしか作られず、そのモードは変数名も書くため、その AX には指定が
+        // 要らず、ソースの先頭行はソース自身のコードに空けておける。
+        if (data.HasVariableNames && !data.DebugInfo.HasLines)
         {
             directives.Add(KeepVariableNamesDirective);
         }

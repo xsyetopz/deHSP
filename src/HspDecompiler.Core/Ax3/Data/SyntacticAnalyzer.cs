@@ -53,6 +53,7 @@ internal class SyntacticAnalyzer
         SubAnalyzeScope(ret);
         SubAnalyzeLabel(ret, data);
         ImportPlacement.Insert(ret, data, importAnchor);
+        ModuleBlocks.Rebuild(ret, data);
 
         SetTabCounts(ret);
 

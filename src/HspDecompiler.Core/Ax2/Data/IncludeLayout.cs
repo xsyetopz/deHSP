@@ -2,14 +2,13 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
+using HspDecompiler.Core.Abstractions;
 
 namespace HspDecompiler.Core.Ax2.Data;
 
 internal readonly record struct SourceLine(string Text, int Anchor);
 
 internal readonly record struct FileSwitch(int Offset, string Name);
-
-internal sealed record IncludeFile(string Name, List<string> Lines);
 
 internal sealed record Ax2Source(List<string> Lines, List<IncludeFile> Includes);
 

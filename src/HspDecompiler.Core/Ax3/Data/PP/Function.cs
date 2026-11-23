@@ -53,8 +53,11 @@ internal class Function : Preprocessor
         : base(index) { }
 
     private int _dllIndex;
+    private ModuleScope? _scope;
     private int _functionIndex;
     private List<Param> _functionParams = [];
+
+    internal IReadOnlyList<Param> Parameters => _functionParams;
     private int _strIndex;
     private int _labelIndex;
     private int _flags;
@@ -63,6 +66,7 @@ internal class Function : Preprocessor
     {
         var ret = new Function(index)
         {
+            _scope = parent.Scope,
             _dllIndex = reader.ReadInt16(),
             _functionIndex = reader.ReadInt16(),
         };
@@ -127,6 +131,11 @@ internal class Function : Preprocessor
     internal int NameOffset => _strIndex;
 
     internal Usedll? Dll => _dll;
+
+    // Set when a restored common #include declares this import, so the source does not.
+    //
+    // 復元した共通ファイルの #include がこのインポートを宣言する時に立て、ソースでは宣言しない。
+    internal bool DeclaredByInclude { get; set; }
 
     internal Label? Label => _label;
 
@@ -252,9 +261,8 @@ internal class Function : Preprocessor
                 strBld.Append("#modterm");
                 break;
             default:
-                strBld.Append("#modfunc");
-                strBld.Append(' ');
-                strBld.Append(FunctionName);
+                strBld.Append(Type == FunctionType.DefCFunc ? "#modcfunc " : "#modfunc ");
+                strBld.Append(DeclaredName(true));
                 break;
         }
         if (_functionParams.Count > 1)
@@ -298,7 +306,7 @@ internal class Function : Preprocessor
                 strBld.Append(' ');
                 if (useModuleStyle)
                 {
-                    strBld.Append(_functionParams[i].ToString(true, true, true));
+                    strBld.Append(_functionParams[i].ParamName);
                 }
                 else
                 {
@@ -367,18 +375,51 @@ internal class Function : Preprocessor
     private string OnExit(string text) =>
         (Flags & FunctionFlags.OnExit) == FunctionFlags.OnExit ? text : string.Empty;
 
+    // A function declared with "local" inside a module is named "name@module"; the
+    // declaration inside the module spells it "local name".
+    //
+    // モジュール内で "local" 付きで宣言した関数の名前は "名前@モジュール" であり、モジュール内
+    // の宣言では "local 名前" と書く。
+    private string? DeclaredName(bool inModule)
+    {
+        string? name = FunctionName;
+        int at = name?.IndexOf('@', StringComparison.Ordinal) ?? -1;
+        return inModule && at >= 0 ? "local " + name![..at] : name;
+    }
+
+    // An import declared inside a module would otherwise be local to it.
+    //
+    // モジュール内で宣言したインポートは、指定しなければそのモジュールのローカルになる。
+    private static string Global(bool inModule) => inModule ? "global " : string.Empty;
+
+    private bool IsMethod => _functionParams.Count != 0 && _functionParams[0].IsModuleType;
+
+    // With useModuleStyle the declaration sits inside a rebuilt #module block.
+    //
+    // useModuleStyle の時、宣言は再構築した #module ブロックの中にある。
     internal string ToString(bool useModuleStyle) =>
         Type switch
         {
             FunctionType.Module => ModuleToString(useModuleStyle),
-            FunctionType.DefFunc
-                when useModuleStyle
-                    && (_functionParams.Count != 0)
-                    && _functionParams[0].IsModuleType => ModFunctionToString(),
-            FunctionType.DefCFunc => "#defcfunc " + FunctionName + ParamsText(0),
-            FunctionType.DefFunc => "#deffunc " + FunctionName + OnExit(" onexit") + ParamsText(0),
-            FunctionType.Func => "#func " + FunctionName + " " + OnExit("onexit ") + ImportText(),
-            FunctionType.CFunc => "#cfunc " + FunctionName + " " + OnExit("onexit ") + ImportText(),
+            FunctionType.DefFunc or FunctionType.DefCFunc when useModuleStyle && IsMethod =>
+                ModFunctionToString(),
+            FunctionType.DefCFunc => "#defcfunc " + DeclaredName(useModuleStyle) + ParamsText(0),
+            FunctionType.DefFunc => "#deffunc "
+                + DeclaredName(useModuleStyle)
+                + OnExit(" onexit")
+                + ParamsText(0),
+            FunctionType.Func => "#func "
+                + Global(useModuleStyle)
+                + FunctionName
+                + " "
+                + OnExit("onexit ")
+                + ImportText(),
+            FunctionType.CFunc => "#cfunc "
+                + Global(useModuleStyle)
+                + FunctionName
+                + " "
+                + OnExit("onexit ")
+                + ImportText(),
             FunctionType.ComFunc => "#comfunc "
                 + FunctionName
                 + " "
@@ -388,5 +429,5 @@ internal class Function : Preprocessor
             _ => "/*#deffunc?*/",
         };
 
-    public override string ToString() => ToString(false);
+    public override string ToString() => ToString(_scope?.Current != null);
 }

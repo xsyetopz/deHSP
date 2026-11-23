@@ -15,6 +15,8 @@ internal class Param : Preprocessor
         : base(paramIndex) { }
 
     private string _paramTypeName = "NULL";
+
+    internal int Index => _index;
     private short _deffuncIndex;
 
     internal static Param FromBinaryReader(BinaryReader reader, AxData parent, int index)
@@ -75,10 +77,23 @@ internal class Param : Preprocessor
     }
 
     private string _nameFormatter = "prm_{0}";
+
+    // The name the debug segment recorded; a module-type parameter keeps the module name.
+    //
+    // デバッグセグメントに記録された名前。モジュール型の引数はモジュール名のままにする。
+    internal string? DebugName { get; set; }
+
+    private string? SourceName => IsModuleType ? null : DebugName;
+
     internal string ParamName
     {
         get
         {
+            if (SourceName != null)
+            {
+                return SourceName;
+            }
+
             if (_isStructParameter)
             {
                 var strbd = new StringBuilder();
@@ -113,14 +128,16 @@ internal class Param : Preprocessor
                 strbd.Append(_paramTypeName);
             }
         }
-        if ((forceNamed) || (_paramNameIsUsed) || (IsModuleType))
+        if (forceNamed || _paramNameIsUsed || IsModuleType || SourceName != null)
         {
             if (strbd.Length > 0)
             {
                 strbd.Append(' ');
             }
 
-            strbd.Append(string.Format(CultureInfo.InvariantCulture, _nameFormatter, _index));
+            strbd.Append(
+                SourceName ?? string.Format(CultureInfo.InvariantCulture, _nameFormatter, _index)
+            );
         }
         return strbd.ToString();
     }

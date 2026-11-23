@@ -48,6 +48,8 @@ internal sealed class Usedll : Preprocessor
 
     private readonly List<Function> _functions = [];
 
+    internal string? Name => _name;
+
     internal UsedllType Type =>
         _type switch
         {

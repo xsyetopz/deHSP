@@ -9,6 +9,8 @@ internal class Label : Preprocessor, System.IComparable<Label>
 
     private int _tokenOffset = -1;
 
+    internal int Index => _index;
+
     internal int TokenOffset => _tokenOffset;
 
     internal static Label FromBinaryReader(BinaryReader reader, AxData _, int index)
@@ -38,11 +40,20 @@ internal class Label : Preprocessor, System.IComparable<Label>
     private string _labelName = "*label";
     internal string LabelName
     {
-        get => _labelName;
+        get => Scope == null ? _labelName : Scope.Label(_labelName, Owner);
         set => _labelName = value;
     }
 
-    public override string ToString() => _function != null ? _function.ToString() : _labelName;
+    // The rebuilt module the label was defined in, and the scope that spells it for the line
+    // being written; both stay null when the output has no module blocks.
+    //
+    // ラベルを定義した再構築モジュールと、出力中の行に合わせて名前を書くスコープ。出力に
+    // モジュールブロックが無ければどちらも null のままである。
+    internal string? Owner { get; set; }
+
+    internal ModuleScope? Scope { get; set; }
+
+    public override string ToString() => _function != null ? _function.ToString() : LabelName;
 
     public int CompareTo(Label? other)
     {

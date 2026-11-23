@@ -15,14 +15,16 @@ internal sealed class UserFunctionPrimitive : FunctionPrimitive
     internal UserFunctionPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet)
     {
+        _scope = dataSet._parent!.Scope;
         _func = dataSet._parent!.GetUserFunction(Value);
         _func?.MarkUsedAt(TokenOffset);
     }
 
     private readonly Function? _func;
+    private readonly ModuleScope _scope;
 
     public override string ToString() =>
-        _func == null ? DefaultName : _func.FunctionName ?? DefaultName;
+        _func?.FunctionName is string name ? _scope.Function(name) : DefaultName;
 }
 
 internal sealed class DllFunctionPrimitive : FunctionPrimitive

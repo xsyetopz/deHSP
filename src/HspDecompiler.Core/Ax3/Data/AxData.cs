@@ -26,14 +26,6 @@ internal class AxData
         "comfunc_{0}"
     );
 
-    // Record markers of the debug segment, as hspcmp's CToken::PutDI writes them.
-    //
-    // hspcmp の CToken::PutDI が書き出すデバッグセグメントのレコード識別子。
-    private const byte DebugMarkerBigOffset = 252;
-    private const byte DebugMarkerVariable = 253;
-    private const byte DebugMarkerFileName = 254;
-    private const byte DebugMarkerEnd = 255;
-
     private AxHeader? _header;
     private readonly TokenCollection _tokens = new();
     private List<Label> _labels = [];
@@ -43,7 +35,11 @@ internal class AxData
     private readonly List<PlugIn> _plugIns = [];
     private Runtime? _runtime;
     private readonly List<Function> _modules = [];
-    private readonly List<byte[]> _variableName = [];
+    private DebugInfo _debugInfo = new();
+
+    internal DebugInfo DebugInfo => _debugInfo;
+
+    internal ModuleScope Scope { get; } = new();
 
     internal List<Function> Modules => _modules;
 
@@ -87,12 +83,25 @@ internal class AxData
         : index >= _functionParams.Count ? null
         : _functionParams[index];
 
-    internal bool HasVariableNames => _variableName.Count != 0;
+    internal bool HasVariableNames => _debugInfo.VariableNames.Count != 0;
 
     internal string? GetVariableName(int index) =>
         index < 0 ? null
-        : index >= _variableName.Count ? null
-        : ScriptStrings.Encoding.GetString(_variableName[index]);
+        : index >= _debugInfo.VariableNames.Count ? null
+        : ScriptStrings.Encoding.GetString(_debugInfo.VariableNames[index]);
+
+    internal string? GetDebugName(Dictionary<int, byte[]> names, int index) =>
+        names.TryGetValue(index, out byte[]? name) ? DecodeName(name) : null;
+
+    // Names stored through PutDSBuf keep the source encoding, which is UTF-8 only when the
+    // strings are UTF-8 too and the bytes hold valid UTF-8.
+    //
+    // PutDSBuf で格納された名前はソースのエンコーディングのままで、文字列も UTF-8 であり
+    // バイト列が正しい UTF-8 の時だけ UTF-8 になる。
+    internal string DecodeName(byte[] name) =>
+        ScriptStrings.IsUtf8 && System.Text.Unicode.Utf8.IsValid(name)
+            ? ScriptStrings.Encoding.GetString(name)
+            : ShiftJisHelper.Encoding.GetString(name);
 
     internal Cmd? AddCmd(int pluginIndex, int methodIndex) =>
         pluginIndex < 0 ? null
@@ -560,6 +569,11 @@ internal class AxData
         }
     }
 
+    // A label the debug segment named keeps that name; the rest are numbered in code order,
+    // skipping numbers whose name a recovered label already took.
+    //
+    // デバッグセグメントが名付けたラベルはその名前を使う。残りはコード順に番号を振り、
+    // 復元したラベルが既に使った名前の番号は飛ばす。
     internal void RenameLables()
     {
         if (_labels.Count <= 0)
@@ -568,48 +582,41 @@ internal class AxData
         }
 
         _labels.Sort();
+        Dictionary<int, string> recovered = DebugNames.LabelNames(this, _labels);
+        var taken = new HashSet<string>(
+            recovered.Values.Select(name => name.ToLowerInvariant()),
+            StringComparer.Ordinal
+        );
         int keta = ((int)Math.Log10(_labels.Count)) + 1;
         var labelFormat = CompositeFormat.Parse(
             "*label_{0:D0" + keta.ToString(CultureInfo.InvariantCulture) + "}"
         );
-        for (int i = 0; i < _labels.Count; i++)
+        int number = 0;
+        foreach (Label label in _labels)
         {
-            _labels[i].LabelName = string.Format(CultureInfo.InvariantCulture, labelFormat, i);
+            if (recovered.TryGetValue(label.Index, out string? name))
+            {
+                label.LabelName = name;
+                continue;
+            }
+
+            string generated;
+            do
+            {
+                generated = string.Format(CultureInfo.InvariantCulture, labelFormat, number++);
+            } while (taken.Contains(generated));
+
+            label.LabelName = generated;
         }
     }
 
     private void ReadDebugInfo()
     {
-        for (uint i = 0; i < _header!.DebugSize; i++)
-        {
-            long offset = _seekOrigin + _header.DebugStart + i;
-            _reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
-
-            byte marker = _reader.ReadByte();
-            if (marker == DebugMarkerEnd)
-            {
-                return;
-            }
-
-            if (marker == DebugMarkerBigOffset)
-            {
-                i += 2;
-            }
-            else if (marker == DebugMarkerVariable)
-            {
-                int literalOffset =
-                    _reader.ReadByte() ^ (_reader.ReadByte() << 8) ^ (_reader.ReadByte() << 16);
-                _variableName.Add(ReadScriptString(literalOffset));
-                i += 5;
-            }
-            else if (marker == DebugMarkerFileName)
-            {
-                i += 5;
-            }
-
-            // Any other byte is a one-byte line-number delta and needs no extra skip.
-            //
-            // それ以外のバイトは 1 バイトの行番号差分で、追加で読み飛ばす必要はない。
-        }
+        byte[] segment = DebugInfo.ReadSegment(
+            _reader!,
+            _seekOrigin + _header!.DebugStart,
+            (int)_header.DebugSize
+        );
+        _debugInfo = DebugInfo.Read(segment, ReadScriptString, ReadLiteralBytes);
     }
 }

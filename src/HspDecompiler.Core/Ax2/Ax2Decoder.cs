@@ -9,11 +9,11 @@ using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax2;
 
-internal sealed class Ax2Decoder : IAxDecoder
+internal sealed class Ax2Decoder : IAxDecoder, IIncludeSource
 {
     internal string? MainFileName { get; init; }
 
-    internal IReadOnlyList<IncludeFile> Includes { get; private set; } = [];
+    public IReadOnlyList<IncludeFile> Includes { get; private set; } = [];
 
     public Task<List<string>> DecodeAsync(
         BinaryReader reader,

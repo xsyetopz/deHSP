@@ -65,4 +65,20 @@ public sealed class DecompilerOptions
     /// </para>
     /// </summary>
     public bool Utf8Output { get; set; }
+
+    /// <summary>
+    /// <para xml:lang="en">
+    /// Directory of the HSP common files (the one hspcmp --compath names). A debug build records
+    /// each #include it read; a common header that left no code, such as hspcmp.as, gets its
+    /// #include back when this directory holds a copy whose declarations match the program's
+    /// imports. When empty, such an #include is written as a comment.
+    /// </para>
+    /// <para xml:lang="ja">
+    /// HSP の共通ファイルのディレクトリ(hspcmp の --compath が指すもの)。デバッグビルドは
+    /// 読んだ #include をそれぞれ記録する。hspcmp.as のようにコードを残さなかった共通ヘッダーは、
+    /// このディレクトリに宣言がプログラムのインポートと一致するコピーがあれば #include を
+    /// 復元する。空ならその #include はコメントとして書き出す。
+    /// </para>
+    /// </summary>
+    public string? CommonDirectory { get; set; }
 }
