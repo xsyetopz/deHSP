@@ -13,6 +13,8 @@ namespace HspDecompiler.Cli;
 // テストはプロセス内でコマンドを実行して出力を読める。
 internal sealed class DecompileCommand : RootCommand
 {
+    private static readonly SourceStyle s_defaults = new();
+
     private readonly Argument<FileInfo> _input = new("input-file")
     {
         Description = "Input file to decompile (.ax, .exe, .dpm)",
@@ -50,6 +52,45 @@ internal sealed class DecompileCommand : RootCommand
             "HSP common directory; restores the #include of a matching common header in a debug build",
     };
 
+    private readonly Option<IfParentheses> _ifParens = new("--if-parens")
+    {
+        Description = "Parentheses around an if condition: none, tight '(x)', spaced '( x )'",
+        DefaultValueFactory = _ => s_defaults.IfParentheses,
+    };
+
+    private readonly Option<OneLineIf> _oneLineIf = new("--one-line-if")
+    {
+        Description = "An if block on one source line (debug builds): colon 'if x : y', braces",
+        DefaultValueFactory = _ => s_defaults.OneLineIf,
+    };
+
+    private readonly Option<bool> _parenNegatives = new("--paren-negatives")
+    {
+        Description = "Write a negative literal beside an operator as 'a - (-1)'",
+    };
+
+    private readonly Option<LogicalOperators> _logical = new("--logical")
+    {
+        Description = "& and | between conditions: symbols, doubled '&&', words 'and'",
+        DefaultValueFactory = _ => s_defaults.LogicalOperators,
+    };
+
+    private readonly Option<bool> _compact = new("--compact")
+    {
+        Description = "Write binary operators without spaces: 'a+1'",
+    };
+
+    private readonly Option<bool> _noMacros = new("--no-macros")
+    {
+        Description = "Write hspdef.as macro calls expanded: 'dirinfo(1)' for 'dir_exe'",
+    };
+
+    private readonly Option<HexLiterals> _hex = new("--hex")
+    {
+        Description = "Integers in hexadecimal: none, poke (poke values of 128 or more), all",
+        DefaultValueFactory = _ => s_defaults.HexLiterals,
+    };
+
     private readonly Option<bool> _verbose = new("--verbose", "-v")
     {
         Description = "Verbose logging",
@@ -65,6 +106,13 @@ internal sealed class DecompileCommand : RootCommand
         Options.Add(_skipEncrypted);
         Options.Add(_utf8);
         Options.Add(_common);
+        Options.Add(_ifParens);
+        Options.Add(_oneLineIf);
+        Options.Add(_parenNegatives);
+        Options.Add(_logical);
+        Options.Add(_compact);
+        Options.Add(_noMacros);
+        Options.Add(_hex);
         Options.Add(_verbose);
         SetAction(RunAsync);
     }
@@ -95,6 +143,7 @@ internal sealed class DecompileCommand : RootCommand
             SkipEncrypted = parseResult.GetValue(_skipEncrypted),
             Utf8Output = parseResult.GetValue(_utf8),
             CommonDirectory = parseResult.GetValue(_common)?.FullName,
+            Style = Style(parseResult),
         };
 
         DecompilerResult result = await pipeline.RunAsync(options, ct).ConfigureAwait(false);
@@ -117,4 +166,16 @@ internal sealed class DecompileCommand : RootCommand
         }
         return 0;
     }
+
+    private SourceStyle Style(ParseResult parseResult) =>
+        new()
+        {
+            IfParentheses = parseResult.GetValue(_ifParens),
+            OneLineIf = parseResult.GetValue(_oneLineIf),
+            ParenthesizeNegatives = parseResult.GetValue(_parenNegatives),
+            LogicalOperators = parseResult.GetValue(_logical),
+            CompactOperators = parseResult.GetValue(_compact),
+            StandardMacros = !parseResult.GetValue(_noMacros),
+            HexLiterals = parseResult.GetValue(_hex),
+        };
 }

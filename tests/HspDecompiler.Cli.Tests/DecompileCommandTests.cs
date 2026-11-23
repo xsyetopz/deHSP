@@ -91,6 +91,32 @@ public sealed class DecompileCommandTests : IDisposable
         );
     }
 
+    [Fact]
+    public async Task StyleOptionsChangeTheSpelling()
+    {
+        int exitCode = await InvokeAsync(
+            Fixture("styles.ax"),
+            "--output",
+            _workDir,
+            "--if-parens",
+            "tight",
+            "--logical",
+            "doubled",
+            "--compact",
+            "--paren-negatives",
+            "--hex",
+            "all",
+            "--no-macros"
+        );
+
+        Assert.Equal(0, exitCode);
+        string source = await File.ReadAllTextAsync(Path.Combine(_workDir, "styles.hsp"));
+        Assert.Contains("if ((var_0==1)&&(var_1==2)) {", source, StringComparison.Ordinal);
+        Assert.Contains("var_3 = var_0-(-1)+var_1*(-2)", source, StringComparison.Ordinal);
+        Assert.Contains("mes dirinfo(1)+dirinfo(0)+dirinfo(5)", source, StringComparison.Ordinal);
+        Assert.Contains("poke var_5, 0, 0xEF", source, StringComparison.Ordinal);
+    }
+
     private static string Fixture(string name = "doubleelse.ax") =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
 
