@@ -230,13 +230,13 @@ internal static class MarkedModules
             AddMacroUses(macros, -1, items);
         }
 
-        var skipped = new HashSet<int>();
+        var rebuild = new Rebuild(table, events, lineOf, data, items);
         for (int row = 0; row < table.Rows.Count; row++)
         {
             int before = items.Count;
-            if (!skipped.Contains(row))
+            if (!rebuild.Skipped.Contains(row))
             {
-                AddRow(table, row, events, lineOf, data, items, skipped);
+                rebuild.AddRow(row);
             }
 
             if (parts.Contains(row) && items.Count > before)
@@ -249,7 +249,7 @@ internal static class MarkedModules
 
         if (lineOf.Keys.Any(e => events.Events[e].Kind == MarkKind.Start))
         {
-            Rescope(data);
+            Rescope(data, rebuild.Modules);
         }
 
         return items;
@@ -270,90 +270,104 @@ internal static class MarkedModules
     private static MarkedItem MacroItem(LineRecordMacro line, int target) =>
         new(line, RowKind.Directive, []) { Target = target };
 
-    private static void AddRow(
+    // The rows being turned into items, with the module blocks rebuilt so far.
+    //
+    // 項目に変えている行と、これまでに組み直したモジュールのブロック。
+    private sealed class Rebuild(
         RowTable table,
-        int index,
         MarkEvents events,
-        Dictionary<int, int> lineOf,
-        AxData data,
-        List<MarkedItem> items,
-        HashSet<int> skipped
-    )
-    {
-        var chosen = lineOf
-            .Where(pair => events.Events[pair.Key].First == index)
-            .Select(pair => (Event: events.Events[pair.Key], Line: pair.Value))
-            .ToList();
-        MarkedRow row = table.Rows[index];
-        if (chosen.Find(c => c.Event.Kind == MarkKind.Start) is { Event: { } start } begin)
-        {
-            MarkBlock block = events.Blocks[start.Block];
-            AddStart(table, block, begin.Line, lineOf, data, items);
-            skipped.Add(block.Goto);
-            return;
-        }
-
-        if (chosen.Find(c => c.Event.Kind == MarkKind.End) is { Event: not null } end)
-        {
-            var exit = (Label)((PreprocessorDeclaration)row.Line).Declared!;
-            items.Add(
-                new MarkedItem(new EndOfModule(exit.TokenOffset), RowKind.Directive, [])
-                {
-                    Target = end.Line,
-                }
-            );
-            return;
-        }
-
-        var item = new MarkedItem(row.Line, row.Kind, row.Escapes);
-        if (chosen.Count > 0)
-        {
-            item.Ends = new SortedDictionary<int, int>(
-                chosen.ToDictionary(c => c.Event.Ordinal, c => c.Line)
-            );
-        }
-
-        items.Add(item);
-    }
-
-    private static void AddStart(
-        RowTable table,
-        MarkBlock block,
-        int line,
         Dictionary<int, int> lineOf,
         AxData data,
         List<MarkedItem> items
     )
     {
-        if (block.IsLone)
+        internal HashSet<int> Skipped { get; } = [];
+
+        internal List<ModuleRange> Modules { get; } = [];
+
+        internal void AddRow(int index)
         {
-            items.Add(
-                new MarkedItem(new ModuleStart(string.Empty, true, null, -1), RowKind.Directive, [])
-                {
-                    Target = line,
-                }
-            );
-            items.Add(
-                new MarkedItem(new EndOfModule(-1), RowKind.Directive, [])
-                {
-                    Target = lineOf[block.End],
-                }
-            );
-            return;
+            var chosen = lineOf
+                .Where(pair => events.Events[pair.Key].First == index)
+                .Select(pair => (Event: events.Events[pair.Key], Line: pair.Value))
+                .ToList();
+            MarkedRow row = table.Rows[index];
+            if (chosen.Find(c => c.Event.Kind == MarkKind.Start) is { Event: { } start } begin)
+            {
+                MarkBlock block = events.Blocks[start.Block];
+                AddStart(block, begin.Line);
+                Skipped.Add(block.Goto);
+                return;
+            }
+
+            if (chosen.Find(c => c.Event.Kind == MarkKind.End) is { Event: not null } end)
+            {
+                var exit = (Label)((PreprocessorDeclaration)row.Line).Declared!;
+                items.Add(
+                    new MarkedItem(new EndOfModule(exit.TokenOffset), RowKind.Directive, [])
+                    {
+                        Target = end.Line,
+                    }
+                );
+                return;
+            }
+
+            var item = new MarkedItem(row.Line, row.Kind, row.Escapes);
+            if (chosen.Count > 0)
+            {
+                item.Ends = new SortedDictionary<int, int>(
+                    chosen.ToDictionary(c => c.Event.Ordinal, c => c.Line)
+                );
+            }
+
+            items.Add(item);
         }
 
-        int startOffset = table.Rows[block.Goto].Line.TokenOffset;
-        int exitOffset = (
-            (Label)((PreprocessorDeclaration)table.Rows[block.LabelRow].Line).Declared!
-        ).TokenOffset;
-        string name = block.Members?.FunctionName
-            ?? LocalModule(data, startOffset, exitOffset)
-            ?? string.Empty;
-        var start = new ModuleStart(name, name.Length == 0, block.Members, startOffset)
+        private void AddStart(MarkBlock block, int line)
         {
-            Used = block.Used,
-        };
-        items.Add(new MarkedItem(start, RowKind.Directive, []) { Target = line });
+            if (block.IsLone)
+            {
+                items.Add(
+                    new MarkedItem(
+                        new ModuleStart(string.Empty, true, null, -1),
+                        RowKind.Directive,
+                        []
+                    )
+                    {
+                        Target = line,
+                    }
+                );
+                items.Add(
+                    new MarkedItem(new EndOfModule(-1), RowKind.Directive, [])
+                    {
+                        Target = lineOf[block.End],
+                    }
+                );
+                return;
+            }
+
+            int startOffset = table.Rows[block.Goto].Line.TokenOffset;
+            int exitOffset = (
+                (Label)((PreprocessorDeclaration)table.Rows[block.LabelRow].Line).Declared!
+            ).TokenOffset;
+            string name = block.Members?.FunctionName
+                ?? LocalModule(data, startOffset, exitOffset)
+                ?? string.Empty;
+            var start = new ModuleStart(name, name.Length == 0, block.Members, startOffset)
+            {
+                Used = block.Used,
+            };
+            items.Add(new MarkedItem(start, RowKind.Directive, []) { Target = line });
+            Modules.Add(new ModuleRange(name, startOffset, exitOffset));
+        }
+    }
+
+    // The code a rebuilt #module block holds, from its goto to its exit label.
+    //
+    // 組み直した #module ブロックが持つコード。goto から出口のラベルまで。
+    private sealed record ModuleRange(string Name, int Start, int Exit)
+    {
+        internal bool Holds(int offset) => offset >= Start && offset < Exit;
     }
 
     // A "local" function keeps its module in its name as "name@module", which names the block
@@ -375,17 +389,26 @@ internal static class MarkedModules
             .Select(name => name[(name.IndexOf('@', StringComparison.Ordinal) + 1)..])
             .FirstOrDefault();
 
-    // A normal build records no label names, so every label is global; inside a module it
-    // takes a bare "@".
+    // A normal build records no label names, so the decompiler picks each label's module. A
+    // label defined in a named block belongs to it, and code outside spells it "name@module". A
+    // nameless block can't be named from outside, so a label there belongs to it only when every
+    // reference is inside too; otherwise it is global and takes a bare "@" inside. Label names
+    // leave no bytes in a normal build, so either choice compiles the same.
     //
-    // 通常ビルドはラベル名を記録しないため、すべてのラベルはグローバルであり、モジュールの
-    // 中では "@" だけを付ける。
-    private static void Rescope(AxData data)
+    // 通常ビルドはラベル名を記録しないため、各ラベルのモジュールはデコンパイラが選ぶ。名前の
+    // あるブロックで定義したラベルはそのブロックに属し、外のコードは "名前@モジュール" と書く。
+    // 名前の無いブロックは外から名指せないため、すべての参照も中にある時だけそのブロックに属し、
+    // それ以外はグローバルで、中では "@" だけを付ける。通常ビルドではラベル名はバイト列に
+    // 残らないため、どちらを選んでも同じにコンパイルされる。
+    private static void Rescope(AxData data, List<ModuleRange> modules)
     {
         ModuleBlocks.AddGlobalFunctions(data);
         foreach (Label label in data.Labels)
         {
-            label.Owner = null;
+            ModuleRange? home = modules.Find(m => m.Holds(label.TokenOffset));
+            bool owned =
+                home != null && (home.Name.Length > 0 || label.ReferenceOffsets.All(home.Holds));
+            label.Owner = owned ? home!.Name : null;
             label.Scope = data.Scope;
         }
     }

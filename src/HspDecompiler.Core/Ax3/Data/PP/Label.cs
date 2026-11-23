@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 
 namespace HspDecompiler.Core.Ax3.Data.PP;
@@ -38,10 +39,16 @@ internal class Label : Preprocessor, System.IComparable<Label>
 
     internal bool IsReferenced => References > 0;
 
-    // The code tokens that refer to the label.
+    internal int References => _referenceOffsets.Count;
+
+    private readonly List<int> _referenceOffsets = [];
+
+    // The code offsets of the tokens that refer to the label.
     //
-    // ラベルを参照するコードトークンの数。
-    internal int References { get; set; }
+    // ラベルを参照するトークンのコード位置。
+    internal IReadOnlyList<int> ReferenceOffsets => _referenceOffsets;
+
+    internal void AddReference(int tokenOffset) => _referenceOffsets.Add(tokenOffset);
 
     private string _labelName = "*label";
     internal string LabelName

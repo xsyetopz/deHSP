@@ -6,9 +6,9 @@
 
 #module
 #deffunc fb
-*label_3@
+*label_3
 	mes "b"
-	goto *label_3@
+	goto *label_3
 #global
 	fa
 	fb
