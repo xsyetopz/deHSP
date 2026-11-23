@@ -27,6 +27,13 @@ internal enum FunctionFlags
 
 internal class Function : Preprocessor
 {
+    // The directive deHSP writes for a module's members when no #module line holds them.
+    // HSP documents no such directive, so the decoder warns at each line that starts with it.
+    //
+    // #module 行がメンバーを持たない時に deHSP が書く指示文。HSP はこの指示文を文書化して
+    // いないため、デコーダーはこれで始まる行ごとに警告する。
+    internal const string StructDirective = "#struct ";
+
     // The HSP 3 compiler marks the function kind with these sentinels in the dll, function and
     // label index fields of each finfo entry.
     //
@@ -295,7 +302,7 @@ internal class Function : Preprocessor
         }
         else
         {
-            strBld.Append("#struct ");
+            strBld.Append(StructDirective);
             strBld.Append(FunctionName);
         }
         if (_functionParams.Count > 1)

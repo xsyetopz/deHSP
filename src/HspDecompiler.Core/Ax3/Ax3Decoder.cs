@@ -9,6 +9,7 @@ using HspDecompiler.Core.Ax3.Data;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.Layout;
 using HspDecompiler.Core.Ax3.Data.Line;
+using HspDecompiler.Core.Ax3.Data.PP;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Pipeline;
 using HspDecompiler.Core.Releases;
@@ -134,11 +135,12 @@ internal class Ax3Decoder : ISourceDecoder
             ? marked.Write(CompileDirectives(data, marked.HasUnusedModule), MainFileName)
             : null;
 
-    // A #struct line is deHSP's own spelling of a module's members; HSP documents no such
-    // directive. A rebuilt #module writes the members itself and leaves none behind.
+    // The warning names the written line, which exists only once a layout has placed every
+    // line, so the scan reads the output. A rebuilt #module writes the members itself and leaves
+    // no #struct line behind.
     //
-    // #struct 行はモジュールのメンバーを表す deHSP 独自の書き方で、HSP はこの指示文を文書化
-    // していない。組み直した #module はメンバーを自分で書き、#struct 行を残さない。
+    // 警告は書き出した行の番号を示す。その番号は配置がすべての行を置いた後にしか無いため、
+    // 出力を読む。組み直した #module はメンバーを自分で書き、#struct 行を残さない。
     private static void WarnStructs(DecodedSource source, IDecompilerLogger logger)
     {
         foreach (
@@ -149,7 +151,7 @@ internal class Ax3Decoder : ISourceDecoder
         {
             for (int i = 0; i < file.Count; i++)
             {
-                if (file[i].StartsWith("#struct ", StringComparison.Ordinal))
+                if (file[i].StartsWith(Function.StructDirective, StringComparison.Ordinal))
                 {
                     logger.Warning(Strings.StructNotInHspSpec, i + 1);
                 }
