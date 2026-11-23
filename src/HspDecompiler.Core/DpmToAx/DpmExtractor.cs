@@ -89,17 +89,16 @@ internal sealed class DpmExtractor
     private BinaryReader? _reader;
     private readonly List<DpmFileEntry> _files = [];
 
-    /// <summary>
-    /// DPMX header (16 bytes):
-    ///   [0-3]  magic "DPMX"
-    ///   [4-7]  ?
-    ///   [8-11] fileCount
-    ///   [12-15] ?
-    /// Entry (32 bytes): 16-char name + unknown(4) + encryptionKey(4) + fileOffset(4) + fileSize(4)
-    /// </summary>
+    // DPMX layout: a 16-byte header (magic, unknown, file count, unknown), then one 32-byte
+    // entry per file (16-byte name, unknown, encryption key, data offset, size). File data
+    // follows the entry table.
+    // ---
+    // DPMX の構造: 16 バイトのヘッダー(マジック、不明、ファイル数、不明)の後に、ファイル
+    // ごとに 32 バイトのエントリ(16 バイトの名前、不明、暗号鍵、データ位置、サイズ)が並ぶ。
+    // ファイルデータはエントリ表の後ろに続く。
     private bool ReadDpmxHeader()
     {
-        _reader!.ReadInt32(); // DPMX magic
+        _reader!.ReadInt32();
         _reader.ReadInt32();
         int fileCount = _reader.ReadInt32();
         _reader.ReadInt32();
@@ -134,75 +133,58 @@ internal sealed class DpmExtractor
         return true;
     }
 
-    /// <summary>
-    /// DPM2 header (32 bytes):
-    ///   [0-3]   magic "DPM2"
-    ///   [4-7]   entryCount
-    ///   [8-11]  stringTableOffset (from header start)
-    ///   [12-15] dataSectionOffset (from header start)
-    ///   [16-19] stringTableSize
-    ///   [20-23] ?
-    ///   [24-27] crcSeed
-    ///   [28-31] crcValue
-    ///
-    /// Entry (32 bytes each), starting at header+32:
-    ///   [0-3]   type/flags
-    ///   [4-7]   nameOffset (in string table)
-    ///   [8-11]  fileSize
-    ///   [12-15] ?
-    ///   [16-19] dataOffset (in data section)
-    ///   [20-23] ?
-    ///   [24-27] dirOffset (in string table, 0=default)
-    ///   [28-31] checksum (0=none)
-    ///
-    /// String table: at header + stringTableOffset, null-terminated strings
-    /// Data section: at header + dataSectionOffset, raw file data
-    /// </summary>
+    // DPM2 layout: a 32-byte header (magic, entry count, string table offset, data section
+    // offset, string table size, unknown, CRC seed, salt), then 32-byte entries (flags, name
+    // offset, size, unknown, data offset, unknown, directory offset, checksum). Offsets in the
+    // header count from the header start; name and directory offsets index the table of
+    // NUL-terminated strings, and a directory offset of 0 means the archive root. The entry
+    // checksum seeds the per-file key table.
+    // ---
+    // DPM2 の構造: 32 バイトのヘッダー(マジック、エントリ数、文字列表の位置、データ部の位置、
+    // 文字列表のサイズ、不明、CRC シード、ソルト)の後に、32 バイトのエントリ(フラグ、名前の
+    // 位置、サイズ、不明、データ位置、不明、ディレクトリの位置、チェックサム)が並ぶ。
+    // ヘッダー内の位置はヘッダー先頭からの値で、名前とディレクトリの位置は NUL 終端文字列の
+    // 表を指す。ディレクトリの位置が 0 ならアーカイブ直下を表す。エントリのチェックサムは
+    // ファイルごとの鍵表のシードになる。
     private bool ReadDpm2Header()
     {
         _isDpm2 = true;
-        _reader!.ReadInt32(); // DPM2 magic
-        int fileCount = _reader.ReadInt32(); // dword[1]: entry count
-        int stringTableOffset = _reader.ReadInt32(); // dword[2]: string table offset
-        int dataSectionOffset = _reader.ReadInt32(); // dword[3]: data section offset
-        _reader.ReadInt32(); // dword[4]: string table size
-        _reader.ReadInt32(); // dword[5]
-        _crcSeed = _reader.ReadInt32(); // dword[6]: CRC seed
-        _salt = _reader.ReadInt32(); // dword[7]: salt
+        _reader!.ReadInt32();
+        int fileCount = _reader.ReadInt32();
+        int stringTableOffset = _reader.ReadInt32();
+        int dataSectionOffset = _reader.ReadInt32();
+        _reader.ReadInt32();
+        _reader.ReadInt32();
+        _crcSeed = _reader.ReadInt32();
+        _salt = _reader.ReadInt32();
 
         _files.Capacity = fileCount;
 
-        // Read string table
         long stringTableAbsOffset = _startPosition + stringTableOffset;
         long savedPosition = _reader.BaseStream.Position;
         _reader.BaseStream.Seek(stringTableAbsOffset, SeekOrigin.Begin);
 
-        // Calculate string table size: from stringTableOffset to dataSectionOffset
         int stringTableSize = dataSectionOffset - stringTableOffset;
         byte[] stringTableBytes = new byte[stringTableSize];
         _reader.BaseStream.ReadExactly(stringTableBytes, 0, stringTableSize);
 
-        // Return to entry reading position
         _reader.BaseStream.Seek(savedPosition, SeekOrigin.Begin);
 
-        // Read entries
         _fileOffsetStart = _startPosition + dataSectionOffset;
         for (int i = 0; i < fileCount; i++)
         {
             var file = new DpmFileEntry();
-            _reader.ReadInt32(); // [0-3]: type/flags
-            int nameOffset = _reader.ReadInt32(); // [4-7]: filename string offset
-            file.FileSize = _reader.ReadInt32(); // [8-11]: file size
-            _reader.ReadInt32(); // [12-15]
-            file.FileOffset = _reader.ReadInt32(); // [16-19]: data offset (relative to data section)
-            _reader.ReadInt32(); // [20-23]
-            int dirOffset = _reader.ReadInt32(); // [24-27]: directory string offset
-            file.Checksum = _reader.ReadInt32(); // [28-31]: checksum (used as key table seed)
+            _reader.ReadInt32();
+            int nameOffset = _reader.ReadInt32();
+            file.FileSize = _reader.ReadInt32();
+            _reader.ReadInt32();
+            file.FileOffset = _reader.ReadInt32();
+            _reader.ReadInt32();
+            int dirOffset = _reader.ReadInt32();
+            file.Checksum = _reader.ReadInt32();
 
-            // Resolve filename from string table
             file.FileName = ReadStringFromTable(stringTableBytes, nameOffset);
 
-            // Resolve directory from string table
             if (dirOffset != 0)
             {
                 string dir = ReadStringFromTable(stringTableBytes, dirOffset);
@@ -254,10 +236,9 @@ internal sealed class DpmExtractor
         return buffer;
     }
 
-    /// <summary>
-    /// Returns the "start.ax" entry, or null if not present.
-    /// Consolidated from the former GetStartAx/SeekStartAx pair.
-    /// </summary>
+    // HSP runtimes start the program from the archive's "start.ax" entry.
+    // ---
+    // HSP ランタイムはアーカイブ内の "start.ax" からプログラムを開始する。
     internal DpmFileEntry? GetStartAx()
     {
         foreach (DpmFileEntry file in _files)

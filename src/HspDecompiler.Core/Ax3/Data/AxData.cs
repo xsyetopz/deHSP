@@ -23,10 +23,12 @@ internal class AxData
         "comfunc_{0}"
     );
 
-    // Fix #30: Named constants for HSP debug info markers
-    private const byte DebugMarkerFileName = 252;
+    // Record markers of the debug segment, as hspcmp's CToken::PutDI writes them.
+    // ---
+    // hspcmp の CToken::PutDI が書き出すデバッグセグメントのレコード識別子。
+    private const byte DebugMarkerBigOffset = 252;
     private const byte DebugMarkerVariable = 253;
-    private const byte DebugMarkerLineNumber = 254;
+    private const byte DebugMarkerFileName = 254;
     private const byte DebugMarkerEnd = 255;
 
     private AxHeader? _header;
@@ -51,6 +53,7 @@ internal class AxData
     internal List<Usedll> Usedlls => _dlls;
 
     // Literal-data offset and code offset of every string and double literal, in code order.
+    // ---
     // コード中の文字列・実数リテラルごとのリテラルデータ位置とコード位置(コード順)。
     internal List<(int DataOffset, int TokenOffset)> LiteralAnchors { get; } = [];
 
@@ -220,11 +223,9 @@ internal class AxData
 
     internal bool IsStarted => _isStarted;
 
-    // Fix #17: removed unused setter
     internal BinaryReader? Reader => _reader;
     internal long StartOfCode => _header!.CodeStart + _seekOrigin;
 
-    // Fix #18: removed unused setter
     internal Hsp3Dictionary? Dictionary => _dictionary;
 
     internal void ReadHeader()
@@ -347,12 +348,10 @@ internal class AxData
         ReadDebugInfo();
     }
 
-    // Fix #25: renamed from DeleteInvisibleLables
     internal void DeleteInvisibleLabels() => _labels = _labels.FindAll(LabelIsVisible);
 
     private bool LabelIsVisible(Label label) => label.Visible;
 
-    // Fix #9: extracted rename loops into dedicated private methods
     private void RenameFunctions(Hsp3Dictionary dictionary)
     {
         var functionNames = new List<string>();
@@ -441,26 +440,24 @@ internal class AxData
         }
     }
 
-    // Upper bound for OpenProject_dll2..OpenProject_dllN; past it, func_N is clearer.
+    // Upper bound for OpenProject_dll2..OpenProject_dllN; past it, func_N reads better.
+    // ---
+    // OpenProject_dll2〜OpenProject_dllN の上限。これを超えるなら func_N の方が読みやすい。
     private const int MaxDllAliasSuffix = 9;
 
-    /// <summary>
-    /// Chooses a readable alias for a <c>#func</c>/<c>#cfunc</c> import.
-    /// </summary>
-    /// <remarks>
-    /// The .ax file stores only the DLL export name, not the alias the author
-    /// wrote, so the alias is derived from the export. HSP identifiers are
-    /// case-insensitive, and wrapper scripts commonly define a
-    /// <c>#deffunc openproject</c> around an <c>_OpenProject@8</c> import, so
-    /// the bare name often collides. Candidates are tried in order: the
-    /// undecorated name (<c>OpenProject</c>), the export with only the stdcall
-    /// suffix removed (<c>_OpenProject</c>), <c>OpenProject_dll</c>, and
-    /// <c>OpenProject_dll2</c> through <c>OpenProject_dll9</c> for repeated
-    /// imports, and finally the numbered <c>func_N</c>.
-    /// </remarks>
-    /// <param name="exportName">DLL export name as stored in the .ax file.</param>
-    /// <param name="takenLowerNames">Lower-cased names already in use.</param>
-    /// <returns>The first candidate not present in <paramref name="takenLowerNames"/>.</returns>
+    // The .ax file stores only the DLL export name, not the alias the author wrote, so the
+    // alias comes from the export. HSP names ignore case, and wrapper scripts often define
+    // "#deffunc openproject" around an "_OpenProject@8" import, so the bare name collides.
+    // The candidates, in order: the undecorated name (OpenProject), the export without the
+    // stdcall suffix (_OpenProject), OpenProject_dll, OpenProject_dll2 to OpenProject_dll9
+    // for repeated imports, and last the numbered func_N.
+    // ---
+    // .ax ファイルには作者が付けた別名ではなく DLL のエクスポート名しか残らないため、別名は
+    // エクスポート名から作る。HSP の名前は大文字と小文字を区別せず、ラッパースクリプトは
+    // "_OpenProject@8" のインポートを "#deffunc openproject" で包むことが多いので、素の名前は
+    // 衝突しやすい。候補は順に、装飾を外した名前(OpenProject)、stdcall の接尾辞だけを外した
+    // 名前(_OpenProject)、OpenProject_dll、重複インポート用の OpenProject_dll2〜
+    // OpenProject_dll9、最後に番号付きの func_N。
     internal static string ResolveDllFunctionName(
         string exportName,
         ICollection<string> takenLowerNames
@@ -480,8 +477,11 @@ internal class AxData
                 candidates.Add(undecorated);
             }
             candidates.Add(bare + "_dll");
-            // Flattened modules each import the same export (CloseHandle in
-            // three #module blocks), so repeats are numbered per export.
+            // Flattened modules each import the same export (CloseHandle in three #module
+            // blocks), so repeats get a number per export.
+            // ---
+            // 展開されたモジュールがそれぞれ同じエクスポートをインポートする(3 つの #module に
+            // CloseHandle がある等)ため、重複にはエクスポートごとに番号を付ける。
             for (int n = 2; n <= MaxDllAliasSuffix; n++)
             {
                 candidates.Add(string.Create(CultureInfo.InvariantCulture, $"{bare}_dll{n}"));
@@ -511,8 +511,11 @@ internal class AxData
         return numbered;
     }
 
-    // Exports such as ordinals ("#12") or C++ mangled names ("?Fn@@YAXH@Z")
-    // are not valid HSP names and must fall through to func_N.
+    // Ordinal exports ("#12") and C++ mangled names ("?Fn@@YAXH@Z") are not valid HSP names,
+    // so they fall through to func_N.
+    // ---
+    // 序数のエクスポート("#12")や C++ の装飾名("?Fn@@YAXH@Z")は HSP の名前として無効な
+    // ため、func_N に回す。
     private static bool IsHspIdentifier(string name) =>
         name.Length > 0
         && name.Length <= 59
@@ -560,16 +563,14 @@ internal class AxData
 
     private bool ReadDebugInfo()
     {
-        // Fix #21: removed commented-out dead code
         for (uint i = 0; i < _header!.DebugSize; i++)
         {
             long offset = _seekOrigin + _header.DebugStart + i;
             _reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
 
-            // Fix #30: use named constants instead of magic bytes
             switch (_reader.ReadByte())
             {
-                case DebugMarkerFileName:
+                case DebugMarkerBigOffset:
                     i += 2;
                     break;
                 case DebugMarkerVariable:
@@ -578,7 +579,7 @@ internal class AxData
                     _variableName.Add(ReadStringLiteral(literalOffset));
                     i += 5;
                     break;
-                case DebugMarkerLineNumber:
+                case DebugMarkerFileName:
                     i += 5;
                     break;
                 case DebugMarkerEnd:

@@ -123,6 +123,7 @@ internal class Function : Preprocessor
     internal Label? Label => _label;
 
     // Code offset of the first token that calls this function, or -1 when nothing calls it.
+    // ---
     // この関数を呼び出す最初のトークンのコードオフセット。呼び出しが無ければ -1。
     internal int FirstUseOffset { get; private set; } = -1;
 

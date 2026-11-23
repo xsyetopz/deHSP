@@ -4,14 +4,16 @@ using System.Linq;
 
 namespace HspDecompiler.Core.ExeToDpm;
 
-/// <summary>
-/// "PE\0\0" で始まる
-/// </summary>
+// The type and field names follow the winnt.h structures they read, so the Windows SDK
+// documentation applies to each field.
+// ---
+// 型名とフィールド名は読み取る winnt.h の構造体に合わせているため、各フィールドの意味は
+// Windows SDK のドキュメントに従う。
 internal sealed class IMAGE_NT_HEADERS
 {
-    /// <summary>
-    /// リトルエンディアンで PE(50 45)
-    /// </summary>
+    // "PE\0\0" read as a little-endian value.
+    // ---
+    // リトルエンディアンで読んだ "PE\0\0"。
     private const int ImageNtSignature = 0x4550;
     internal uint _signature;
     internal IMAGE_FILE_HEADER? _fileHeader;
@@ -219,54 +221,54 @@ internal sealed class IMAGE_SECTION_HEADER
 
 internal sealed class IMAGE_DOS_HEADER
 {
-    /// <summary>
-    /// リトルエンディアンで MZ(4D 5A)
-    /// </summary>
+    // "MZ" read as a little-endian value.
+    // ---
+    // リトルエンディアンで読んだ "MZ"。
     private const int ImageDosSignature = 0x5A4D;
-    internal ushort _e_magic; // Magic number
-    internal ushort _e_cblp; // Bytes on last page of file
-    internal ushort _e_cp; // Pages in file
-    internal ushort _e_crlc; // Relocations
-    internal ushort _e_cparhdr; // Size of header in paragraphs
-    internal ushort _e_minalloc; // Minimum extra paragraphs needed
-    internal ushort _e_maxalloc; // Maximum extra paragraphs needed
-    internal ushort _e_ss; // Initial (relative) SS value
-    internal ushort _e_sp; // Initial SP value
-    internal ushort _e_csum; // Checksum
-    internal ushort _e_ip; // Initial IP value
-    internal ushort _e_cs; // Initial (relative) CS value
-    internal ushort _e_lfarlc; // File address of relocation table
-    internal ushort _e_ovno; // Overlay number
-    internal ushort[] _e_res = new ushort[4]; // Reserved words
-    internal ushort _e_oemid; // OEM identifier (for e_oeminfo)
-    internal ushort _e_oeminfo; // OEM information; e_oemid specific
-    internal ushort[] _e_res2 = new ushort[10]; // Reserved words
-    internal uint _e_lfanew; // File address of new exe header
+    internal ushort _e_magic;
+    internal ushort _e_cblp;
+    internal ushort _e_cp;
+    internal ushort _e_crlc;
+    internal ushort _e_cparhdr;
+    internal ushort _e_minalloc;
+    internal ushort _e_maxalloc;
+    internal ushort _e_ss;
+    internal ushort _e_sp;
+    internal ushort _e_csum;
+    internal ushort _e_ip;
+    internal ushort _e_cs;
+    internal ushort _e_lfarlc;
+    internal ushort _e_ovno;
+    internal ushort[] _e_res = new ushort[4];
+    internal ushort _e_oemid;
+    internal ushort _e_oeminfo;
+    internal ushort[] _e_res2 = new ushort[10];
+    internal uint _e_lfanew;
 
     internal static IMAGE_DOS_HEADER? FromBinaryReader(BinaryReader reader)
     {
         var ret = new IMAGE_DOS_HEADER();
         try
         {
-            ret._e_magic = reader.ReadUInt16(); // Magic number
+            ret._e_magic = reader.ReadUInt16();
             if (ret._e_magic != ImageDosSignature)
             {
                 return null;
             }
 
-            ret._e_cblp = reader.ReadUInt16(); // Bytes on last page of file
-            ret._e_cp = reader.ReadUInt16(); // Pages in file
-            ret._e_crlc = reader.ReadUInt16(); // Relocations
-            ret._e_cparhdr = reader.ReadUInt16(); // Size of header in paragraphs
-            ret._e_minalloc = reader.ReadUInt16(); // Minimum extra paragraphs needed
-            ret._e_maxalloc = reader.ReadUInt16(); // Maximum extra paragraphs needed
-            ret._e_ss = reader.ReadUInt16(); // Initial (relative) SS value
-            ret._e_sp = reader.ReadUInt16(); // Initial SP value
-            ret._e_csum = reader.ReadUInt16(); // Checksum
-            ret._e_ip = reader.ReadUInt16(); // Initial IP value
-            ret._e_cs = reader.ReadUInt16(); // Initial (relative) CS value
-            ret._e_lfarlc = reader.ReadUInt16(); // File address of relocation table
-            ret._e_ovno = reader.ReadUInt16(); // Overlay number
+            ret._e_cblp = reader.ReadUInt16();
+            ret._e_cp = reader.ReadUInt16();
+            ret._e_crlc = reader.ReadUInt16();
+            ret._e_cparhdr = reader.ReadUInt16();
+            ret._e_minalloc = reader.ReadUInt16();
+            ret._e_maxalloc = reader.ReadUInt16();
+            ret._e_ss = reader.ReadUInt16();
+            ret._e_sp = reader.ReadUInt16();
+            ret._e_csum = reader.ReadUInt16();
+            ret._e_ip = reader.ReadUInt16();
+            ret._e_cs = reader.ReadUInt16();
+            ret._e_lfarlc = reader.ReadUInt16();
+            ret._e_ovno = reader.ReadUInt16();
             for (int i = 0; i < 4; i++)
             {
                 ret._e_res[i] = reader.ReadUInt16();

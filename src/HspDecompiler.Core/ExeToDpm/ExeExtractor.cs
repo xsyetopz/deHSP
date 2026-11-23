@@ -3,14 +3,22 @@ using HspDecompiler.Core.Exceptions;
 
 namespace HspDecompiler.Core.ExeToDpm;
 
-// Legacy/unused: no callers exist outside this file in the current codebase.
+// Nothing calls this class: DpmExtractor finds the archive through the PE section table
+// instead of these fixed offsets.
+// ---
+// このクラスの呼び出し元は無い。DpmExtractor は固定オフセットではなく PE のセクション表から
+// アーカイブを探す。
 internal sealed class ExeExtractor
 {
-    // Known offsets where DPMX data begins in HSP runtime executables.
+    // Offsets where the DPMX data starts in known HSP runtime executables.
+    // ---
+    // 既知の HSP ランタイム実行ファイルで DPMX データが始まる位置。
     private const long DpmxOffsetLarge = 0x25000;
     private const long DpmxOffsetSmall = 0x1BE00;
 
-    // DPMX and DPM2 magic bytes: 'D', 'P', 'M', 'X'/'2'
+    // Magic bytes "DPMX" and "DPM2".
+    // ---
+    // マジックバイト "DPMX" と "DPM2"。
     private const byte DpmMagicD = 0x44;
     private const byte DpmMagicP = 0x50;
     private const byte DpmMagicM = 0x4D;

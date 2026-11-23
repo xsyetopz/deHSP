@@ -73,6 +73,7 @@ internal sealed class DoublePrimitive : LiteralPrimitive
     // The shortest text that hspcmp parses back to the same bits. hspcmp reads a literal
     // through atof and treats it as a double only when it holds '.' or a lowercase 'e'
     // exponent (token.cpp), so integral values keep a ".0" suffix.
+    // ---
     // hspcmp が同じビット値に読み戻せる最短の表記。hspcmp は atof で読み取り、'.' か
     // 小文字 'e' の指数を含む時だけ実数として扱う(token.cpp)ため、整数値には ".0" を付ける。
     internal static string FormatLiteral(double value)

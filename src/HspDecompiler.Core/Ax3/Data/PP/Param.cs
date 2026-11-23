@@ -6,7 +6,9 @@ namespace HspDecompiler.Core.Ax3.Data.PP;
 
 internal class Param : Preprocessor
 {
-    // Fix #38: named constant for the invalid-type comment prefix (HSP source convention)
+    // Keeps an unknown parameter type visible in the output instead of dropping it.
+    // ---
+    // 未知の引数型を捨てずに出力へ残すためのコメント。
     private const string InvalidTypeCommentPrefix = "/*不正な型 ";
 
     private Param() { }

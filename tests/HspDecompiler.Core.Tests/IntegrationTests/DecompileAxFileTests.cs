@@ -23,17 +23,14 @@ public class DecompileAxFileTests
         string extension
     )
     {
-        // Arrange
         string outputDir = NewOutputDirectory();
         DecompilerPipeline pipeline = NewPipeline();
         DecompilerOptions options = NewOptions(fixture, outputDir);
 
         try
         {
-            // Act
             DecompilerResult result = await pipeline.RunAsync(options, CancellationToken.None);
 
-            // Assert
             Assert.True(result.Success, result.ErrorMessage);
             Assert.Equal(Path.Combine(outputDir, fixture + extension), result.OutputPath);
             Assert.Equal(
@@ -50,17 +47,14 @@ public class DecompileAxFileTests
     [Fact]
     public async Task Hsp2IncludeIsWrittenAsSeparateFileBesideMainSource()
     {
-        // Arrange
         string outputDir = NewOutputDirectory();
         DecompilerPipeline pipeline = NewPipeline();
         DecompilerOptions options = NewOptions("h2include", outputDir);
 
         try
         {
-            // Act
             DecompilerResult result = await pipeline.RunAsync(options, CancellationToken.None);
 
-            // Assert
             Assert.True(result.Success, result.ErrorMessage);
             Assert.Equal(
                 await File.ReadAllBytesAsync(Fixture("h2include.h2sub.expected.as")),

@@ -105,6 +105,7 @@ internal sealed class Usedll : Preprocessor
     internal void AddFunction(Function ret) => _functions.Add(ret);
 
     // A #usecom line itself declares the COM object's first function entry.
+    // ---
     // #usecom 行そのものが COM オブジェクトの最初の関数エントリを宣言する。
     internal bool IsDeclaredByHeader(Function function) =>
         Type == UsedllType.usecom && _functions.Count != 0 && _functions[0] == function;

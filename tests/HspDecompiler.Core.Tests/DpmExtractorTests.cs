@@ -14,22 +14,23 @@ public class DpmExtractorTests
         using var ms = new MemoryStream();
         using var bw = new BinaryWriter(ms);
 
-        // 16-byte header: magic, unknown, fileCount, unknown
-        bw.Write("DPMX"u8.ToArray()); // DPMX
-        bw.Write(0); // unknown
-        bw.Write(1); // fileCount = 1
-        bw.Write(0); // unknown
+        // One unencrypted 100-byte file: header, a 32-byte entry, then the data at offset 48.
+        // ---
+        // 暗号化されていない 100 バイトのファイル 1 つ。ヘッダー、32 バイトのエントリ、
+        // オフセット 48 からのデータの順に並ぶ。
+        bw.Write("DPMX"u8.ToArray());
+        bw.Write(0);
+        bw.Write(1);
+        bw.Write(0);
 
-        // 32-byte file entry: 16-byte name + 4 int32 fields
         byte[] name = new byte[16];
         System.Text.Encoding.ASCII.GetBytes("test.ax").CopyTo(name, 0);
         bw.Write(name);
-        bw.Write(0); // unknown
-        bw.Write(0); // EncryptionKey = 0 (not encrypted)
-        bw.Write(0); // FileOffset = 0
-        bw.Write(100); // FileSize = 100
+        bw.Write(0);
+        bw.Write(0);
+        bw.Write(0);
+        bw.Write(100);
 
-        // file data (fileOffsetStart=48, fileOffset=0 => seek to 48; data must be 100 bytes)
         bw.Write(new byte[100]);
         bw.Flush();
 
@@ -47,7 +48,6 @@ public class DpmExtractorTests
     [Fact]
     public void FromBinaryReaderFindsDpmAfterPackerHeader()
     {
-        // Arrange
         const int peOffset = 0x40;
         const int sectionTable = peOffset + 4 + 20 + 0xE0;
         const int dpmOffset = 0x1200;
@@ -81,10 +81,8 @@ public class DpmExtractorTests
         ms.Seek(0, SeekOrigin.Begin);
         using var br = new BinaryReader(ms, ShiftJisHelper.Encoding);
 
-        // Act
         var extractor = DpmExtractor.FromBinaryReader(br);
 
-        // Assert
         Assert.NotNull(extractor);
         Assert.Equal("start.ax", Assert.Single(extractor.FileList).FileName);
     }
@@ -105,23 +103,26 @@ public class DpmExtractorTests
         using var ms = new MemoryStream();
         using var bw = new BinaryWriter(ms);
 
+        // The entry's data offset of -1 points before the data section.
+        // ---
+        // エントリのデータ位置 -1 はデータ部より前を指す。
         bw.Write("DPM2"u8.ToArray());
-        bw.Write(1); // fileCount
-        bw.Write(64); // stringTableOffset
-        bw.Write(72); // dataSectionOffset
-        bw.Write(8); // stringTableSize
+        bw.Write(1);
+        bw.Write(64);
+        bw.Write(72);
+        bw.Write(8);
         bw.Write(0);
         bw.Write(0);
         bw.Write(0);
 
-        bw.Write(0); // flags
-        bw.Write(0); // nameOffset
-        bw.Write(1); // fileSize
         bw.Write(0);
-        bw.Write(-1); // dataOffset must not seek before data section
         bw.Write(0);
-        bw.Write(0); // dirOffset
-        bw.Write(0); // checksum
+        bw.Write(1);
+        bw.Write(0);
+        bw.Write(-1);
+        bw.Write(0);
+        bw.Write(0);
+        bw.Write(0);
 
         bw.Write("file.ax\0"u8.ToArray());
         bw.Write(new byte[10]);

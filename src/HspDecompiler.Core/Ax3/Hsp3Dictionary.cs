@@ -46,7 +46,7 @@ internal class Hsp3Dictionary
     }
 
     // The table ships inside the assembly so the decompiler runs without a file beside it.
-
+    // ---
     // 表はアセンブリに埋め込まれているため、隣にファイルが無くても動作する。
     private static Hsp3Dictionary LoadBuiltIn()
     {

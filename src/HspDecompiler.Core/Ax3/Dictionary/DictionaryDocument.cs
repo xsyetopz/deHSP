@@ -13,6 +13,7 @@ internal sealed class DictionaryDocument
 
 // A missing Value matches every value code of the type, as hspcmp stores variables, literals
 // and labels as one type code with an index or offset in the value field.
+// ---
 // Value が無い項目は型のすべての値コードに一致する。hspcmp は変数・リテラル・ラベルを
 // 1 つの型コードで表し、値フィールドに番号やオフセットを入れるため。
 internal sealed class CodeEntry
