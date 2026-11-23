@@ -101,6 +101,17 @@ internal sealed class AxHeader
     private readonly uint[] _data = new uint[25];
     internal const uint HeaderSize = 0x60;
 
+    // The format version hspcmp writes: 0x300 for 3.0, 0x301 for 3.1 to 3.4, 0x350 for 3.5 and
+    // 0x360 for 3.6 and later.
+    //
+    // hspcmp が書き込む形式のバージョン。3.0 は 0x300、3.1〜3.4 は 0x301、3.5 は 0x350、
+    // 3.6 以降は 0x360。
+    internal uint Version => _data[1];
+
+    internal const uint Version31 = 0x301;
+    internal const uint Version35 = 0x350;
+    internal const uint Version36 = 0x360;
+
     internal uint AllDataSize => _data[3];
     internal uint CodeStart => _data[4];
     internal uint CodeSize => _data[5] / (int)HeaderDataSize.Code;

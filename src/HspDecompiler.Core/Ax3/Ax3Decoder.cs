@@ -129,16 +129,27 @@ internal class Ax3Decoder : IAxDecoder, IIncludeSource
         // onexit ones), each #module nothing refers to, and stores each repeated string once
         // (codegen.cpp CMPMODE_OPTCODE). An uncalled import, an unused module or a repeated
         // string in the AX means optcode was off, so the source turns it off too; otherwise the
-        // default reproduces the pooled data segment. hspcmp 3.5 never pools, so its repeated
-        // strings ask for optcode 0, which it compiles to the same bytes.
+        // default reproduces the pooled data segment. Checked against each release: hspcmp 3.0a
+        // has no optcode and ignores the directive, 3.1 to 3.51 drop imports and modules but
+        // store every string, and pooling starts with 3.6. A repeated string therefore says
+        // nothing about an AX older than 0x360, and nothing at all about a 0x300 one, where the
+        // directive would only take a source line from a debug build.
         //
         // hspcmp の既定の optcode は、ソースが一度も名前を出さない #func・#cfunc(onexit 以外)
         // と、何からも参照されない #module を削り、同じ文字列を一度だけ格納する(codegen.cpp の
         // CMPMODE_OPTCODE)。呼ばれない import・使われないモジュール・重複した文字列が AX に
         // あれば optcode は切られていたため、ソースでも切る。それ以外は既定のままにすると共有
-        // されたデータセグメントを再現できる。hspcmp 3.5 は文字列を共有しないため重複から
-        // optcode 0 を書くが、3.5 はそれでも同じバイト列を出力する。
-        if (data.HasRepeatedStrings || HasUncalledImport(data) || data.Scope.HasUnusedModule)
+        // されたデータセグメントを再現できる。各リリースで確かめた結果、hspcmp 3.0a には
+        // optcode が無くこの指定を無視し、3.1〜3.51 は import とモジュールを削るが文字列は
+        // すべて格納し、共有は 3.6 からである。そのため重複した文字列は 0x360 より古い AX
+        // では何も示さず、0x300 の AX では何も示さない。そこでは指定はデバッグビルドの
+        // ソース行を 1 行使うだけである。
+        uint version = data.Header!.Version;
+        bool pooled = version >= AxHeader.Version36 && data.HasRepeatedStrings;
+        bool dropped =
+            version >= AxHeader.Version31
+            && (HasUncalledImport(data) || data.Scope.HasUnusedModule);
+        if (pooled || dropped)
         {
             directives.Add(KeepUnusedImportsDirective);
         }
@@ -159,12 +170,20 @@ internal class Ax3Decoder : IAxDecoder, IIncludeSource
 
         // hspcmp flags a parameter made of one literal by default (codegen.cpp CMPMODE_OPTPRM,
         // EXFLG_0). An AX with no flagged literal had the option off or came from a compiler
-        // without it, such as the HSP 3.0 build behind Elona.
+        // without it, such as the HSP 3.0 build behind Elona. The option arrived in 3.3: 3.0a
+        // ignores the directive, and 3.1 to 3.21 reject it as an illegal option name. 3.1 to
+        // 3.4 share format 0x301, and a 3.3 or 3.4 build with optprm 0 is the same AX as a
+        // 3.1 to 3.21 build, so the directive is written only from 0x350, where every hspcmp
+        // knows it.
         //
         // hspcmp は既定で 1 つのリテラルだけの引数に印を付ける（codegen.cpp の
         // CMPMODE_OPTPRM、EXFLG_0）。印の付いたリテラルが無い AX は、このオプションを
         // 切ったか、Elona を作った HSP 3.0 のようにこの機能の無いコンパイラで作られている。
-        if (!data.HasSingleItemFlags)
+        // このオプションは 3.3 で加わった。3.0a は指定を無視し、3.1〜3.21 は不正なオプション
+        // 名として拒否する。3.1〜3.4 は形式 0x301 を共有し、optprm 0 の 3.3・3.4 のビルドは
+        // 3.1〜3.21 のビルドと同じ AX になるため、すべての hspcmp が知っている 0x350 から
+        // だけ指定を書く。
+        if (!data.HasSingleItemFlags && version >= AxHeader.Version35)
         {
             directives.Add(PlainParametersDirective);
         }

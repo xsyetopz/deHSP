@@ -1,0 +1,3 @@
+mes "x" : mes "x"
+width 640, 480
+stop
