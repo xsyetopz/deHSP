@@ -121,4 +121,21 @@ public class BootOptionDirectivesTests
             )
         );
     }
+
+    [Fact]
+    public void Hsp64RuntimeImpliesTheHsp64Bit()
+    {
+        // hspcmp 3.8 beta 2 sets the bit for `#runtime "hsp3_64"` by itself.
+        //
+        // hspcmp 3.8 beta 2 は `#runtime "hsp3_64"` に対して自分でビットを立てる。
+        Assert.Equal(
+            ["#bootopt nogdip 1"],
+            BootOptionDirectives.Build(
+                BootOptionDirectives.Hsp64 | BootOptionDirectives.NoGdip,
+                utf8Strings: true,
+                usesAwait: false,
+                runtimeName: BootOptionDirectives.Hsp64Runtime
+            )
+        );
+    }
 }

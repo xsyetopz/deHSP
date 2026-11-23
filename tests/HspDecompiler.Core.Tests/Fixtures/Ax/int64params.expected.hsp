@@ -1,4 +1,3 @@
-#bootopt hsp64 1
 #runtime "hsp3_64"
 
 	goto *label_1

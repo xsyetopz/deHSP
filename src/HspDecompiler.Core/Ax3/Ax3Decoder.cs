@@ -229,7 +229,8 @@ internal class Ax3Decoder : ISourceDecoder
             BootOptionDirectives.Build(
                 data.Header!.BootOption,
                 data.ScriptStrings.IsUtf8,
-                data.UsesAwait
+                data.UsesAwait,
+                data.Runtime?.Name
             )
         );
         return directives;

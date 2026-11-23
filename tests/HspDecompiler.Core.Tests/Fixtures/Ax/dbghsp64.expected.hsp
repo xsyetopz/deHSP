@@ -27,5 +27,4 @@
 	newmod o, obj, 3
 	show o
 	stop
-#bootopt hsp64 1
 #runtime "hsp3_64"

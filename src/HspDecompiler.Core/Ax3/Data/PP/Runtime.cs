@@ -11,6 +11,8 @@ internal class Runtime : Preprocessor
 
     private readonly string? _name;
 
+    internal string? Name => _name;
+
     public override string ToString()
     {
         var strbd = new StringBuilder();

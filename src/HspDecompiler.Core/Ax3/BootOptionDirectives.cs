@@ -20,6 +20,7 @@ internal static class BootOptionDirectives
     internal const uint IoResume = 0x80000;
 
     internal const string Utf8StringsDirective = "#cmpopt utf8 1";
+    internal const string Hsp64Runtime = "hsp3_64";
 
     private static readonly (uint Bit, string Directive)[] s_plainOptions =
     [
@@ -37,7 +38,12 @@ internal static class BootOptionDirectives
     // 文字列を格納するため、どちらかのビットを持つランタイムは文字列を UTF-8 として読む。
     internal static bool IsUtf8Runtime(uint bootOption) => (bootOption & (Utf8 | Hsp64)) != 0;
 
-    internal static List<string> Build(uint bootOption, bool utf8Strings, bool usesAwait)
+    internal static List<string> Build(
+        uint bootOption,
+        bool utf8Strings,
+        bool usesAwait,
+        string? runtimeName = null
+    )
     {
         var lines = new List<string>();
 
@@ -60,9 +66,17 @@ internal static class BootOptionDirectives
             lines.Add("#bootopt utf8 1");
         }
 
+        // hspcmp 3.8 beta 2 sets the HSP64 bit for `#runtime "hsp3_64"` by itself, in debug and
+        // normal builds alike, so beside that runtime `#bootopt hsp64 1` only adds a source line,
+        // and in a debug build a line record.
+        //
+        // hspcmp 3.8 beta 2 は `#runtime "hsp3_64"` に対して自分で HSP64 ビットを立てる。
+        // デバッグビルドでも通常ビルドでも同じである。そのランタイムの横では
+        // `#bootopt hsp64 1` はソースの行を、デバッグビルドでは行の記録を増やすだけになる。
+        uint implied = runtimeName == Hsp64Runtime ? Hsp64 : 0;
         foreach ((uint bit, string directive) in s_plainOptions)
         {
-            if ((bootOption & bit) != 0)
+            if ((bootOption & ~implied & bit) != 0)
             {
                 lines.Add(directive);
             }
