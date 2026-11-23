@@ -35,7 +35,7 @@ internal sealed class MarkedPlacer(ModuleScope scope, List<string> headers)
         var parts = new List<List<string>>();
         var part = new Part();
         List<Slot> pending = headersFirst
-            ? [.. headers.Select(h => new Slot(h, 0, RowKind.Directive))]
+            ? [.. headers.Select(h => new Slot(h, 0, LineKind.Header))]
             : [];
         for (int i = 0; i < items.Count; i++)
         {
@@ -76,7 +76,7 @@ internal sealed class MarkedPlacer(ModuleScope scope, List<string> headers)
     // One line of output, or a row waiting for its line.
     //
     // 出力の 1 行、または自分の行を待つ行。
-    private sealed record Slot(string Text, int Tabs, RowKind Kind)
+    private sealed record Slot(string Text, int Tabs, LineKind Kind)
     {
         internal string Line => new string('\t', Tabs) + Text;
 
@@ -221,7 +221,7 @@ internal sealed class MarkedPlacer(ModuleScope scope, List<string> headers)
             return true;
         }
 
-        private static readonly Slot s_blank = new(string.Empty, 0, RowKind.Blank);
+        private static readonly Slot s_blank = new(string.Empty, 0, LineKind.Blank);
 
         private static bool EndsOpen(List<Slot> packed) => packed.Count > 0 && packed[^1].LetsJoin;
 
@@ -238,7 +238,7 @@ internal sealed class MarkedPlacer(ModuleScope scope, List<string> headers)
                 return slots;
             }
 
-            List<Slot> filled = [.. slots.Where(slot => slot.Kind != RowKind.Blank)];
+            List<Slot> filled = [.. slots.Where(slot => slot.Kind != LineKind.Blank)];
             int lines = filled.Count;
             var packed = new List<Slot>();
             foreach (Slot slot in filled)

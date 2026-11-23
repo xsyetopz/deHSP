@@ -2,31 +2,16 @@ using System.Collections.Generic;
 
 namespace HspDecompiler.Core.Ax3.Data.Layout;
 
-// How an output line may move when the source layout is rebuilt. Code, an #include and a
-// #module stay on the line the debug segment gives them. A closing brace, a #global and a
-// header directive go as early as the order allows, every other line just before the code that
-// follows it. A #module never joins other code, because a directive needs a line of its own.
+// One output line of the debug layout. Code, an #include and a #module are anchors: they stay on
+// the line the debug segment gives them. A closing brace, a #global and a header directive go as
+// early as the order allows, every other line just before the anchor that follows it.
 //
-// ソースの配置を組み直す時に出力行がどう動けるか。コード・#include・#module はデバッグ
-// セグメントが示す行から動かない。閉じ括弧・#global・ヘッダーの指定は順序が許す限り前に、
-// それ以外の行は後に続くコードの直前に置く。指示文は 1 行を占めるため、#module は他のコードと
-// つながらない。
-internal enum LayoutKind
-{
-    Code,
-    Include,
-    ModuleStart,
-    Close,
-    ModuleEnd,
-    Header,
-    Label,
-    Blank,
-    Other,
-}
-
+// デバッグの配置の出力 1 行。コード・#include・#module はアンカーであり、デバッグセグメントが
+// 示す行から動かない。閉じ括弧・#global・ヘッダーの指定は順序が許す限り前に、それ以外の行は
+// 後に続くアンカーの直前に置く。
 internal sealed class LayoutItem
 {
-    internal LayoutItem(LayoutKind kind, string text, int tabs, int file, int target)
+    internal LayoutItem(LineKind kind, string text, int tabs, int file, int target)
     {
         Kind = kind;
         Text = text;
@@ -35,7 +20,7 @@ internal sealed class LayoutItem
         Target = target;
     }
 
-    internal LayoutKind Kind { get; }
+    internal LineKind Kind { get; }
 
     internal string Text { get; }
 
@@ -69,8 +54,7 @@ internal sealed class LayoutItem
     // つないだ行の元になった項目。ラベルとそれが指す文など。
     internal IReadOnlyList<LayoutItem>? Parts { get; init; }
 
-    internal bool IsAnchor =>
-        Kind is LayoutKind.Code or LayoutKind.Include or LayoutKind.ModuleStart;
+    internal bool IsAnchor => Kind is LineKind.Code or LineKind.Include or LineKind.ModuleStart;
 
-    internal bool IsEarly => Kind is LayoutKind.Close or LayoutKind.ModuleEnd or LayoutKind.Header;
+    internal bool IsEarly => Kind is LineKind.Close or LineKind.ModuleEnd or LineKind.Header;
 }

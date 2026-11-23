@@ -12,10 +12,10 @@ public class MarkedLayoutTests
 {
     private static AxData Hsp33() => new() { Release = new([CompilerReleases.Hsp33]) };
 
-    private static MarkedRow Row(RowKind kind, params int[] escapes) =>
+    private static MarkedRow Row(LineKind kind, params int[] escapes) =>
         new(new CommentLine("x"), kind, escapes);
 
-    private static MarkedItem Item(LogicalLine line, RowKind kind, int target = 0) =>
+    private static MarkedItem Item(LogicalLine line, LineKind kind, int target = 0) =>
         new(line, kind, []) { Target = target };
 
     private static List<List<string>>? Place(List<MarkedItem> items, params string[] headers) =>
@@ -25,12 +25,12 @@ public class MarkedLayoutTests
     public void BlankRowsTakeNoLineAndCodeJoinsCodeOrLabel()
     {
         var table = new RowTable([
-            Row(RowKind.Label),
-            Row(RowKind.Code),
-            Row(RowKind.Blank),
-            Row(RowKind.Close),
-            Row(RowKind.Directive),
-            Row(RowKind.Code),
+            Row(LineKind.Label),
+            Row(LineKind.Code),
+            Row(LineKind.Blank),
+            Row(LineKind.Close),
+            Row(LineKind.Directive),
+            Row(LineKind.Code),
         ]);
 
         int[] widths = [.. Enumerable.Range(0, 6).Select(table.Width)];
@@ -43,7 +43,7 @@ public class MarkedLayoutTests
     [Fact]
     public void StringRecordTakesTheLiteralWhoseBreaksReachIt()
     {
-        var table = new RowTable([Row(RowKind.Directive), Row(RowKind.Code, 0, 2)]);
+        var table = new RowTable([Row(LineKind.Directive), Row(LineKind.Code, 0, 2)]);
         var events = MarkEvents.Build(table, Hsp33(), false, false);
 
         MarkChoice[]? choices = MarkMatcher.Match(table, events, [4], false);
@@ -56,7 +56,7 @@ public class MarkedLayoutTests
     [Fact]
     public void StringTakesNoRecordWhenSomeCandidateDoesNotRecordStrings()
     {
-        var table = new RowTable([Row(RowKind.Directive), Row(RowKind.Code, 0, 2)]);
+        var table = new RowTable([Row(LineKind.Directive), Row(LineKind.Code, 0, 2)]);
         var data = new AxData { Release = new([CompilerReleases.Hsp321, CompilerReleases.Hsp33]) };
         var events = MarkEvents.Build(table, data, false, false);
 
@@ -71,10 +71,10 @@ public class MarkedLayoutTests
     public void RecordBeforeItsRowsCanReachStartsANewFile()
     {
         var table = new RowTable([
-            Row(RowKind.Directive),
-            Row(RowKind.Directive),
-            Row(RowKind.Directive),
-            Row(RowKind.Code, 0),
+            Row(LineKind.Directive),
+            Row(LineKind.Directive),
+            Row(LineKind.Directive),
+            Row(LineKind.Code, 0),
         ]);
         var events = MarkEvents.Build(table, Hsp33(), false, false);
 
@@ -87,7 +87,7 @@ public class MarkedLayoutTests
     [Fact]
     public void RecordWithoutAnyEventFindsNoLayout()
     {
-        var table = new RowTable([Row(RowKind.Code)]);
+        var table = new RowTable([Row(LineKind.Code)]);
         var events = MarkEvents.Build(table, Hsp33(), false, false);
 
         Assert.Null(MarkMatcher.Match(table, events, [1], false));
@@ -96,7 +96,7 @@ public class MarkedLayoutTests
     [Fact]
     public void RecordWithoutAnyEventIsFreeAfterTheMacroDefinition()
     {
-        var table = new RowTable([Row(RowKind.Code), Row(RowKind.Code)]);
+        var table = new RowTable([Row(LineKind.Code), Row(LineKind.Code)]);
         var events = MarkEvents.Build(table, Hsp33(), false, false);
 
         MarkChoice[]? choices = MarkMatcher.Match(table, events, [3], true);
@@ -108,7 +108,7 @@ public class MarkedLayoutTests
     [Fact]
     public void FreeRecordNeedsALineBetweenTheDefinitionAndItself()
     {
-        var table = new RowTable([Row(RowKind.Code)]);
+        var table = new RowTable([Row(LineKind.Code)]);
         var events = MarkEvents.Build(table, Hsp33(), false, false);
 
         Assert.Null(MarkMatcher.Match(table, events, [2], true));
@@ -117,7 +117,7 @@ public class MarkedLayoutTests
     [Fact]
     public void FreeRecordFollowsTheRowsOfTheEventBeforeIt()
     {
-        var table = new RowTable([Row(RowKind.Code, 1), Row(RowKind.Code)]);
+        var table = new RowTable([Row(LineKind.Code, 1), Row(LineKind.Code)]);
         var events = MarkEvents.Build(table, Hsp33(), false, false);
 
         MarkChoice[]? choices = MarkMatcher.Match(table, events, [3, 5], true);
@@ -131,10 +131,10 @@ public class MarkedLayoutTests
     public void LineRecordMacroUseStandsOnTheLineBeforeItsRecord()
     {
         List<List<string>>? parts = Place([
-            Item(LineRecordMacro.Definition(), RowKind.Directive, 1),
-            Item(new CommentLine("a"), RowKind.Code),
-            Item(LineRecordMacro.Use(), RowKind.Directive, 3),
-            Item(new CommentLine("b"), RowKind.Code),
+            Item(LineRecordMacro.Definition(), LineKind.Directive, 1),
+            Item(new CommentLine("a"), LineKind.Code),
+            Item(LineRecordMacro.Use(), LineKind.Directive, 3),
+            Item(new CommentLine("b"), LineKind.Code),
         ]);
 
         Assert.NotNull(parts);
@@ -148,9 +148,9 @@ public class MarkedLayoutTests
     public void DirectiveStandsOnItsRecordedLine()
     {
         List<List<string>>? parts = Place([
-            Item(new CommentLine("a"), RowKind.Directive),
-            Item(new ModuleStart(string.Empty, true, null, -1), RowKind.Directive, 4),
-            Item(new EndOfModule(-1), RowKind.Directive, 5),
+            Item(new CommentLine("a"), LineKind.Directive),
+            Item(new ModuleStart(string.Empty, true, null, -1), LineKind.ModuleStart, 4),
+            Item(new EndOfModule(-1), LineKind.ModuleEnd, 5),
         ]);
 
         Assert.NotNull(parts);
@@ -161,9 +161,9 @@ public class MarkedLayoutTests
     public void BlankRowsDropWhenTheLinesAreShort()
     {
         List<List<string>>? parts = Place([
-            Item(new CommentLine(), RowKind.Blank),
-            Item(new CommentLine("a"), RowKind.Directive),
-            Item(new ModuleStart("m", false, null, -1), RowKind.Directive, 2),
+            Item(new CommentLine(), LineKind.Blank),
+            Item(new CommentLine("a"), LineKind.Directive),
+            Item(new ModuleStart("m", false, null, -1), LineKind.ModuleStart, 2),
         ]);
 
         Assert.NotNull(parts);
@@ -174,9 +174,9 @@ public class MarkedLayoutTests
     public void DirectiveWithoutRoomFindsNoLayout()
     {
         List<List<string>>? parts = Place([
-            Item(new CommentLine("a"), RowKind.Directive),
-            Item(new CommentLine("b"), RowKind.Directive),
-            Item(new ModuleStart("m", false, null, -1), RowKind.Directive, 2),
+            Item(new CommentLine("a"), LineKind.Directive),
+            Item(new CommentLine("b"), LineKind.Directive),
+            Item(new ModuleStart("m", false, null, -1), LineKind.ModuleStart, 2),
         ]);
 
         Assert.Null(parts);
@@ -185,14 +185,14 @@ public class MarkedLayoutTests
     [Fact]
     public void NewPartEndsThePreviousFileWithItsInclude()
     {
-        MarkedItem restart = Item(new ModuleStart("b", false, null, -1), RowKind.Directive, 1);
+        MarkedItem restart = Item(new ModuleStart("b", false, null, -1), LineKind.ModuleStart, 1);
         restart.StartsPart = true;
 
         List<List<string>>? parts = Place([
-            Item(new ModuleStart("a", false, null, -1), RowKind.Directive, 3),
-            Item(new EndOfModule(-1), RowKind.Directive, 4),
+            Item(new ModuleStart("a", false, null, -1), LineKind.ModuleStart, 3),
+            Item(new EndOfModule(-1), LineKind.ModuleEnd, 4),
             restart,
-            Item(new EndOfModule(-1), RowKind.Directive, 2),
+            Item(new EndOfModule(-1), LineKind.ModuleEnd, 2),
         ]);
 
         Assert.NotNull(parts);
@@ -206,13 +206,13 @@ public class MarkedLayoutTests
     [Fact]
     public void StringEndsOnItsRecordedLine()
     {
-        var row = new MarkedItem(new CommentLine(" s = \"a\\nb\\nc\""), RowKind.Code, [2])
+        var row = new MarkedItem(new CommentLine(" s = \"a\\nb\\nc\""), LineKind.Code, [2])
         {
             Ends = new SortedDictionary<int, int> { [0] = 3 },
         };
 
         List<List<string>>? parts = Place([
-            Item(new ModuleStart("m", false, null, -1), RowKind.Directive, 1),
+            Item(new ModuleStart("m", false, null, -1), LineKind.ModuleStart, 1),
             row,
         ]);
 
@@ -224,7 +224,7 @@ public class MarkedLayoutTests
     public void HeadersWithoutRoomGoAfterTheCode()
     {
         List<List<string>>? parts = Place(
-            [Item(new ModuleStart("m", false, null, -1), RowKind.Directive, 1)],
+            [Item(new ModuleStart("m", false, null, -1), LineKind.ModuleStart, 1)],
             "#runtime \"hsp3cl\""
         );
 

@@ -12,6 +12,9 @@ internal class CommentLine : LogicalLine
     }
 
     private readonly string? _comment;
+
+    internal bool IsBlank => _comment == null;
+
     internal override int TokenOffset => -1;
 
     internal override int TabCount => 0;

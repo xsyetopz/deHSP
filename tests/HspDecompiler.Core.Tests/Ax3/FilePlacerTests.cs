@@ -6,7 +6,7 @@ namespace HspDecompiler.Core.Tests.Ax3;
 
 public class FilePlacerTests
 {
-    private static LayoutItem Item(LayoutKind kind, string text, int target = 0) =>
+    private static LayoutItem Item(LineKind kind, string text, int target = 0) =>
         new(kind, text, 0, 1, target);
 
     [Fact]
@@ -15,7 +15,7 @@ public class FilePlacerTests
         var placer = new FilePlacer();
 
         List<string> lines = placer.Place(
-            [Item(LayoutKind.Code, "a = 1", 1), Item(LayoutKind.Code, "b = 2", 1)],
+            [Item(LineKind.Code, "a = 1", 1), Item(LineKind.Code, "b = 2", 1)],
             1
         );
 
@@ -28,7 +28,7 @@ public class FilePlacerTests
         var placer = new FilePlacer();
 
         List<string> lines = placer.Place(
-            [Item(LayoutKind.Code, "gcount = 1", 1), Item(LayoutKind.ModuleStart, "#module m", 1)],
+            [Item(LineKind.Code, "gcount = 1", 1), Item(LineKind.ModuleStart, "#module m", 1)],
             2
         );
 
@@ -43,10 +43,10 @@ public class FilePlacerTests
 
         List<string> lines = placer.Place(
             [
-                Item(LayoutKind.Header, "#bootopt hsp64 1"),
-                Item(LayoutKind.Code, "a = 1", 1),
-                Item(LayoutKind.Blank, string.Empty),
-                Item(LayoutKind.Code, "b = 2", 4),
+                Item(LineKind.Header, "#bootopt hsp64 1"),
+                Item(LineKind.Code, "a = 1", 1),
+                Item(LineKind.Blank, string.Empty),
+                Item(LineKind.Code, "b = 2", 4),
             ],
             4
         );
@@ -62,9 +62,9 @@ public class FilePlacerTests
 
         List<string> lines = placer.Place(
             [
-                Item(LayoutKind.Header, "#bootopt hsp64 1"),
-                Item(LayoutKind.Code, "a = 1", 1),
-                Item(LayoutKind.Code, "b = 2", 2),
+                Item(LineKind.Header, "#bootopt hsp64 1"),
+                Item(LineKind.Code, "a = 1", 1),
+                Item(LineKind.Code, "b = 2", 2),
             ],
             2
         );
@@ -79,7 +79,7 @@ public class FilePlacerTests
         var placer = new FilePlacer();
 
         List<string> lines = placer.Place(
-            [Item(LayoutKind.Code, "s = {\"x\ny\"}", 1), Item(LayoutKind.Code, "mes s", 3)],
+            [Item(LineKind.Code, "s = {\"x\ny\"}", 1), Item(LineKind.Code, "mes s", 3)],
             3
         );
 

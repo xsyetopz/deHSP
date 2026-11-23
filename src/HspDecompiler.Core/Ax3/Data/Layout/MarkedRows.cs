@@ -1,38 +1,12 @@
 using System.Collections.Generic;
-using HspDecompiler.Core.Ax3.Data.Line;
-using HspDecompiler.Core.Ax3.Data.PP;
 
 namespace HspDecompiler.Core.Ax3.Data.Layout;
 
-// How an output line of a normal build may share a source line. Code and a closing brace may
-// follow code, a brace or a label on its line ("*l : mes", "} else {"). A label, a directive or a
-// comment starts a line of its own, and nothing may follow a directive or a comment on it.
-//
-// 通常ビルドの出力行がソース行をどう共有できるか。コードと閉じ括弧は、コード・括弧・ラベルの
-// 後ろに同じ行で続けられる("*l : mes"、"} else {")。ラベル・指示文・コメントは自分の行で
-// 始まり、指示文とコメントの後ろには何も続けられない。
-internal enum RowKind
-{
-    Code,
-    Close,
-    Label,
-    Blank,
-    Directive,
-}
-
-internal static class RowKinds
-{
-    internal static bool TakesJoin(this RowKind kind) => kind is RowKind.Code or RowKind.Close;
-
-    internal static bool LetsJoin(this RowKind kind) =>
-        kind is RowKind.Code or RowKind.Close or RowKind.Label;
-}
-
-internal sealed class MarkedRow(LogicalLine line, RowKind kind, int[] escapes)
+internal sealed class MarkedRow(LogicalLine line, LineKind kind, int[] escapes)
 {
     internal LogicalLine Line { get; } = line;
 
-    internal RowKind Kind { get; } = kind;
+    internal LineKind Kind { get; } = kind;
 
     // The "\n" escapes of each "..." literal of a code row, in order.
     //
@@ -64,17 +38,17 @@ internal sealed class RowTable
         {
             MarkedRow row = rows[i];
             int width =
-                row.Kind == RowKind.Blank ? 0
+                row.Kind == LineKind.Blank ? 0
                 : row.TakesJoin && letsJoin ? 0
                 : 1;
             _lines[i + 1] = _lines[i] + width;
-            letsJoin = row.Kind == RowKind.Blank ? letsJoin : row.LetsJoin;
+            letsJoin = row.Kind == LineKind.Blank ? letsJoin : row.LetsJoin;
         }
 
         _next[rows.Count] = rows.Count;
         for (int i = rows.Count - 1; i >= 0; i--)
         {
-            _next[i] = rows[i].Kind == RowKind.Blank ? _next[i + 1] : i;
+            _next[i] = rows[i].Kind == LineKind.Blank ? _next[i + 1] : i;
         }
     }
 
@@ -102,28 +76,17 @@ internal sealed class RowTable
                 continue;
             }
 
-            if (line is PreprocessorDeclaration { Declared: Runtime })
+            LineKind kind = LineKinds.Of(line);
+            if (kind == LineKind.Header)
             {
                 headers.Add(line);
                 continue;
             }
 
-            RowKind kind = KindOf(line);
-            int[] escapes = kind == RowKind.Code ? LongStrings.Escapes(line.ToString()) : [];
+            int[] escapes = kind == LineKind.Code ? LongStrings.Escapes(line.ToString()) : [];
             rows.Add(new MarkedRow(line, kind, escapes));
         }
 
         return rows;
     }
-
-    internal static RowKind KindOf(LogicalLine line) =>
-        line switch
-        {
-            ScopeEnd => RowKind.Close,
-            PreprocessorDeclaration { Declared: Label { Function: null } } => RowKind.Label,
-            CommentLine when line.ToString().Length == 0 => RowKind.Blank,
-            PreprocessorDeclaration or CommentLine or UnknownLine => RowKind.Directive,
-            ModuleStart or EndOfModule => RowKind.Directive,
-            _ => RowKind.Code,
-        };
 }

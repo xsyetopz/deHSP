@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using HspDecompiler.Core.Abstractions;
 using HspDecompiler.Core.Ax3.Data.Line;
-using HspDecompiler.Core.Ax3.Data.PP;
 using HspDecompiler.Core.Pipeline;
 
 namespace HspDecompiler.Core.Ax3.Data.Layout;
@@ -91,7 +90,7 @@ internal static class SourceLayout
     {
         List<LayoutItem> items =
         [
-            .. header.Select(text => new LayoutItem(LayoutKind.Header, text, 0, mainFile, 0)),
+            .. header.Select(text => new LayoutItem(LineKind.Header, text, 0, mainFile, 0)),
         ];
         int first = items.Count;
         ModuleScope scope = data.Scope;
@@ -133,26 +132,28 @@ internal static class SourceLayout
 
             text = LongStrings.Render(text, pending);
             return line is ModuleStart
-                ? new LayoutItem(LayoutKind.ModuleStart, text, 0, record.File, record.Line)
-                : new LayoutItem(LayoutKind.Code, text, line.TabCount, record.File, record.Line);
+                ? new LayoutItem(LineKind.ModuleStart, text, 0, record.File, record.Line)
+                : new LayoutItem(LineKind.Code, text, line.TabCount, record.File, record.Line);
         }
 
         if (line is EndOfModule end)
         {
-            return new LayoutItem(LayoutKind.ModuleEnd, text, 0, -1, 0)
+            return new LayoutItem(LineKind.ModuleEnd, text, 0, -1, 0)
             {
                 CodeOffset = end.ExitOffset,
             };
         }
 
-        LayoutKind kind = line switch
+        // Code without a record of its line has no line to keep, so it waits for the next
+        // anchor like any line without code.
+        //
+        // 行の記録の無いコードは保つ行を持たないため、コードの無い行と同じく次のアンカーを待つ。
+        LineKind kind = LineKinds.Of(line);
+        if (kind is LineKind.Code or LineKind.ModuleStart)
         {
-            ScopeEnd => LayoutKind.Close,
-            PreprocessorDeclaration { Declared: Runtime } => LayoutKind.Header,
-            PreprocessorDeclaration { Declared: Label { Function: null } } => LayoutKind.Label,
-            CommentLine when text.Length == 0 => LayoutKind.Blank,
-            _ => LayoutKind.Other,
-        };
+            kind = LineKind.Directive;
+        }
+
         return new LayoutItem(kind, text, line.TabCount, -1, 0);
     }
 
@@ -224,11 +225,11 @@ internal static class SourceLayout
         int module = -1;
         for (int i = first; i < items.Count; i++)
         {
-            if (items[i].Kind == LayoutKind.ModuleStart)
+            if (items[i].Kind == LineKind.ModuleStart)
             {
                 module = items[i].File;
             }
-            else if (items[i].Kind == LayoutKind.ModuleEnd)
+            else if (items[i].Kind == LineKind.ModuleEnd)
             {
                 items[i].File = module;
             }
@@ -274,7 +275,7 @@ internal static class SourceLayout
             text = "; " + text;
         }
 
-        return new LayoutItem(LayoutKind.Include, text, 0, include.Parent, include.Line);
+        return new LayoutItem(LineKind.Include, text, 0, include.Parent, include.Line);
     }
 
     // The include goes after the last code line before it and any braces that close there. A
@@ -288,11 +289,8 @@ internal static class SourceLayout
         while (
             index < items.Count
             && (
-                items[index].Kind == LayoutKind.Close
-                || (
-                    items[index].Kind == LayoutKind.ModuleEnd
-                    && items[index].CodeOffset <= childCode
-                )
+                items[index].Kind == LineKind.Close
+                || (items[index].Kind == LineKind.ModuleEnd && items[index].CodeOffset <= childCode)
             )
         )
         {
@@ -301,7 +299,7 @@ internal static class SourceLayout
 
         if (index == 0)
         {
-            index = items.FindIndex(item => item.Kind != LayoutKind.Header);
+            index = items.FindIndex(item => item.Kind != LineKind.Header);
             index = index < 0 ? items.Count : index;
         }
 
@@ -347,7 +345,7 @@ internal static class SourceLayout
         names.IsCommon(file)
         && !(
             byFile.TryGetValue(file, out List<LayoutItem>? items)
-            && items.Any(item => item.Kind == LayoutKind.Code)
+            && items.Any(item => item.Kind == LineKind.Code)
         );
 
     // hspcmp counts one more line in the main file for the end code it appends after the source.

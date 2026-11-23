@@ -86,7 +86,7 @@ internal static class ColonIfs
         if (
             line < lines.Count
             && !split.Contains(line)
-            && members[line] is [{ Kind: LayoutKind.Label } label, { } anchor, ..]
+            && members[line] is [{ Kind: LineKind.Label } label, { } anchor, ..]
         )
         {
             lines[line - 1] = new string('\t', label.Tabs) + label.Text;
@@ -159,13 +159,13 @@ internal static class ColonIfs
             LayoutItem item = order[i];
             if (
                 !lineOf.TryGetValue(item, out int line)
-                || item.Kind is not (LayoutKind.Code or LayoutKind.Close)
+                || item.Kind is not (LineKind.Code or LineKind.Close)
             )
             {
                 return false;
             }
 
-            code |= item.Kind == LayoutKind.Code;
+            code |= item.Kind == LineKind.Code;
             if (line != block.Line && !ClosesOnly(members[line]))
             {
                 return false;
@@ -179,7 +179,7 @@ internal static class ColonIfs
     }
 
     private static bool ClosesOnly(List<LayoutItem> items) =>
-        items.Count > 0 && items.All(item => item.Kind == LayoutKind.Close);
+        items.Count > 0 && items.All(item => item.Kind == LineKind.Close);
 
     // Conditions that depend on other blocks: the partner qualifies, every block inside
     // qualifies, and on the open line only closes of qualifying blocks follow the chain.

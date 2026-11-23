@@ -13,11 +13,11 @@ namespace HspDecompiler.Core.Ax3.Data.Layout;
 //
 // 通常ビルドの出力行と、それが立つべき行。#module・#global は記録の行に、文字列の行はその
 // {"..."} リテラルが記録の行で終わるように置く。
-internal sealed class MarkedItem(LogicalLine line, RowKind kind, int[] escapes)
+internal sealed class MarkedItem(LogicalLine line, LineKind kind, int[] escapes)
 {
     internal LogicalLine Line { get; } = line;
 
-    internal RowKind Kind { get; } = kind;
+    internal LineKind Kind { get; } = kind;
 
     internal int[] Escapes { get; } = escapes;
 
@@ -268,7 +268,7 @@ internal static class MarkedModules
     }
 
     private static MarkedItem MacroItem(LineRecordMacro line, int target) =>
-        new(line, RowKind.Directive, []) { Target = target };
+        new(line, LineKind.Directive, []) { Target = target };
 
     // The rows being turned into items, with the module blocks rebuilt so far.
     //
@@ -304,7 +304,7 @@ internal static class MarkedModules
             {
                 var exit = (Label)((PreprocessorDeclaration)row.Line).Declared!;
                 items.Add(
-                    new MarkedItem(new EndOfModule(exit.TokenOffset), RowKind.Directive, [])
+                    new MarkedItem(new EndOfModule(exit.TokenOffset), LineKind.ModuleEnd, [])
                     {
                         Target = end.Line,
                     }
@@ -330,7 +330,7 @@ internal static class MarkedModules
                 items.Add(
                     new MarkedItem(
                         new ModuleStart(string.Empty, true, null, -1),
-                        RowKind.Directive,
+                        LineKind.ModuleStart,
                         []
                     )
                     {
@@ -338,7 +338,7 @@ internal static class MarkedModules
                     }
                 );
                 items.Add(
-                    new MarkedItem(new EndOfModule(-1), RowKind.Directive, [])
+                    new MarkedItem(new EndOfModule(-1), LineKind.ModuleEnd, [])
                     {
                         Target = lineOf[block.End],
                     }
@@ -357,7 +357,7 @@ internal static class MarkedModules
             {
                 Used = block.Used,
             };
-            items.Add(new MarkedItem(start, RowKind.Directive, []) { Target = line });
+            items.Add(new MarkedItem(start, LineKind.ModuleStart, []) { Target = line });
             Modules.Add(new ModuleRange(name, startOffset, exitOffset));
         }
     }

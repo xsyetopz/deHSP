@@ -54,7 +54,7 @@ internal sealed class FilePlacer
             {
                 Flush(item);
             }
-            else if (item.Kind == LayoutKind.Header)
+            else if (item.Kind == LineKind.Header)
             {
                 _headers.Enqueue(item);
             }
@@ -99,15 +99,14 @@ internal sealed class FilePlacer
     // アンカーが既に書いた行に属する。同じ行の次の文である。
     private void FlushOnCurrentLine(LayoutItem anchor)
     {
-        bool sameLine =
-            anchor.Target == _lines.Count - _extraLines && anchor.Kind == LayoutKind.Code;
+        bool sameLine = anchor.Target == _lines.Count - _extraLines && anchor.Kind == LineKind.Code;
         if (
             sameLine
             && _lastTakesCode
-            && _pending.All(p => p.Kind is LayoutKind.Close or LayoutKind.Blank)
+            && _pending.All(p => p.Kind is LineKind.Close or LineKind.Blank)
         )
         {
-            foreach (LayoutItem close in _pending.Where(p => p.Kind == LayoutKind.Close))
+            foreach (LayoutItem close in _pending.Where(p => p.Kind == LineKind.Close))
             {
                 Append(close);
             }
@@ -122,7 +121,7 @@ internal sealed class FilePlacer
     private void FlushBefore(LayoutItem anchor, int free)
     {
         var items = new List<LayoutItem>(_pending);
-        int room = free - items.Count(p => p.Kind != LayoutKind.Blank);
+        int room = free - items.Count(p => p.Kind != LineKind.Blank);
         for (int i = 0; i < room && _headers.Count > 0; i++)
         {
             items.Insert(i, _headers.Dequeue());
@@ -130,11 +129,11 @@ internal sealed class FilePlacer
 
         if (items.Count > free)
         {
-            items.RemoveAll(p => p.Kind == LayoutKind.Blank);
+            items.RemoveAll(p => p.Kind == LineKind.Blank);
         }
 
         LayoutItem? prefix = null;
-        if (items.Count > free && anchor.Kind == LayoutKind.Code && JoinsNext(items, anchor))
+        if (items.Count > free && anchor.Kind == LineKind.Code && JoinsNext(items, anchor))
         {
             prefix = items[^1];
             items.RemoveAt(items.Count - 1);
@@ -145,7 +144,7 @@ internal sealed class FilePlacer
         {
             while (
                 joined < items.Count
-                && items[joined].Kind == LayoutKind.Close
+                && items[joined].Kind == LineKind.Close
                 && items.Count - joined > free
             )
             {
@@ -174,9 +173,9 @@ internal sealed class FilePlacer
     private static bool JoinsNext(List<LayoutItem> items, LayoutItem anchor) =>
         items.Count > 0
         && (
-            items[^1].Kind == LayoutKind.Label
+            items[^1].Kind == LineKind.Label
             || (
-                items[^1].Kind == LayoutKind.Close
+                items[^1].Kind == LineKind.Close
                 && anchor.Text.StartsWith("else", System.StringComparison.Ordinal)
             )
         );
@@ -246,7 +245,7 @@ internal sealed class FilePlacer
         _members.Add([.. item.Parts ?? [item]]);
         AddLines(parts, 0);
         _extraLines = parts.Length - 1;
-        _lastTakesCode = item.Kind is LayoutKind.Code or LayoutKind.Close;
+        _lastTakesCode = item.Kind.TakesJoin();
     }
 
     private void Append(LayoutItem item)
