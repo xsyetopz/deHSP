@@ -1,0 +1,7 @@
+#define global __line_record(%1) %c
+
+	__line_record
+	mes 0
+	mes 1
+	mes 2
+	mes 3

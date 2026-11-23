@@ -1,0 +1,4 @@
+#define global R(%1) mes 1 %c mes %1
+	mes 0
+R 2
+	mes 3
