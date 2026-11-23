@@ -1,0 +1,33 @@
+#include "hspdef.as"
+	screen 0, 320, 240
+	dim a, 4
+	a = varsize(a)
+	b = int64(5)
+	strexchange "x.txt", 0
+	varprop a, 0
+	assert a = 0
+	logmes "hi"
+	print "p"
+	mes "m"
+	celbitmap 1, a
+	objcolor 1, 2, 3
+	rgbcolor 255
+	viewcalc 1, 2, 3
+	layerobj 1, 2, 3
+	gmulcolor 1, 2, 3
+	setcls 1
+	celputm 1, 2
+	c = getease(1, 2)
+	d = geteasef(1.0, 2.0)
+	e = notefind("a", 1)
+	f = powf(2.0, 3.0)
+	g = strtrim("a", 0, 32)
+	split "a", ",", s
+	strrep s, "a", "b"
+	setease 1, 2
+	sortval a, 0
+	sortstr s, 0
+	gfilter 1
+	cnvatos "a"
+	cnvstoa a, "x"
+	stop

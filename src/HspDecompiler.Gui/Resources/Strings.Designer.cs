@@ -63,7 +63,6 @@ namespace HspDecompiler.Gui.Resources
         internal static string AllFilesFilter => ResourceManager.GetString("AllFilesFilter", resourceCulture);
 
         // Messages
-        internal static string FailedToLoadDictionary => ResourceManager.GetString("FailedToLoadDictionary", resourceCulture);
         internal static string ErrorFormat => ResourceManager.GetString("ErrorFormat", resourceCulture);
     }
 }

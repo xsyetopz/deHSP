@@ -14,9 +14,6 @@ public sealed class DecompileVocalShifterTests
 
     private static string StartOrigHspPath => Path.Combine(FixturesDir, "start_orig.hsp");
 
-    private static string DictionaryPath =>
-        Path.Combine(AppContext.BaseDirectory, "Dictionary.csv");
-
     [Fact]
     public async Task DecompileVocalShifterProducesStartHspMatchingReference()
     {
@@ -29,14 +26,7 @@ public sealed class DecompileVocalShifterTests
         var progress = new NullProgressReporter();
         var pipeline = new DecompilerPipeline(logger, progress);
 
-        if (File.Exists(DictionaryPath))
-        {
-            bool initialized = pipeline.Initialize(DictionaryPath);
-            if (!initialized)
-            {
-                return;
-            }
-        }
+        Assert.True(pipeline.Initialize());
 
         string tempDir = Path.Combine(
             Path.GetTempPath(),

@@ -56,6 +56,5 @@
   <data name="AllFilesFilter" xml:space="preserve"><value>All Files</value></data>
 
   <!-- Messages -->
-  <data name="FailedToLoadDictionary" xml:space="preserve"><value>Failed to load Dictionary.csv</value></data>
   <data name="ErrorFormat" xml:space="preserve"><value>Error: {0}</value></data>
 </root>

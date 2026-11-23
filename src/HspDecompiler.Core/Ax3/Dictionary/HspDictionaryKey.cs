@@ -12,15 +12,11 @@ internal struct HspDictionaryKey : IComparable<HspDictionaryKey>, IEquatable<Hsp
         _allValue = key._allValue;
     }
 
-    internal HspDictionaryKey(string theType, string theValue)
+    internal HspDictionaryKey(int type, int? value)
     {
-        _type = DicParser.StringToInt32(theType);
-        _value = DicParser.StringToInt32(theValue);
-        _allValue = false;
-        if (_value == -1)
-        {
-            _allValue = true;
-        }
+        _type = type;
+        _value = value ?? -1;
+        _allValue = value is null;
     }
 
     internal int _type;

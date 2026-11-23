@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using HspDecompiler.Core.Ax3.Dictionary;
-using HspDecompiler.Core.Encoding;
 
 namespace HspDecompiler.Core.Ax3;
 
@@ -14,119 +15,80 @@ internal class Hsp3Dictionary
 
     private Hsp3Dictionary() { }
 
-    private readonly Dictionary<HspDictionaryKey, HspDictionaryValue> _codeDictionary = new();
-    private readonly Dictionary<int, string> _paramDictionary = new();
+    private readonly Dictionary<HspDictionaryKey, HspDictionaryValue> _codeDictionary = [];
+    private readonly Dictionary<int, string> _paramDictionary = [];
+
+    private const string EmbeddedResourceName = "HspDecompiler.Core.Ax3.Dictionary.json";
+
+    private static readonly Lazy<Hsp3Dictionary> s_builtIn = new(LoadBuiltIn);
+
+    internal static Hsp3Dictionary BuiltIn => s_builtIn.Value;
+
+    internal string Version { get; private set; } = "";
 
     internal static Hsp3Dictionary? FromFile(string filePath)
     {
         try
         {
             using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            using var reader = new StreamReader(stream, ShiftJisHelper.Encoding);
-            return FromReader(reader);
+            return FromStream(stream);
         }
-        catch (Exception ex) when (ex is IOException or FormatException or ArgumentException)
+        catch (Exception ex)
+            when (ex
+                    is IOException
+                        or UnauthorizedAccessException
+                        or JsonException
+                        or ArgumentException
+            )
         {
             return null;
         }
     }
 
-    private static IEnumerable<string[]> ReadCsvFields(TextReader reader)
+    // The table ships inside the assembly so the decompiler runs without a file beside it.
+
+    // 表はアセンブリに埋め込まれているため、隣にファイルが無くても動作する。
+    private static Hsp3Dictionary LoadBuiltIn()
     {
-        string? line;
-        while ((line = reader.ReadLine()) != null)
-        {
-            int commentIndex = line.IndexOf('#');
-            if (commentIndex >= 0)
-            {
-                line = line[..commentIndex];
-            }
-
-            line = line.Trim();
-            if (line.Length == 0)
-            {
-                continue;
-            }
-
-            yield return line.Split(',');
-        }
+        using Stream stream = typeof(Hsp3Dictionary).Assembly.GetManifestResourceStream(
+            EmbeddedResourceName
+        ) ?? throw new InvalidOperationException(EmbeddedResourceName);
+        return FromStream(stream);
     }
 
-    private static Hsp3Dictionary FromReader(TextReader reader)
+    private static Hsp3Dictionary FromStream(Stream stream)
     {
-        var dictionary = new Hsp3Dictionary();
-        foreach (string[] tokens in ReadCsvFields(reader))
+        DictionaryDocument document = JsonSerializer.Deserialize(
+            stream,
+            DictionaryJsonContext.Default.DictionaryDocument
+        ) ?? throw new JsonException(EmbeddedResourceName);
+        var dictionary = new Hsp3Dictionary { Version = document.Version };
+        foreach (
+            HspDictionaryKey key in from entry in document.Codes
+            let key = new HspDictionaryKey(entry.Type, entry.Value)
+            let value = new HspDictionaryValue(
+                entry.Name,
+                entry.Kind,
+                entry.Flags,
+                entry.Priority ?? -1
+            )
+            where !dictionary._codeDictionary.TryAdd(key, value)
+            select key
+        )
         {
-            if (tokens.Length == 0)
-            {
-                continue;
-            }
-
-            string first = tokens[0].Trim();
-            if (first.StartsWith('$'))
-            {
-                switch (first)
-                {
-                    case "$Code":
-                        dictionary.LoadCodeDictionaryFromReader(reader);
-                        break;
-                    case "$ParamType":
-                        dictionary.LoadParamDictionaryFromReader(reader);
-                        break;
-                    default:
-                        break;
-                }
-            }
+            throw new JsonException(key.ToString());
         }
+
+        foreach (
+            ParamTypeEntry entry in document.ParamTypes.Where(entry =>
+                !dictionary._paramDictionary.TryAdd(entry.Code, entry.Name)
+            )
+        )
+        {
+            throw new JsonException(entry.Name);
+        }
+
         return dictionary;
-    }
-
-    private void LoadCodeDictionaryFromReader(TextReader reader)
-    {
-        foreach (string[] tokens in ReadCsvFields(reader))
-        {
-            if (tokens.Length == 0)
-            {
-                continue;
-            }
-
-            if (tokens[0].Trim() == "$End")
-            {
-                return;
-            }
-
-            if (tokens.Length >= 4)
-            {
-                string[] extraFlags = new string[tokens.Length - 4];
-                Array.Copy(tokens, 4, extraFlags, 0, tokens.Length - 4);
-                var key = new HspDictionaryKey(tokens[0].Trim(), tokens[1].Trim());
-                var value = new HspDictionaryValue(tokens[2].Trim(), tokens[3].Trim(), extraFlags);
-                _codeDictionary.Add(key, value);
-            }
-        }
-    }
-
-    private void LoadParamDictionaryFromReader(TextReader reader)
-    {
-        foreach (string[] tokens in ReadCsvFields(reader))
-        {
-            if (tokens.Length == 0)
-            {
-                continue;
-            }
-
-            if (tokens[0].Trim() == "$End")
-            {
-                return;
-            }
-
-            if (tokens.Length >= 2)
-            {
-                int key = DicParser.StringToInt32(tokens[0].Trim());
-                string value = tokens[1].Trim();
-                _paramDictionary.Add(key, value);
-            }
-        }
     }
 
     internal bool CodeLookUp(HspDictionaryKey key, out HspDictionaryValue value)
@@ -142,22 +104,24 @@ internal class Hsp3Dictionary
             return true;
         }
 
-        if ((key._type == ExtendedCommandType) && (key._value >= ExtendedCommandValueThreshold))
+        if (key is { _type: ExtendedCommandType, _value: >= ExtendedCommandValueThreshold })
         {
             value._name = "comfunc";
             value._type = HspCodeType.ComFunction;
-            value._extra = HspCodeExtraOptions.NONE;
+            value._extra = HspCodeExtraOptions.None;
             return true;
         }
-        if (key._type >= PluginFunctionTypeBase)
+
+        if (key._type < PluginFunctionTypeBase)
         {
-            value._name = "pluginFunction";
-            value._operatorPriority = key._type - PluginFunctionTypeBase;
-            value._type = HspCodeType.PlugInFunction;
-            value._extra = HspCodeExtraOptions.NONE;
-            return true;
+            return false;
         }
-        return false;
+
+        value._name = "pluginFunction";
+        value._operatorPriority = key._type - PluginFunctionTypeBase;
+        value._type = HspCodeType.PlugInFunction;
+        value._extra = HspCodeExtraOptions.None;
+        return true;
     }
 
     internal bool ParamLookUp(int paramKey, out string? paramTypeName) =>
@@ -166,56 +130,23 @@ internal class Hsp3Dictionary
     internal List<string> GetAllFuncName()
     {
         var functionNames = new List<string>();
-        foreach (KeyValuePair<HspDictionaryKey, HspDictionaryValue> pair in _codeDictionary)
+        foreach (HspDictionaryValue value in _codeDictionary.Values)
         {
-            switch (pair.Value._type)
+            if (
+                value._type
+                is HspCodeType.HspFunction
+                    or HspCodeType.IfStatement
+                    or HspCodeType.OnEventStatement
+                    or HspCodeType.OnStatement
+                    or HspCodeType.McallStatement
+            )
             {
-                case HspCodeType.HspFunction:
-                case HspCodeType.IfStatement:
-                case HspCodeType.OnEventStatement:
-                case HspCodeType.OnStatement:
-                case HspCodeType.McallStatement:
-                    functionNames.Add(
-                        pair.Value._name.ToLower(System.Globalization.CultureInfo.CurrentCulture)
-                    );
-                    break;
-                case HspCodeType.NONE:
-                    break;
-                case HspCodeType.Operator:
-                    break;
-                case HspCodeType.Symbol:
-                    break;
-                case HspCodeType.Variable:
-                    break;
-                case HspCodeType.StringValue:
-                    break;
-                case HspCodeType.DoubleValue:
-                    break;
-                case HspCodeType.IntegerValue:
-                    break;
-                case HspCodeType.Param:
-                    break;
-                case HspCodeType.Label:
-                    break;
-                case HspCodeType.UserFunction:
-                    break;
-                case HspCodeType.DllFunction:
-                    break;
-                case HspCodeType.ComFunction:
-                    break;
-                case HspCodeType.PlugInFunction:
-                    break;
-                case HspCodeType.ElseStatement:
-                    break;
-                default:
-                    break;
+                functionNames.Add(value._name.ToLowerInvariant());
             }
         }
 
-        foreach (KeyValuePair<int, string> pair in _paramDictionary)
-        {
-            functionNames.Add(pair.Value.ToLower(System.Globalization.CultureInfo.CurrentCulture));
-        }
+        functionNames.AddRange(_paramDictionary.Values.Select(name => name.ToLowerInvariant()));
+
         return functionNames;
     }
 }

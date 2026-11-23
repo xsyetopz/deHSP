@@ -1,0 +1,33 @@
+#cmpopt optcode 0
+#runtime "hsp3_64"
+
+	screen 0, 320, 240
+	dim var_0, 4
+	var_0 = varsize(var_0)
+	var_1 = int64(5)
+	strexchange "x.txt", 0
+	varprop var_0, 0
+	mes "p"
+	mes "m"
+	celbitmap 1, var_0
+	objcolor 1, 2, 3
+	rgbcolor 255
+	viewcalc 1, 2, 3
+	layerobj 1, 2, 3
+	gmulcolor 1, 2, 3
+	setcls 1
+	celputm 1, 2
+	var_2 = getease(1, 2)
+	var_3 = geteasef(1.0, 2.0)
+	var_4 = notefind("a", 1)
+	var_5 = powf(2.0, 3.0)
+	var_6 = strtrim("a", 0, 32)
+	split "a", ",", var_7
+	strrep var_7, "a", "b"
+	setease 1, 2
+	sortval var_0, 0
+	sortstr var_7, 0
+	gfilter 1
+	cnvatos "a"
+	cnvstoa var_0, "x"
+	stop
