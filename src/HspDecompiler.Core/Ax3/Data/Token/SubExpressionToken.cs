@@ -1,4 +1,5 @@
 using System.Text;
+using HspDecompiler.Core.Ax3.Data.Primitive;
 using HspDecompiler.Core.Pipeline;
 
 namespace HspDecompiler.Core.Ax3.Data.Token;
@@ -49,11 +50,11 @@ internal sealed class SubExpressionToken : OperandToken
         parenthesize ? "(" + operand + ")" : operand.ToString();
 
     private string LogicalText(LogicalOperators logical) =>
-        (_op!.ToString(), logical) switch
+        (_op!.Code, logical) switch
         {
-            ("&", LogicalOperators.Words) => "and",
+            (CalcCode.And, LogicalOperators.Words) => "and",
             (_, LogicalOperators.Words) => "or",
-            ("&", _) => "&&",
+            (CalcCode.And, _) => "&&",
             _ => "||",
         };
 
@@ -62,7 +63,7 @@ internal sealed class SubExpressionToken : OperandToken
     //
     // 二つの条件の間の & と | は論理演算子として読む。それ以外の値の間ではビット演算のまま。
     private bool IsLogical =>
-        _op!.ToString() is "&" or "|" && IsCondition(_p1!) && IsCondition(_p2!);
+        _op!.Code is CalcCode.And or CalcCode.Or && IsCondition(_p1!) && IsCondition(_p2!);
 
     private static bool IsCondition(OperandToken operand) =>
         operand.IsComparison || operand is SubExpressionToken { IsLogical: true };
@@ -91,7 +92,7 @@ internal sealed class SubExpressionToken : OperandToken
             return ToStringForceDefault();
         }
 
-        if (_op!.ToString() != "*")
+        if (_op!.Code != CalcCode.Multiply)
         {
             return ToStringForceDefault();
         }
@@ -106,9 +107,7 @@ internal sealed class SubExpressionToken : OperandToken
 
     internal override int Priority => _op!.Priority;
 
-    internal override bool IsComparison => _op!.Priority == ComparisonPriority;
-
-    private const int ComparisonPriority = 1;
+    internal override bool IsComparison => _op!.Code.IsComparison();
 
     internal override void CheckLabel()
     {

@@ -4,4 +4,6 @@ internal sealed class OperatorPrimitive : PrimitiveToken
 {
     internal OperatorPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet) { }
+
+    internal CalcCode Code => (CalcCode)Value;
 }
