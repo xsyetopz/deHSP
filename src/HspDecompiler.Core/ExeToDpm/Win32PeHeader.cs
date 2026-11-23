@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace HspDecompiler.Core.ExeToDpm;
 
@@ -193,15 +194,9 @@ internal sealed class IMAGE_SECTION_HEADER
         var ret = new IMAGE_SECTION_HEADER();
         try
         {
-            bool allZero = true;
             for (int i = 0; i < ImageSizeofShortName; i++)
             {
                 ret._name[i] = reader.ReadByte();
-                allZero &= (ret._name[i] == 0);
-            }
-            if (allZero)
-            {
-                return null;
             }
 
             ret._physicalAddress = reader.ReadUInt32();
@@ -325,21 +320,14 @@ internal sealed class Win32PeHeader
 {
     private IMAGE_DOS_HEADER? _dosHeader;
     private IMAGE_NT_HEADERS? _ntHeader;
-    private readonly List<IMAGE_SECTION_HEADER> _sectionHeaders = new();
+    private readonly List<IMAGE_SECTION_HEADER> _sectionHeaders = [];
 
-    internal long EndOfExecutableRegion
-    {
-        get
-        {
-            if (_sectionHeaders.Count == 0)
-            {
-                return -1;
-            }
-
-            IMAGE_SECTION_HEADER section = _sectionHeaders[^1];
-            return (section._pointerToRawData + section._sizeOfRawData);
-        }
-    }
+    internal long EndOfExecutableRegion =>
+        _sectionHeaders.Count == 0
+            ? -1
+            : _sectionHeaders.Max(section =>
+                (long)section._pointerToRawData + section._sizeOfRawData
+            );
 
     internal static Win32PeHeader? FromBinaryReader(BinaryReader reader)
     {
@@ -370,11 +358,24 @@ internal sealed class Win32PeHeader
                 return null;
             }
 
-            var section = IMAGE_SECTION_HEADER.FromBinaryReader(reader);
-            while (section != null)
+            // Packers such as UPX write their own header right after the section table, so the
+            // table is read by the count in the file header instead of up to an all-zero entry.
+            // ---
+            // UPX などのパッカーはセクション表の直後に独自のヘッダーを書くため、全ゼロの項目まで
+            // ではなく、ファイルヘッダーのセクション数だけ表を読む。
+            IMAGE_FILE_HEADER fileHeader = ret._ntHeader._fileHeader!;
+            reader.BaseStream.Seek(
+                startPosition + ret._dosHeader._e_lfanew + 24 + fileHeader._sizeOfOptionalHeader,
+                SeekOrigin.Begin
+            );
+            for (int i = 0; i < fileHeader._numberOfSections; i++)
             {
+                var section = IMAGE_SECTION_HEADER.FromBinaryReader(reader);
+                if (section == null)
+                {
+                    return null;
+                }
                 ret._sectionHeaders.Add(section);
-                section = IMAGE_SECTION_HEADER.FromBinaryReader(reader);
             }
             return ret;
         }
