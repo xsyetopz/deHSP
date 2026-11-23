@@ -62,11 +62,11 @@ Or drag-and-drop files onto the application window.
 
 ## Project Structure
 
-| Project              | Description                              |
-| -------------------- | ---------------------------------------- |
+| Project | Description |
+| --- | --- |
 | `HspDecompiler.Core` | Core decompiler library — all algorithms |
-| `HspDecompiler.Cli`  | Command-line interface                   |
-| `HspDecompiler.Gui`  | Avalonia cross-platform GUI              |
+| `HspDecompiler.Cli` | Command-line interface |
+| `HspDecompiler.Gui` | Avalonia cross-platform GUI |
 
 ## Dictionary.csv
 
@@ -74,15 +74,15 @@ Or drag-and-drop files onto the application window.
 
 ## History
 
-| Date       | Name                             | Version | Notes                                                                 |
-| ---------- | -------------------------------- | ------- | --------------------------------------------------------------------- |
-| 2006-01-28 | HSP Decompiler (HSP逆コンパイラ) | 1.0     | Initially released as shareware by Kitsutsuki                         |
-| 2007-09-10 | HSP Decompiler                   | 1.1     | HSP3 support added                                                    |
-| 2010-09-12 | HSP Decompiler                   | 1.2     | Released as PDS/OSS; bug fixes                                        |
-| 2012-01-13 | HSPdeco                          | 1.0     | `.ax` decode feature exposed; bug fixes. Author: minorshift (Mia)     |
-| 2015-12-15 | HSPdecom                         | 1.0     | Variable name restoration, dictionary data. Authors: Sitapuru, YSRKEN |
-| 2016-08-16 | HSPdecom                         | 1.1     | Decryption patches applied; republished on GitHub                     |
-| 2026-03-13 | deHSP                            | 2.0     | .NET 8.0 + Avalonia; CLI tool; cross-platform                         |
+| Date | Name | Version | Notes |
+| --- | --- | --- | --- |
+| 2006-01-28 | HSP Decompiler (HSP逆コンパイラ) | 1.0 | Initially released as shareware by Kitsutsuki |
+| 2007-09-10 | HSP Decompiler | 1.1 | HSP3 support added |
+| 2010-09-12 | HSP Decompiler | 1.2 | Released as PDS/OSS; bug fixes |
+| 2012-01-13 | HSPdeco | 1.0 | `.ax` decode feature exposed; bug fixes. Author: minorshift (Mia) |
+| 2015-12-15 | HSPdecom | 1.0 | Variable name restoration, dictionary data. Authors: Sitapuru, YSRKEN |
+| 2016-08-16 | HSPdecom | 1.1 | Decryption patches applied; republished on GitHub |
+| 2026-03-13 | deHSP | 2.0 | .NET 8.0 + Avalonia; CLI tool; cross-platform |
 
 ## License
 

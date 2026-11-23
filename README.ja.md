@@ -62,11 +62,11 @@ dotnet run --project src/HspDecompiler.Gui
 
 ## プロジェクト構成
 
-| プロジェクト         | 説明                               |
-| -------------------- | ---------------------------------- |
-| `HspDecompiler.Core` | コアライブラリ（全アルゴリズム）   |
-| `HspDecompiler.Cli`  | コマンドラインインターフェース     |
-| `HspDecompiler.Gui`  | Avalonia クロスプラットフォームGUI |
+| プロジェクト | 説明 |
+| --- | --- |
+| `HspDecompiler.Core` | コアライブラリ（全アルゴリズム） |
+| `HspDecompiler.Cli` | コマンドラインインターフェース |
+| `HspDecompiler.Gui` | Avalonia クロスプラットフォームGUI |
 
 ## Dictionary.csv
 
@@ -76,24 +76,24 @@ dotnet run --project src/HspDecompiler.Gui
 
 ### 作者
 
-| ソフト名                                                                 | 作者                                                                                                  | 説明                   |
-| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ---------------------- |
-| [HSP逆コンパイラ](http://www.vector.co.jp/soft/win95/prog/se390297.html) | [きつつき](http://www.vector.co.jp/vpack/browse/person/an043697.html)                                 | オリジナルのソフト     |
-| [HSPdeco](https://osdn.jp/projects/hspdeco/)                             | [minorshift](https://osdn.jp/users/minorshift/)                                                       | オリジナルの改良版     |
-| [HSPdecom](http://stpr18.blogspot.jp/2015/10/hspdecohspelona.html)       | [したぷる](https://www.blogger.com/profile/00794326060600750840)、[YSRKEN](https://github.com/YSRKEN) | HSPdecoの改良版        |
-| [HSPdecoのパッチ](http://vivibit.net/hspdeco/)                           | [xx2zz](http://vivibit.net/about/)                                                                    | 復号失敗時の対策パッチ |
+| ソフト名 | 作者 | 説明 |
+| --- | --- | --- |
+| [HSP逆コンパイラ](http://www.vector.co.jp/soft/win95/prog/se390297.html) | [きつつき](http://www.vector.co.jp/vpack/browse/person/an043697.html) | オリジナルのソフト |
+| [HSPdeco](https://osdn.jp/projects/hspdeco/) | [minorshift](https://osdn.jp/users/minorshift/) | オリジナルの改良版 |
+| [HSPdecom](http://stpr18.blogspot.jp/2015/10/hspdecohspelona.html) | [したぷる](https://www.blogger.com/profile/00794326060600750840)、[YSRKEN](https://github.com/YSRKEN) | HSPdecoの改良版 |
+| [HSPdecoのパッチ](http://vivibit.net/hspdeco/) | [xx2zz](http://vivibit.net/about/) | 復号失敗時の対策パッチ |
 
 ### バージョン履歴
 
-| 日付       | ソフト名        | バージョン | 説明                                                       |
-| ---------- | --------------- | ---------- | ---------------------------------------------------------- |
-| 2006/01/28 | HSP逆コンパイラ | 1.0        | 当初シェアウェアとして公開                                 |
-| 2007/09/10 | HSP逆コンパイラ | 1.1        | HSP3に対応                                                 |
-| 2010/09/12 | HSP逆コンパイラ | 1.2        | PDS・OSSになった他、バグ修正                               |
-| 2012/01/13 | HSPdeco         | 1.0        | axファイルのデコード機能を開放、バグ修正                   |
-| 2015/12/15 | HSPdecom        | 1.0        | 変数名復元をサポート、辞書データ追加                       |
-| 2016/08/16 | HSPdecom        | 1.1        | パッチを全て付加、GitHubに上げ直し                         |
-| 2026-03-13 | deHSP           | 2.0        | .NET 8.0 + Avalonia、CLIツール、クロスプラットフォーム対応 |
+| 日付 | ソフト名 | バージョン | 説明 |
+| --- | --- | --- | --- |
+| 2006/01/28 | HSP逆コンパイラ | 1.0 | 当初シェアウェアとして公開 |
+| 2007/09/10 | HSP逆コンパイラ | 1.1 | HSP3に対応 |
+| 2010/09/12 | HSP逆コンパイラ | 1.2 | PDS・OSSになった他、バグ修正 |
+| 2012/01/13 | HSPdeco | 1.0 | axファイルのデコード機能を開放、バグ修正 |
+| 2015/12/15 | HSPdecom | 1.0 | 変数名復元をサポート、辞書データ追加 |
+| 2016/08/16 | HSPdecom | 1.1 | パッチを全て付加、GitHubに上げ直し |
+| 2026-03-13 | deHSP | 2.0 | .NET 8.0 + Avalonia、CLIツール、クロスプラットフォーム対応 |
 
 ## ライセンス
 
