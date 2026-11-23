@@ -4,8 +4,6 @@ namespace HspDecompiler.Core.Ax3.Data.Token;
 
 internal sealed class SubExpressionToken : OperandToken
 {
-    private SubExpressionToken() { }
-
     internal SubExpressionToken(
         OperandToken leftToken,
         OperandToken rightToken,
@@ -29,12 +27,12 @@ internal sealed class SubExpressionToken : OperandToken
         if (_p1!.Priority < _op!.Priority)
         {
             builder.Append('(');
-            builder.Append(_p1.ToString());
+            builder.Append(_p1);
             builder.Append(')');
         }
         else
         {
-            builder.Append(_p1.ToString());
+            builder.Append(_p1);
         }
         builder.Append(' ');
         builder.Append(_op.ToString(false, true));
@@ -42,19 +40,19 @@ internal sealed class SubExpressionToken : OperandToken
         if (_p2!.Priority <= _op.Priority)
         {
             builder.Append('(');
-            builder.Append(_p2.ToString());
+            builder.Append(_p2);
             builder.Append(')');
         }
         else
         {
-            builder.Append(_p2.ToString());
+            builder.Append(_p2);
         }
         return builder.ToString();
     }
 
-    internal string ToString(bool force_default)
+    internal string ToString(bool forceDefault)
     {
-        if (force_default)
+        if (forceDefault)
         {
             return ToStringForceDefault();
         }
@@ -83,7 +81,7 @@ internal sealed class SubExpressionToken : OperandToken
 
         var builder = new StringBuilder();
         builder.Append('-');
-        builder.Append(var.ToString());
+        builder.Append(var);
         return builder.ToString();
     }
 

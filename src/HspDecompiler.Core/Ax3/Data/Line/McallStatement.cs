@@ -6,8 +6,6 @@ namespace HspDecompiler.Core.Ax3.Data.Line;
 
 internal class McallStatement : LogicalLine
 {
-    private McallStatement() { }
-
     internal McallStatement(
         McallFunctionPrimitive theToken,
         VariablePrimitive var,
@@ -36,21 +34,21 @@ internal class McallStatement : LogicalLine
         }
 
         var builder = new StringBuilder();
-        builder.Append(_token!.ToString());
+        builder.Append(_token);
         if (_var != null)
         {
             builder.Append(' ');
-            builder.Append(_var.ToString());
+            builder.Append(_var);
             if (_exp != null)
             {
                 builder.Append(' ');
                 builder.Append(',');
-                builder.Append(_var.ToString());
+                builder.Append(_var);
             }
         }
         if (_arg != null)
         {
-            builder.Append(_arg.ToString());
+            builder.Append(_arg);
         }
         return builder.ToString();
     }
@@ -78,9 +76,9 @@ internal class McallStatement : LogicalLine
         }
 
         var builder = new StringBuilder();
-        builder.Append(_var.ToString());
+        builder.Append(_var);
         builder.Append("->");
-        builder.Append(_exp.ToString());
+        builder.Append(_exp);
         if (_arg != null)
         {
             builder.Append(_arg.ToString(true));

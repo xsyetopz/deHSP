@@ -17,8 +17,6 @@ internal abstract class LiteralPrimitive : OperandPrimitive
 
 internal sealed class LabelPrimitive : LiteralPrimitive
 {
-    private LabelPrimitive() { }
-
     internal LabelPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet)
     {
@@ -43,8 +41,6 @@ internal sealed class LabelPrimitive : LiteralPrimitive
 
 internal sealed class IntegerPrimitive : LiteralPrimitive
 {
-    private IntegerPrimitive() { }
-
     internal IntegerPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet) { }
 
@@ -56,8 +52,6 @@ internal sealed class IntegerPrimitive : LiteralPrimitive
 
 internal sealed class DoublePrimitive : LiteralPrimitive
 {
-    private DoublePrimitive() { }
-
     internal DoublePrimitive(PrimitiveTokenDataSet dataSet, double d)
         : base(dataSet)
     {
@@ -87,8 +81,6 @@ internal sealed class DoublePrimitive : LiteralPrimitive
 
 internal sealed class StringPrimitive : LiteralPrimitive
 {
-    private StringPrimitive() { }
-
     internal StringPrimitive(PrimitiveTokenDataSet dataSet, string str)
         : base(dataSet)
     {
@@ -109,8 +101,6 @@ internal sealed class StringPrimitive : LiteralPrimitive
 
 internal sealed class SymbolPrimitive : LiteralPrimitive
 {
-    private SymbolPrimitive() { }
-
     internal SymbolPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet) { }
 }

@@ -139,7 +139,7 @@ internal static class ImportPlacement
             Function import = imports[i];
             Usedll dll = import.Dll!;
             bool byHeader = dll.IsDeclaredByHeader(import);
-            if (byHeader || (dll != current && dll.Type != UsedllType.usecom))
+            if (byHeader || (dll != current && dll.Type != UsedllType.UseCom))
             {
                 block.Add(new PreprocessorDeclaration(dll));
                 current = dll;

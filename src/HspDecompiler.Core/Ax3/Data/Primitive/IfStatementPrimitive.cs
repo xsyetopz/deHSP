@@ -5,15 +5,13 @@ namespace HspDecompiler.Core.Ax3.Data.Primitive;
 
 internal sealed class IfStatementPrimitive : HspFunctionPrimitive
 {
-    private IfStatementPrimitive() { }
-
     internal IfStatementPrimitive(PrimitiveTokenDataSet dataSet, int extraValue)
         : base(dataSet)
     {
         _extraValue = extraValue;
     }
 
-    private readonly int _extraValue = -1;
+    private readonly int _extraValue;
     internal int JumpToOffset
     {
         get

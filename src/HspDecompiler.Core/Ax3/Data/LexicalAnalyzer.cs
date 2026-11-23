@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.Primitive;
@@ -90,6 +91,12 @@ internal class LexicalAnalyzer
         return ret;
     }
 
+    // IDE0072 asks for every HspCodeType member, so None stays named next to the discard even
+    // though ReSharper sees the pattern as redundant.
+    //
+    // IDE0072 は HspCodeType の全メンバーを求めるため、ReSharper が冗長と見なしても None を
+    // 破棄パターンの隣に明示する。
+    [SuppressMessage("ReSharper", "PatternIsRedundant", Justification = "IDE0072 wants None")]
     private static PrimitiveToken CreatePrimitive(
         AxData data,
         HspDictionaryValue dicValue,

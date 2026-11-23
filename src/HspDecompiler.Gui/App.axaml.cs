@@ -10,7 +10,7 @@ namespace HspDecompiler.Gui;
 /// <para xml:lang="en">The deHSP desktop application; it opens the main window on desktop platforms.</para>
 /// <para xml:lang="ja">deHSP のデスクトップアプリケーション。デスクトップ環境ではメインウィンドウを開く。</para>
 /// </summary>
-public partial class App : Application
+public class App : Application
 {
     /// <inheritdoc/>
     public override void Initialize() => AvaloniaXamlLoader.Load(this);

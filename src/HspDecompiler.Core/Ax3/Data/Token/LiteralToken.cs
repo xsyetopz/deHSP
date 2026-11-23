@@ -4,8 +4,6 @@ namespace HspDecompiler.Core.Ax3.Data.Token;
 
 internal sealed class LiteralToken : OperandToken
 {
-    private LiteralToken() { }
-
     internal LiteralToken(LiteralPrimitive token)
     {
         _token = token;

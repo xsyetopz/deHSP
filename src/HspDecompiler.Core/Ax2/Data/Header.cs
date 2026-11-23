@@ -71,11 +71,6 @@ internal class Header
 
     internal static Header? FromIntArray(int[] data)
     {
-        if (data == null)
-        {
-            return null;
-        }
-
         if (data.Length < 20)
         {
             return null;

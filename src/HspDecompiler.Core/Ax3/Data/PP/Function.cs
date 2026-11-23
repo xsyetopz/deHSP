@@ -8,19 +8,20 @@ namespace HspDecompiler.Core.Ax3.Data.PP;
 
 internal enum FunctionType
 {
-    NULL = 0x00,
-    func = 0x01,
-    cfunc = 0x02,
-    deffunc = 0x03,
-    defcfunc = 0x04,
-    comfunc = 0x05,
-    module = 0x06,
+    None = 0x00,
+    Func = 0x01,
+    CFunc = 0x02,
+    DefFunc = 0x03,
+    DefCFunc = 0x04,
+    ComFunc = 0x05,
+    Module = 0x06,
 }
 
+[Flags]
 internal enum FunctionFlags
 {
-    NULL = 0,
-    onexit = 0x01,
+    None = 0,
+    OnExit = 0x01,
 }
 
 internal class Function : Preprocessor
@@ -39,8 +40,6 @@ internal class Function : Preprocessor
     private const int LabelIndexCfunc = 4;
     private const int LabelIndexFunc2 = 6;
 
-    private Function() { }
-
     private Function(int index)
         : base(index) { }
 
@@ -48,9 +47,7 @@ internal class Function : Preprocessor
     private int _functionIndex;
     private List<Param> _functionParams = [];
     private int _strIndex;
-    private int _paramSizeSum;
     private int _labelIndex;
-    private Int16 _int0;
     private int _flags;
 
     internal static Function FromBinaryReader(BinaryReader reader, AxData parent, int index)
@@ -74,45 +71,47 @@ internal class Function : Preprocessor
             ret._defaultName = parent.ReadStringLiteral(ret._strIndex);
         }
 
-        ret._paramSizeSum = reader.ReadInt32();
+        // STRUCTDAT.size, the stack size of the parameters; the source does not spell it out.
+        //
+        // STRUCTDAT.size。引数のスタックサイズで、ソースには現れない。
+        _ = reader.ReadInt32();
         ret._labelIndex = reader.ReadInt32();
 
-        ret._int0 = reader.ReadInt16();
+        _ = reader.ReadInt16();
         ret._flags = reader.ReadInt16();
         switch (ret.Type)
         {
-            case FunctionType.defcfunc:
-            case FunctionType.deffunc:
+            case FunctionType.DefCFunc:
+            case FunctionType.DefFunc:
                 Label label = parent.GetLabel(ret._labelIndex);
-                label?.SetFunction(ret);
+                label.SetFunction(ret);
 
                 ret._label = label;
                 break;
 
-            case FunctionType.func:
-            case FunctionType.cfunc:
-            case FunctionType.comfunc:
+            case FunctionType.Func:
+            case FunctionType.CFunc:
+            case FunctionType.ComFunc:
                 Usedll? dll = parent.GetUsedll(ret._dllIndex);
                 dll?.AddFunction(ret);
 
                 ret._dll = dll;
                 break;
-            case FunctionType.module:
+            case FunctionType.Module:
                 parent.Modules.Add(ret);
                 break;
-            case FunctionType.NULL:
-                break;
+            case FunctionType.None:
             default:
                 break;
         }
         return ret;
     }
 
-    internal bool IsModuleFunction => Type == FunctionType.module;
-    internal bool IsComFunction => Type == FunctionType.comfunc;
-    internal bool IsUserFunction => Type is FunctionType.deffunc or FunctionType.defcfunc;
+    internal bool IsModuleFunction => Type == FunctionType.Module;
+    internal bool IsComFunction => Type == FunctionType.ComFunc;
+    internal bool IsUserFunction => Type is FunctionType.DefFunc or FunctionType.DefCFunc;
 
-    internal bool IsDllFunction => Type is FunctionType.func or FunctionType.cfunc;
+    internal bool IsDllFunction => Type is FunctionType.Func or FunctionType.CFunc;
 
     internal int Index => _index;
 
@@ -153,48 +152,48 @@ internal class Function : Preprocessor
         {
             if (_dllIndex == DllIndexDeffunc)
             {
-                return FunctionType.deffunc;
+                return FunctionType.DefFunc;
             }
 
             if (_dllIndex == DllIndexDefcfunc)
             {
-                return FunctionType.defcfunc;
+                return FunctionType.DefCFunc;
             }
 
             if (_dllIndex == DllIndexModule)
             {
-                return FunctionType.module;
+                return FunctionType.Module;
             }
 
             if (_dllIndex >= 0)
             {
                 if (_functionIndex == FuncIndexComfunc)
                 {
-                    return FunctionType.comfunc;
+                    return FunctionType.ComFunc;
                 }
 
                 if (_labelIndex is LabelIndexFunc1 or LabelIndexFunc2)
                 {
-                    return FunctionType.func;
+                    return FunctionType.Func;
                 }
 
                 if (_labelIndex == LabelIndexOnExit)
                 {
-                    return FunctionType.func;
+                    return FunctionType.Func;
                 }
 
                 if (_labelIndex == LabelIndexCfunc)
                 {
-                    return FunctionType.cfunc;
+                    return FunctionType.CFunc;
                 }
             }
-            return FunctionType.NULL;
+            return FunctionType.None;
         }
     }
     internal FunctionFlags Flags =>
-        (_flags == 1) && (_dllIndex == DllIndexDeffunc) ? FunctionFlags.onexit
-        : (_dllIndex >= 0) && (_labelIndex == LabelIndexOnExit) ? FunctionFlags.onexit
-        : FunctionFlags.NULL;
+        (_flags == 1) && (_dllIndex == DllIndexDeffunc) ? FunctionFlags.OnExit
+        : (_dllIndex >= 0) && (_labelIndex == LabelIndexOnExit) ? FunctionFlags.OnExit
+        : FunctionFlags.None;
 
     internal void SetName(string name) => _name = name;
 
@@ -209,28 +208,27 @@ internal class Function : Preprocessor
 
             if (_defaultName == null)
             {
-                return Type == FunctionType.comfunc
+                return Type == FunctionType.ComFunc
                     ? "comfunc_" + _index.ToString(CultureInfo.InvariantCulture)
                     : null;
             }
             switch (Type)
             {
-                case FunctionType.defcfunc:
-                case FunctionType.deffunc:
-                case FunctionType.module:
+                case FunctionType.DefCFunc:
+                case FunctionType.DefFunc:
+                case FunctionType.Module:
                     return _defaultName;
-                case FunctionType.func:
-                case FunctionType.cfunc:
+                case FunctionType.Func:
+                case FunctionType.CFunc:
                     if (_name != null)
                     {
                         return _name;
                     }
 
                     return _defaultName;
-                case FunctionType.comfunc:
+                case FunctionType.ComFunc:
                     return "comfunc_" + _index.ToString(CultureInfo.InvariantCulture);
-                case FunctionType.NULL:
-                    break;
+                case FunctionType.None:
                 default:
                     break;
             }
@@ -238,7 +236,7 @@ internal class Function : Preprocessor
         }
     }
 
-    private string modFunctionToString()
+    private string ModFunctionToString()
     {
         var strBld = new StringBuilder();
         switch (_defaultName)
@@ -265,13 +263,13 @@ internal class Function : Preprocessor
                 }
 
                 strBld.Append(' ');
-                strBld.Append(_functionParams[i].ToString());
+                strBld.Append(_functionParams[i]);
             }
         }
         return strBld.ToString();
     }
 
-    private string moduleToString(bool useModuleStyle)
+    private string ModuleToString(bool useModuleStyle)
     {
         var strBld = new StringBuilder();
         if (useModuleStyle)
@@ -313,26 +311,26 @@ internal class Function : Preprocessor
         for (int i = paramStart; i < _functionParams.Count; i++)
         {
             strBld.Append(i == paramStart ? " " : ", ");
-            strBld.Append(_functionParams[i].ToString());
+            strBld.Append(_functionParams[i]);
         }
 
         return strBld.ToString();
     }
 
     private string OnExit(string text) =>
-        (Flags & FunctionFlags.onexit) == FunctionFlags.onexit ? text : string.Empty;
+        (Flags & FunctionFlags.OnExit) == FunctionFlags.OnExit ? text : string.Empty;
 
     internal string ToString(bool useModuleStyle) =>
         Type switch
         {
-            FunctionType.module => moduleToString(useModuleStyle),
-            FunctionType.deffunc
+            FunctionType.Module => ModuleToString(useModuleStyle),
+            FunctionType.DefFunc
                 when useModuleStyle
                     && (_functionParams.Count != 0)
-                    && _functionParams[0].IsModuleType => modFunctionToString(),
-            FunctionType.defcfunc => "#defcfunc " + FunctionName + ParamsText(0),
-            FunctionType.deffunc => "#deffunc " + FunctionName + OnExit(" onexit") + ParamsText(0),
-            FunctionType.func => "#func "
+                    && _functionParams[0].IsModuleType => ModFunctionToString(),
+            FunctionType.DefCFunc => "#defcfunc " + FunctionName + ParamsText(0),
+            FunctionType.DefFunc => "#deffunc " + FunctionName + OnExit(" onexit") + ParamsText(0),
+            FunctionType.Func => "#func "
                 + FunctionName
                 + " "
                 + OnExit("onexit ")
@@ -340,18 +338,18 @@ internal class Function : Preprocessor
                 + _defaultName
                 + "\""
                 + ParamsText(0),
-            FunctionType.cfunc => "#cfunc "
+            FunctionType.CFunc => "#cfunc "
                 + FunctionName
                 + " \""
                 + _defaultName
                 + "\""
                 + ParamsText(0),
-            FunctionType.comfunc => "#comfunc "
+            FunctionType.ComFunc => "#comfunc "
                 + FunctionName
                 + " "
                 + _labelIndex.ToString(CultureInfo.InvariantCulture)
                 + ParamsText(1),
-            FunctionType.NULL => ParamsText(0),
+            FunctionType.None => ParamsText(0),
             _ => "/*#deffunc?*/",
         };
 

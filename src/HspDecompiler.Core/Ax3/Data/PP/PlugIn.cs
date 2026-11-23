@@ -6,14 +6,11 @@ namespace HspDecompiler.Core.Ax3.Data.PP;
 
 internal class PlugIn : Preprocessor
 {
-    private PlugIn() { }
-
     private PlugIn(int index)
         : base(index) { }
 
     private string? _dllName;
     private string? _exportName;
-    private int _int3;
 
     internal static PlugIn FromBinaryReader(BinaryReader reader, AxData parent, int index)
     {
@@ -21,7 +18,10 @@ internal class PlugIn : Preprocessor
         var ret = new PlugIn(index);
         int dllNameOffset = reader.ReadInt32();
         int exportNameOffset = reader.ReadInt32();
-        ret._int3 = reader.ReadInt32();
+        // HPIDAT.p_libptr, a library handle the runtime fills in.
+        //
+        // HPIDAT.p_libptr。ランタイムが埋めるライブラリのハンドル。
+        _ = reader.ReadInt32();
         ret._dllName = parent.ReadStringLiteral(dllNameOffset);
         ret._exportName = parent.ReadStringLiteral(exportNameOffset);
         return ret;
@@ -38,8 +38,7 @@ internal class PlugIn : Preprocessor
 
     internal Cmd AddCmd(int methodIndex)
     {
-        Cmd? cmd = null;
-        if (_cmds.TryGetValue(methodIndex, out cmd))
+        if (_cmds.TryGetValue(methodIndex, out Cmd? cmd))
         {
             return cmd;
         }

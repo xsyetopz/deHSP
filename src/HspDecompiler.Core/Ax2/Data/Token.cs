@@ -9,9 +9,7 @@ namespace HspDecompiler.Core.Ax2.Data;
 
 internal class Token
 {
-    private Token() { }
-
-    private readonly AxData _data = null!;
+    private readonly AxData _data;
 
     private Token(AxData data)
     {
@@ -55,7 +53,6 @@ internal class Token
             ret._fType ^= Ax2TokenType.LongValueFlag;
             ret._size += 4;
             ret._fValue = BitConverter.ToInt32(data.TokenData, offset);
-            offset += 4;
         }
         return ret;
     }

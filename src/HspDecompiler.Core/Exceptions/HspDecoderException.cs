@@ -18,8 +18,7 @@ public sealed class HspDecoderException : Exception
     /// <para xml:lang="en">Creates the exception with the default message.</para>
     /// <para xml:lang="ja">既定のメッセージで例外を作る。</para>
     /// </summary>
-    public HspDecoderException()
-        : base() { }
+    public HspDecoderException() { }
 
     /// <summary>
     /// <para xml:lang="en">Creates the exception with a message.</para>

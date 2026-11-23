@@ -4,19 +4,15 @@ namespace HspDecompiler.Core.Ax2.Data;
 
 internal class Label
 {
-    private Label() { }
-
-    internal Label(int p_index, int p_tokenIndex)
+    internal Label(int index, int tokenIndex)
     {
-        _index = p_index;
-        _tokenIndex = p_tokenIndex;
-        _name = "*label_" + _index.ToString(CultureInfo.InvariantCulture);
+        _tokenIndex = tokenIndex;
+        _name = "*label_" + index.ToString(CultureInfo.InvariantCulture);
     }
 
-    private readonly int _index;
     private readonly int _tokenIndex;
     private int _loadCount;
-    private string _name = "";
+    private string _name;
     private bool _enabled;
     private int _deffunc = -1;
 

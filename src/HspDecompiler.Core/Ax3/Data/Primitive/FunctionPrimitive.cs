@@ -12,8 +12,6 @@ internal abstract class FunctionPrimitive : PrimitiveToken
 
 internal sealed class UserFunctionPrimitive : FunctionPrimitive
 {
-    private UserFunctionPrimitive() { }
-
     internal UserFunctionPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet)
     {
@@ -29,8 +27,6 @@ internal sealed class UserFunctionPrimitive : FunctionPrimitive
 
 internal sealed class DllFunctionPrimitive : FunctionPrimitive
 {
-    private DllFunctionPrimitive() { }
-
     internal DllFunctionPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet)
     {
@@ -46,8 +42,6 @@ internal sealed class DllFunctionPrimitive : FunctionPrimitive
 
 internal sealed class PlugInFunctionPrimitive : FunctionPrimitive
 {
-    private PlugInFunctionPrimitive() { }
-
     internal PlugInFunctionPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet)
     {
@@ -62,8 +56,6 @@ internal sealed class PlugInFunctionPrimitive : FunctionPrimitive
 
 internal sealed class ComFunctionPrimitive : FunctionPrimitive
 {
-    private ComFunctionPrimitive() { }
-
     internal ComFunctionPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet)
     {

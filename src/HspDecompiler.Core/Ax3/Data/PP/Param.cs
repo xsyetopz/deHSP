@@ -11,14 +11,11 @@ internal class Param : Preprocessor
     // 未知の引数型を捨てずに出力へ残すためのコメント。
     private const string InvalidTypeCommentPrefix = "/*不正な型 ";
 
-    private Param() { }
-
     private Param(int paramIndex)
         : base(paramIndex) { }
 
     private string _paramTypeName = "NULL";
     private short _deffuncIndex;
-    private int _paramStartByte;
 
     internal static Param FromBinaryReader(BinaryReader reader, AxData parent, int index)
     {
@@ -28,7 +25,10 @@ internal class Param : Preprocessor
             : lookupName ?? "NULL";
 
         ret._deffuncIndex = reader.ReadInt16();
-        ret._paramStartByte = reader.ReadInt32();
+        // STRUCTPRM.offset, the parameter position on the stack; the order already implies it.
+        //
+        // STRUCTPRM.offset。スタック上の引数の位置で、並び順から分かる。
+        _ = reader.ReadInt32();
 
         return ret;
     }
@@ -89,10 +89,10 @@ internal class Param : Preprocessor
         }
     }
 
-    internal string ToString(bool force_Named, bool remove_type, bool localToVar)
+    internal string ToString(bool forceNamed, bool removeType, bool localToVar)
     {
         var strbd = new StringBuilder();
-        if (!remove_type)
+        if (!removeType)
         {
             if (_paramTypeName == "NULL")
             {
@@ -111,7 +111,7 @@ internal class Param : Preprocessor
                 strbd.Append(_paramTypeName);
             }
         }
-        if ((force_Named) || (_paramNameIsUsed) || (IsModuleType))
+        if ((forceNamed) || (_paramNameIsUsed) || (IsModuleType))
         {
             if (strbd.Length > 0)
             {

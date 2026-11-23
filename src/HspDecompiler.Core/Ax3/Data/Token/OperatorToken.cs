@@ -4,8 +4,6 @@ namespace HspDecompiler.Core.Ax3.Data.Token;
 
 internal sealed class OperatorToken : ExpressionTermToken
 {
-    private OperatorToken() { }
-
     internal OperatorToken(OperatorPrimitive source)
     {
         _primitive = source;
@@ -41,16 +39,9 @@ internal sealed class OperatorToken : ExpressionTermToken
                 _ => ret + "=",
             };
         }
-        else
+        else if (ret is "=" or "!")
         {
-            switch (ret)
-            {
-                case "=":
-                case "!":
-                    return ret + "=";
-                default:
-                    break;
-            }
+            return ret + "=";
         }
         return ret;
     }

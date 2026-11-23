@@ -4,8 +4,6 @@ namespace HspDecompiler.Core.Ax3.Data.Line;
 
 internal sealed class PreprocessorDeclaration : LogicalLine
 {
-    private PreprocessorDeclaration() { }
-
     internal PreprocessorDeclaration(Preprocessor pp)
     {
         _pp = pp;

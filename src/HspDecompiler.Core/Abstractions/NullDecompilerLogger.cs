@@ -5,7 +5,7 @@ namespace HspDecompiler.Core.Abstractions;
 
 internal sealed class NullDecompilerLogger : IDecompilerLogger
 {
-    internal static readonly NullDecompilerLogger Instance = new();
+    internal static NullDecompilerLogger Instance { get; } = new();
 
     private NullDecompilerLogger() { }
 

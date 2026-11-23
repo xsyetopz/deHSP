@@ -5,8 +5,6 @@ namespace HspDecompiler.Core.Ax3.Data.Line;
 
 internal sealed class UnknownLine : LogicalLine
 {
-    private UnknownLine() { }
-
     internal UnknownLine(List<PrimitiveToken> primitives)
     {
         _tokens = new PrimitiveToken[primitives.Count];
@@ -29,7 +27,7 @@ internal sealed class UnknownLine : LogicalLine
         foreach (PrimitiveToken token in _tokens)
         {
             builder.Append(' ');
-            builder.Append(token.ToString());
+            builder.Append(token);
         }
         return builder.ToString();
     }

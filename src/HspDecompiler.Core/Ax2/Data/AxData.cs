@@ -12,8 +12,6 @@ internal class AxData
 {
     private const int LabelIndexBaseOffset = 0x1000;
 
-    internal AxData() { }
-
     private Header? _header;
     private Label[]? _labels;
     private Dll[]? _dlls;
@@ -25,7 +23,6 @@ internal class AxData
     private byte[]? _dllData;
     private byte[]? _funcData;
     private byte[]? _deffuncData;
-    private byte[]? _moduleData;
     private byte[]? _tokenData;
 
     internal byte[] TokenData => _tokenData!;
@@ -76,7 +73,10 @@ internal class AxData
                 startPosition + head.DeffuncOffset,
                 head.DeffuncByte
             );
-            _moduleData = ReadSegment(stream, startPosition + head.ModuleOffset, head.ModuleByte);
+            // The decompiler ignores #module data, but reading it still rejects a truncated file.
+            //
+            // デコンパイラーは #module のデータを使わないが、読むことで途中で切れたファイルを弾く。
+            _ = ReadSegment(stream, startPosition + head.ModuleOffset, head.ModuleByte);
             _labelData = ReadSegment(stream, startPosition + head.LabelOffset, head.LabelByte);
             _stringData = ReadSegment(stream, startPosition + head.TextOffset, head.TextByte);
         }
@@ -115,7 +115,7 @@ internal class AxData
 
     private static string ReadString(int offset, byte[] dumpData)
     {
-        System.Text.Encoding encode = HspDecompiler.Core.Encoding.ShiftJisHelper.Encoding;
+        System.Text.Encoding encode = Encoding.ShiftJisHelper.Encoding;
         var buffer = new List<byte>();
         byte token;
         while (offset < dumpData.Length)

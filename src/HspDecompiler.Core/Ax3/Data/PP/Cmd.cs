@@ -4,8 +4,6 @@ namespace HspDecompiler.Core.Ax3.Data.PP;
 
 internal sealed class Cmd : Preprocessor
 {
-    private Cmd() { }
-
     internal Cmd(int pluginIndex, int methodIndex)
     {
         _pluginIndex = pluginIndex;

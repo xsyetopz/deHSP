@@ -98,14 +98,14 @@ internal class AxData
         : pluginIndex >= _plugIns.Count ? null
         : _plugIns[pluginIndex].AddCmd(methodIndex);
 
-    internal string ReadString(int offset, int max_count)
+    internal string ReadString(int offset, int maxCount)
     {
         long seekOffset = _seekOrigin + offset;
         long nowPosition = _reader!.BaseStream.Position;
         _reader.BaseStream.Seek(seekOffset, SeekOrigin.Begin);
         var chars = new List<char>();
-        char token = '\0';
         int count = 0;
+        char token;
         while ((token = _reader.ReadChar()) != '\0')
         {
             switch (token)
@@ -134,7 +134,7 @@ internal class AxData
             }
 
             count++;
-            if (count >= max_count)
+            if (count >= maxCount)
             {
                 break;
             }
@@ -151,11 +151,10 @@ internal class AxData
 
     internal double ReadDoubleLiteral(int offset)
     {
-        double ret = 0.0;
         long seekOffset = _seekOrigin + _header!.LiteralStart + offset;
         long nowPosition = _reader!.BaseStream.Position;
         _reader.BaseStream.Seek(seekOffset, SeekOrigin.Begin);
-        ret = _reader.ReadDouble();
+        double ret = _reader.ReadDouble();
         _reader.BaseStream.Seek(nowPosition, SeekOrigin.Begin);
         return ret;
     }
@@ -257,8 +256,6 @@ internal class AxData
                 e
             );
         }
-
-        return;
     }
 
     private void ReadTable<T>(
@@ -333,10 +330,7 @@ internal class AxData
                 (int)_header.RuntimeStart,
                 (int)(_header.CodeStart - _header.RuntimeStart)
             );
-            if (runtimeName != null)
-            {
-                _runtime = new Runtime(runtimeName);
-            }
+            _runtime = new Runtime(runtimeName);
         }
 
         ReadTables(_header);
@@ -370,16 +364,16 @@ internal class AxData
         {
             switch (func.Type)
             {
-                case FunctionType.cfunc:
-                case FunctionType.func:
+                case FunctionType.CFunc:
+                case FunctionType.Func:
                     dllfuncs.Add(func);
                     break;
-                case FunctionType.comfunc:
+                case FunctionType.ComFunc:
                     comfuncs.Add(func);
                     break;
-                case FunctionType.defcfunc:
-                case FunctionType.deffunc:
-                case FunctionType.module:
+                case FunctionType.DefCFunc:
+                case FunctionType.DefFunc:
+                case FunctionType.Module:
                     if (func.ParentModule != null)
                     {
                         initializer.Add(func);
@@ -387,16 +381,11 @@ internal class AxData
                     else
                     {
                         func.SetName(func.DefaultName ?? "");
-                        functionNames.Add(
-                            (func.DefaultName ?? "").ToLower(
-                                System.Globalization.CultureInfo.CurrentCulture
-                            )
-                        );
+                        functionNames.Add(NameKey(func.DefaultName ?? ""));
                     }
 
                     break;
-                case FunctionType.NULL:
-                    break;
+                case FunctionType.None:
                 default:
                     break;
             }
@@ -412,18 +401,14 @@ internal class AxData
         foreach (Function func in initializer)
         {
             string defName = func.DefaultName ?? "";
-            if (
-                !functionNames.Contains(
-                    defName.ToLower(System.Globalization.CultureInfo.CurrentCulture)
-                )
-            )
+            if (!functionNames.Contains(NameKey(defName)))
             {
                 func.SetName(defName);
-                functionNames.Add(defName.ToLower(System.Globalization.CultureInfo.CurrentCulture));
+                functionNames.Add(NameKey(defName));
                 continue;
             }
 
-            string newName = defName;
+            string newName;
             int index = 1;
             do
             {
@@ -434,10 +419,10 @@ internal class AxData
                     index
                 );
                 index++;
-            } while (functionNames.Contains(newName));
+            } while (functionNames.Contains(NameKey(newName)));
 
             func.SetName(newName);
-            functionNames.Add(newName.ToLower(System.Globalization.CultureInfo.CurrentCulture));
+            functionNames.Add(NameKey(newName));
         }
     }
 
@@ -447,7 +432,7 @@ internal class AxData
         {
             string newName = ResolveDllFunctionName(func.DefaultName ?? "", functionNames);
             func.SetName(newName);
-            functionNames.Add(newName.ToLower(System.Globalization.CultureInfo.CurrentCulture));
+            functionNames.Add(NameKey(newName));
         }
     }
 
@@ -502,12 +487,7 @@ internal class AxData
 
         foreach (string candidate in candidates)
         {
-            if (
-                IsHspIdentifier(candidate)
-                && !takenLowerNames.Contains(
-                    candidate.ToLower(System.Globalization.CultureInfo.CurrentCulture)
-                )
-            )
+            if (IsHspIdentifier(candidate) && !takenLowerNames.Contains(NameKey(candidate)))
             {
                 return candidate;
             }
@@ -529,6 +509,13 @@ internal class AxData
     //
     // 序数のエクスポート("#12")や C++ の装飾名("?Fn@@YAXH@Z")は HSP の名前として無効な
     // ため、func_N に回す。
+    // HSP names ignore case. The dictionary lowers its names the same invariant way, so both
+    // lists compare equal under any UI culture.
+    //
+    // HSP の名前は大文字と小文字を区別しない。辞書も同じく不変カルチャで小文字にするため、
+    // UI のカルチャに関係なく両方の一覧が一致する。
+    private static string NameKey(string name) => name.ToLowerInvariant();
+
     private static bool IsHspIdentifier(string name) =>
         name.Length > 0
         && name.Length <= 59
@@ -539,7 +526,7 @@ internal class AxData
     {
         foreach (Function func in comfuncs)
         {
-            string newName = "";
+            string newName;
             int index = 1;
             do
             {
@@ -549,10 +536,10 @@ internal class AxData
                     index
                 );
                 index++;
-            } while (functionNames.Contains(newName));
+            } while (functionNames.Contains(NameKey(newName)));
 
             func.SetName(newName);
-            functionNames.Add(newName.ToLower(System.Globalization.CultureInfo.CurrentCulture));
+            functionNames.Add(NameKey(newName));
         }
     }
 
@@ -564,7 +551,7 @@ internal class AxData
         }
 
         _labels.Sort();
-        int keta = ((int)System.Math.Log10(_labels.Count)) + 1;
+        int keta = ((int)Math.Log10(_labels.Count)) + 1;
         var labelFormat = CompositeFormat.Parse(
             "*label_{0:D0" + keta.ToString(CultureInfo.InvariantCulture) + "}"
         );
@@ -572,38 +559,40 @@ internal class AxData
         {
             _labels[i].LabelName = string.Format(CultureInfo.InvariantCulture, labelFormat, i);
         }
-
-        return;
     }
 
-    private bool ReadDebugInfo()
+    private void ReadDebugInfo()
     {
         for (uint i = 0; i < _header!.DebugSize; i++)
         {
             long offset = _seekOrigin + _header.DebugStart + i;
             _reader!.BaseStream.Seek(offset, SeekOrigin.Begin);
 
-            switch (_reader.ReadByte())
+            byte marker = _reader.ReadByte();
+            if (marker == DebugMarkerEnd)
             {
-                case DebugMarkerBigOffset:
-                    i += 2;
-                    break;
-                case DebugMarkerVariable:
-                    int literalOffset =
-                        _reader.ReadByte() ^ (_reader.ReadByte() << 8) ^ (_reader.ReadByte() << 16);
-                    _variableName.Add(ReadStringLiteral(literalOffset));
-                    i += 5;
-                    break;
-                case DebugMarkerFileName:
-                    i += 5;
-                    break;
-                case DebugMarkerEnd:
-                    return true;
-                default:
-                    break;
+                return;
             }
-        }
 
-        return false;
+            if (marker == DebugMarkerBigOffset)
+            {
+                i += 2;
+            }
+            else if (marker == DebugMarkerVariable)
+            {
+                int literalOffset =
+                    _reader.ReadByte() ^ (_reader.ReadByte() << 8) ^ (_reader.ReadByte() << 16);
+                _variableName.Add(ReadStringLiteral(literalOffset));
+                i += 5;
+            }
+            else if (marker == DebugMarkerFileName)
+            {
+                i += 5;
+            }
+
+            // Any other byte is a one-byte line-number delta and needs no extra skip.
+            //
+            // それ以外のバイトは 1 バイトの行番号差分で、追加で読み飛ばす必要はない。
+        }
     }
 }

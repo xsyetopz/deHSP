@@ -2,10 +2,9 @@ using System;
 
 namespace HspDecompiler.Core.Ax3.Data.Analyzer;
 
-internal class HspLogicalLineException : Exception
+internal sealed class HspLogicalLineException : Exception
 {
-    internal HspLogicalLineException()
-        : base() { }
+    internal HspLogicalLineException() { }
 
     internal HspLogicalLineException(string message)
         : base(message) { }

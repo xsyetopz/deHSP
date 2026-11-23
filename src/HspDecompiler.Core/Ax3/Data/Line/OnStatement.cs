@@ -6,8 +6,6 @@ namespace HspDecompiler.Core.Ax3.Data.Line;
 
 internal sealed class OnStatement : LogicalLine
 {
-    private OnStatement() { }
-
     internal OnStatement(OnFunctionPrimitive theToken, ExpressionToken? exp, FunctionToken? func)
     {
         _token = theToken;
@@ -26,17 +24,17 @@ internal sealed class OnStatement : LogicalLine
         var builder = new StringBuilder();
         if (_token != null)
         {
-            builder.Append(_token.ToString());
+            builder.Append(_token);
         }
         if (_exp != null)
         {
             builder.Append(' ');
-            builder.Append(_exp.ToString());
+            builder.Append(_exp);
         }
         if (_func != null)
         {
             builder.Append(' ');
-            builder.Append(_func.ToString());
+            builder.Append(_func);
         }
         return builder.ToString();
     }

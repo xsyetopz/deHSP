@@ -5,8 +5,6 @@ namespace HspDecompiler.Core.Ax3.Data.Token;
 
 internal sealed class FunctionToken : OperandToken
 {
-    private FunctionToken() { }
-
     internal FunctionToken(FunctionPrimitive token)
     {
         _primitive = token;
@@ -34,7 +32,7 @@ internal sealed class FunctionToken : OperandToken
         }
 
         var builder = new StringBuilder(_primitive!.ToString());
-        builder.Append(_arg.ToString());
+        builder.Append(_arg);
         return builder.ToString();
     }
 

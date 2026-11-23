@@ -4,8 +4,6 @@ namespace HspDecompiler.Core.Ax3.Data.Line;
 
 internal sealed class Command : LogicalLine
 {
-    private Command() { }
-
     internal Command(FunctionToken function)
     {
         _function = function;

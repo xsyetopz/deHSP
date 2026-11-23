@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using HspDecompiler.Core.Ax3.Data.Primitive;
 using HspDecompiler.Core.Ax3.Data.Token;
 using HspDecompiler.Core.Resources;
@@ -15,8 +16,7 @@ internal partial class LogicalLineFactory
                 throw new HspLogicalLineException(Strings.ExpressionStackEmpty);
             }
 
-            ExpressionTermToken? elem = null;
-            var elements = new System.Collections.Generic.List<ExpressionTermToken>();
+            var elements = new List<ExpressionTermToken>();
             do
             {
                 if (stream.NextIsBracketEnd)
@@ -24,15 +24,11 @@ internal partial class LogicalLineFactory
                     break;
                 }
 
-                elem =
-                    stream.NextToken is OperatorPrimitive
-                        ? (ExpressionTermToken)(ReadOperator(stream))
-                    : stream.NextToken is LiteralPrimitive
-                        ? (ExpressionTermToken)(ReadLiteral(stream))
-                    : stream.NextToken is FunctionPrimitive
-                        ? (ExpressionTermToken)(ReadFunction(stream, true))
-                    : stream.NextToken is VariablePrimitive
-                        ? (ExpressionTermToken)(ReadVariable(stream))
+                ExpressionTermToken elem =
+                    stream.NextToken is OperatorPrimitive ? ReadOperator(stream)
+                    : stream.NextToken is LiteralPrimitive ? ReadLiteral(stream)
+                    : stream.NextToken is FunctionPrimitive ? ReadFunction(stream, true)
+                    : stream.NextToken is VariablePrimitive ? ReadVariable(stream)
                     : throw new HspLogicalLineException(Strings.ExpressionInvalidElement);
 
                 elements.Add(elem);
@@ -49,7 +45,7 @@ internal partial class LogicalLineFactory
                 throw new HspLogicalLineException(Strings.LiteralExpressionStackEmpty);
             }
 
-            LiteralPrimitive? token =
+            LiteralPrimitive token =
                 stream.GetNextToken() as LiteralPrimitive
                 ?? throw new HspLogicalLineException(Strings.LiteralExpressionInvalidElement);
             return new LiteralToken(token);
@@ -68,7 +64,7 @@ internal partial class LogicalLineFactory
                 stream.GetNextToken();
             }
 
-            var exps = new System.Collections.Generic.List<ExpressionToken>();
+            var exps = new List<ExpressionToken>();
             bool firstArgIsNull = stream.NextIsEndOfParam;
             while (!stream.NextIsEndOfLine)
             {
@@ -89,7 +85,7 @@ internal partial class LogicalLineFactory
                 throw new HspLogicalLineException(Strings.FunctionStackEmpty);
             }
 
-            FunctionPrimitive? token =
+            FunctionPrimitive token =
                 stream.GetNextToken() as FunctionPrimitive
                 ?? throw new HspLogicalLineException(Strings.FunctionInvalidStart);
             if (stream.NextIsEndOfLine)
@@ -118,7 +114,7 @@ internal partial class LogicalLineFactory
                 throw new HspLogicalLineException(Strings.VariableStackEmpty);
             }
 
-            VariablePrimitive? token =
+            VariablePrimitive token =
                 stream.GetNextToken() as VariablePrimitive
                 ?? throw new HspLogicalLineException(Strings.VariableInvalidStart);
             return stream.NextIsBracketStart
@@ -133,7 +129,7 @@ internal partial class LogicalLineFactory
                 throw new HspLogicalLineException(Strings.OperatorStackEmpty);
             }
 
-            OperatorPrimitive? token =
+            OperatorPrimitive token =
                 stream.GetNextToken() as OperatorPrimitive
                 ?? throw new HspLogicalLineException(Strings.OperatorInvalidElement);
             return new OperatorToken(token);

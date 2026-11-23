@@ -4,8 +4,6 @@ namespace HspDecompiler.Core.Ax3.Data.PP;
 
 internal class Label : Preprocessor, System.IComparable<Label>
 {
-    private Label() { }
-
     private Label(int index)
         : base(index) { }
 

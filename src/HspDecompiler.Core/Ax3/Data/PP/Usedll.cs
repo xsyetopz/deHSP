@@ -7,39 +7,38 @@ namespace HspDecompiler.Core.Ax3.Data.PP;
 internal enum UsedllType
 {
     None = 0x00,
-    uselib = 0x01,
-    usecom = 0x02,
+    UseLib = 0x01,
+    UseCom = 0x02,
 }
 
 internal sealed class Usedll : Preprocessor
 {
-    private Usedll() { }
-
     private Usedll(int index)
         : base(index) { }
 
     private string? _name;
     private string? _clsName;
     private int _type;
-    private int _int2;
 
     internal static Usedll FromBinaryReader(BinaryReader reader, AxData parent, int index)
     {
         var ret = new Usedll(index) { _type = reader.ReadInt32() };
         int nameOffset = reader.ReadInt32();
-        ret._int2 = reader.ReadInt32();
+        // LIBDAT.hlib, a library handle the runtime fills in.
+        //
+        // LIBDAT.hlib。ランタイムが埋めるライブラリのハンドル。
+        _ = reader.ReadInt32();
         int clsNameOffset = reader.ReadInt32();
         switch (ret.Type)
         {
-            case UsedllType.usecom:
+            case UsedllType.UseCom:
                 ret._name = parent.ReadIidCodeLiteral(nameOffset);
                 ret._clsName = parent.ReadStringLiteral(clsNameOffset);
                 break;
-            case UsedllType.uselib:
+            case UsedllType.UseLib:
                 ret._name = parent.ReadStringLiteral(nameOffset);
                 break;
             case UsedllType.None:
-                break;
             default:
                 break;
         }
@@ -52,8 +51,8 @@ internal sealed class Usedll : Preprocessor
     internal UsedllType Type =>
         _type switch
         {
-            1 => UsedllType.uselib,
-            4 => UsedllType.usecom,
+            1 => UsedllType.UseLib,
+            4 => UsedllType.UseCom,
             _ => UsedllType.None,
         };
 
@@ -67,12 +66,12 @@ internal sealed class Usedll : Preprocessor
         var strBld = new StringBuilder();
         switch (Type)
         {
-            case UsedllType.uselib:
+            case UsedllType.UseLib:
                 strBld.Append(@"#uselib """);
                 strBld.Append(_name);
                 strBld.Append('"');
                 break;
-            case UsedllType.usecom:
+            case UsedllType.UseCom:
                 strBld.Append(@"#usecom");
                 if (_functions.Count != 0)
                 {
@@ -95,7 +94,6 @@ internal sealed class Usedll : Preprocessor
                 strBld.Append('"');
                 break;
             case UsedllType.None:
-                break;
             default:
                 return @"//#uselib? //非対応の形式";
         }
@@ -108,5 +106,5 @@ internal sealed class Usedll : Preprocessor
     //
     // #usecom 行そのものが COM オブジェクトの最初の関数エントリを宣言する。
     internal bool IsDeclaredByHeader(Function function) =>
-        Type == UsedllType.usecom && _functions.Count != 0 && _functions[0] == function;
+        Type == UsedllType.UseCom && _functions.Count != 0 && _functions[0] == function;
 }

@@ -5,8 +5,6 @@ namespace HspDecompiler.Core.Ax3.Data.Token;
 
 internal sealed class VariableToken : OperandToken
 {
-    private VariableToken() { }
-
     internal VariableToken(VariablePrimitive var)
     {
         _primitive = var;
@@ -32,7 +30,7 @@ internal sealed class VariableToken : OperandToken
         }
 
         var builder = new StringBuilder(_primitive!.ToString());
-        builder.Append(_arg.ToString());
+        builder.Append(_arg);
         return builder.ToString();
     }
 

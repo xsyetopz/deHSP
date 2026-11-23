@@ -5,14 +5,12 @@ namespace HspDecompiler.Core.Ax3.Data.Token;
 
 internal sealed class ExpressionToken : CodeToken
 {
-    private ExpressionToken() { }
-
     internal ExpressionToken(List<ExpressionTermToken> elements)
     {
         _tokens = elements;
     }
 
-    private readonly List<ExpressionTermToken>? _tokens;
+    private readonly List<ExpressionTermToken> _tokens;
     private ExpressionTermToken? _convertedToken;
     private bool _tryConvert;
     internal bool CanRpnConvert => _convertedToken != null || !_tryConvert && RpnConvert();
@@ -24,7 +22,7 @@ internal sealed class ExpressionToken : CodeToken
             return true;
         }
 
-        if (_tokens!.Count == 0)
+        if (_tokens.Count == 0)
         {
             return false;
         }
@@ -72,19 +70,7 @@ internal sealed class ExpressionToken : CodeToken
         return stack.Count == 1 ? stack.Pop() : null;
     }
 
-    internal override int TokenOffset
-    {
-        get
-        {
-            if ((_tokens == null) || (_tokens.Count == 0))
-            {
-                return -1;
-            }
-
-            var token = _tokens[0] as CodeToken;
-            return token == null ? -1 : token.TokenOffset;
-        }
-    }
+    internal override int TokenOffset => _tokens.Count == 0 ? -1 : _tokens[0].TokenOffset;
 
     internal string ToString(bool getRpnConverted)
     {
@@ -95,14 +81,14 @@ internal sealed class ExpressionToken : CodeToken
 
         var builder = new StringBuilder();
         int i = 0;
-        foreach (ExpressionTermToken token in _tokens!)
+        foreach (ExpressionTermToken token in _tokens)
         {
             if (i != 0)
             {
                 builder.Append(' ');
             }
 
-            builder.Append(token.ToString());
+            builder.Append(token);
             i++;
         }
         return builder.ToString();
@@ -112,7 +98,7 @@ internal sealed class ExpressionToken : CodeToken
 
     internal override void CheckLabel()
     {
-        foreach (CodeToken token in _tokens!)
+        foreach (CodeToken token in _tokens)
         {
             token.CheckLabel();
         }
