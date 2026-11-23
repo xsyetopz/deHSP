@@ -96,6 +96,22 @@ public sealed class EncryptedDpmTests : IDisposable
         Assert.True(File.Exists(OutputFile("secret.hsp")));
     }
 
+    [Fact]
+    public async Task DecompressDpmCountsEncryptedEntries()
+    {
+        var pipeline = new DecompilerPipeline(new NullLogger(), new NullProgressReporter());
+        using var reader = new BinaryReader(File.OpenRead(WriteArchive(encryptPlainEntry: false)));
+
+        DpmExtractionResult result = await pipeline.DecompressDpmAsync(
+            reader,
+            OutputDirectory,
+            new DecompilerOptions { InputPath = "archive.dpm", SkipEncrypted = true }
+        );
+
+        Assert.Equal(2, result.Files.Count);
+        Assert.Equal(1, result.EncryptedCount);
+    }
+
     private string OutputDirectory => Path.Combine(_workDir, "out");
 
     private string OutputFile(string name) => Path.Combine(OutputDirectory, name);

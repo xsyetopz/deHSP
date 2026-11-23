@@ -24,9 +24,9 @@ public class DpmExtractorTests
         bw.Write(0);
 
         byte[] name = new byte[16];
-        System.Text.Encoding.ASCII.GetBytes("test.ax").CopyTo(name, 0);
+        "test.ax"u8.CopyTo(name);
         bw.Write(name);
-        bw.Write(0);
+        bw.Write(0x12345678);
         bw.Write(0);
         bw.Write(0);
         bw.Write(100);
@@ -43,6 +43,7 @@ public class DpmExtractorTests
         Assert.Equal("test.ax", extractor.FileList[0].FileName);
         Assert.False(extractor.FileList[0].IsEncrypted);
         Assert.Equal(100, extractor.FileList[0].FileSize);
+        Assert.Equal(0x12345678, extractor.FileList[0].Unknown);
     }
 
     [Fact]

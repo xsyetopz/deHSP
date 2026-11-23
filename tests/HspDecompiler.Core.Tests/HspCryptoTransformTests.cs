@@ -71,14 +71,14 @@ public class HspCryptoTransformTests
         byte[] plaintext = [0x48, 0x53, 0x50, 0x33, 0x01, 0x02, 0x03, 0x04];
         byte[] encrypted = originalTransform.Encryption(plaintext);
 
-        static bool validator(byte[] data) =>
+        static bool IsHspHeader(byte[] data) =>
             data.Length >= 4
             && data[0] == 0x48
             && data[1] == 0x53
             && data[2] == 0x50
             && (data[3] == 0x33 || data[3] == 0x32);
 
-        var cracked = HspCryptoTransform.CrackEncryption(encrypted, validator);
+        var cracked = HspCryptoTransform.CrackEncryption(encrypted, IsHspHeader);
 
         Assert.NotNull(cracked);
         byte[] decrypted = cracked.Decryption(encrypted);
