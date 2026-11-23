@@ -34,7 +34,19 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
   - `#runtime`.
   - `#cmpopt varname 1` and `#cmpopt optprm 0`.
   - `#cmpopt optcode 0`, written only when the AX shows optcode was off: an uncalled
-    `#func` or `#cfunc`, or a string stored twice.
+    `#func` or `#cfunc`, a `#module` nothing uses, or a string stored twice.
+- Debug builds (`hspcmp -d`) decompile to their source layout. Recompiled with `hspcmp -d`, the
+  output gives back the same AX, debug segment included:
+  - Each included file that held code is written beside the main source, and its `#include`
+    goes back on its line.
+  - Each statement goes back on its source line. Statements of one line join with ` : `, and
+    `{"..."}` strings get their line breaks back.
+  - Variables, labels and parameters get their recorded names.
+  - `#module` and `#global` blocks come back, with `#modinit`, `#modfunc`, `#modcfunc`,
+    `#modterm`, `#deffunc local`, nameless `#module` and names written for the block's scope.
+- `--common <dir>` (`DecompilerOptions.CommonDirectory`) points at the HSP `common` directory.
+  A debug build gets back the `#include` of a common header that left only definitions, and
+  the imports that header declares leave the output.
 - The CLI exits with 0 on success and 1 on any failure.
 - The public API has XML documentation in English and Japanese.
 
@@ -64,5 +76,6 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
   that form, because only it rebuilds the same AX. A bare name that hspcmp 3.7 and earlier
   decorated as `_name@16` comes back bare.
 - `#func onexit` and `#cfunc onexit` are no longer dropped from the output.
+- `thismod` decompiles as `thismod` instead of a comment that does not compile.
 - The GUI logs errors from Open, drag and drop, and About instead of crashing, and keeps
   decompile continuations on the UI thread.

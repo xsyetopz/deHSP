@@ -48,6 +48,7 @@ dehsp <input-file> [options]
   --no-decrypt                   Skip encrypted file decryption
   --skip-encrypted               Extract only non-encrypted files
   --utf8                         Write UTF-8 without a BOM instead of Shift_JIS; recompile with hspcmp -i or -j
+  --common <common>              HSP common directory; restores the #include of a matching common header in a debug build
   -v, --verbose                  Verbose logging
   -?, -h, --help                 Show help and usage information
   --version                      Show version information
@@ -76,14 +77,42 @@ the AX records, so hspcmp builds it the same way:
 
 | Line | Written when the AX |
 | --- | --- |
-| `#cmpopt optcode 0` | has an uncalled `#func` or `#cfunc`, or stores a string twice |
-| `#cmpopt varname 1` | holds variable names |
+| `#cmpopt optcode 0` | has an uncalled `#func` or `#cfunc`, a `#module` nothing uses, or stores a string twice |
+| `#cmpopt varname 1` | holds variable names and is not a debug build |
 | `#cmpopt optprm 0` | has no single-literal parameter flags |
 | `#cmpopt utf8 1` | holds UTF-8 strings, unless it is an hsp64 program without the utf8 boot flag |
 | `#bootopt ...` | has boot flags set (hsp64, nogdip, float32, orgrnd, ioresume, utf8, notimer) |
 | `#runtime "..."` | names a runtime |
 
 The test fixtures recompile byte for byte with hspcmp 3.5, 3.7 and 3.8β2.
+
+### Debug builds
+
+A program compiled in debug mode (`hspcmp -d`) carries the file names, the source line of
+every statement, and the names of its variables, labels and parameters. deHSP rebuilds the
+source from them:
+
+- Each file that held code is written next to the main source under its recorded name, and
+  its `#include` goes back on its original line.
+- Each statement goes back on its source line. Statements that shared a line are joined with
+  ` : `, and `{"..."}` strings get their line breaks back.
+- Variables, labels and parameters get their original names.
+- `#module` and `#global` blocks come back, with `#modinit`, `#modfunc`, `#modcfunc`,
+  `#modterm`, `#deffunc local`, nameless `#module` and `thismod`. Names inside a block are
+  written for its scope: `val` for its own variable, `gcount@` for a global one, `*init@` for
+  a global label.
+- `--common` points at the HSP `common` directory. A common header that left only
+  definitions behind, such as `hspcmp.as`, gets its `#include` back, and the output drops the
+  imports it declares. Without `--common` that `#include` stays as a comment.
+
+Recompile the output with `hspcmp -d` to get the same debug segment. The debug fixtures and a
+41 KB program built by hspcmp 3.8β2 rebuild byte for byte. Two limits remain:
+
+- The AX does not hold comments, `#define` macros, the case of names, or the alias of a
+  `#func` that no common header declares, so those cannot come back.
+- The 64-bit hspcmp 3.8β2 sets hsp64 and `#runtime "hsp3_64"` without being asked; a 32-bit
+  hspcmp needs both lines. The two lines go into the first gap without code. When a source has
+  no such gap, they go after the last line, and a recompile records those extra lines.
 
 ### Text encoding
 
