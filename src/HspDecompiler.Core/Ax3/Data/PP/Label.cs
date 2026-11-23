@@ -51,22 +51,27 @@ internal class Label : Preprocessor, System.IComparable<Label>
     internal void AddReference(int tokenOffset) => _referenceOffsets.Add(tokenOffset);
 
     private string _labelName = "*label";
+
     internal string LabelName
     {
-        get => Scope == null ? _labelName : Scope.Label(_labelName, Owner);
+        get => _labelName;
         set => _labelName = value;
     }
 
-    // The rebuilt module the label was defined in, and the scope that spells it for the line
-    // being written; both stay null when the output has no module blocks.
+    // The rebuilt module the label was defined in; null when the output has no module blocks.
     //
-    // ラベルを定義した再構築モジュールと、出力中の行に合わせて名前を書くスコープ。出力に
-    // モジュールブロックが無ければどちらも null のままである。
+    // ラベルを定義した再構築モジュール。出力にモジュールブロックが無ければ null である。
     internal string? Owner { get; set; }
 
-    internal ModuleScope? Scope { get; set; }
+    // The label's name as a line in the given context refers to it.
+    //
+    // 与えた文脈の行が参照する時のラベル名。
+    internal string Name(RenderContext context) => context.Label(_labelName, Owner);
 
-    public override string ToString() => _function != null ? _function.ToString() : LabelName;
+    internal override string Render(RenderContext context) =>
+        _function != null ? _function.Render(context) : Name(context);
+
+    public override string ToString() => _function != null ? _function.ToString() : _labelName;
 
     public int CompareTo(Label? other)
     {

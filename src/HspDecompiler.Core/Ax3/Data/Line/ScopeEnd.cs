@@ -5,5 +5,5 @@ internal sealed class ScopeEnd : LogicalLine
     internal override bool TabDecrement => true;
     internal override int TokenOffset => -1;
 
-    public override string ToString() => "}";
+    internal override string Render(RenderContext context) => "}";
 }

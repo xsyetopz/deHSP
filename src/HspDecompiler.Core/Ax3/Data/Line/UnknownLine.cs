@@ -16,7 +16,7 @@ internal sealed class UnknownLine : LogicalLine
     internal override int TokenOffset =>
         (_tokens == null) || (_tokens.Length == 0) ? -1 : _tokens[0].TokenOffset;
 
-    public override string ToString()
+    internal override string Render(RenderContext context)
     {
         if ((_tokens == null) || (_tokens.Length == 0))
         {
@@ -27,7 +27,7 @@ internal sealed class UnknownLine : LogicalLine
         foreach (PrimitiveToken token in _tokens)
         {
             builder.Append(' ');
-            builder.Append(token);
+            builder.Append(token.Render(context));
         }
         return builder.ToString();
     }

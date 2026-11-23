@@ -22,13 +22,11 @@ public class ScopeSnapshotTests
         data.Labels.Add(label);
         var before = ScopeSnapshot.Take(data);
         label.Owner = "m";
-        label.Scope = data.Scope;
         data.Scope.AddGlobalFunction("f");
 
         before.Restore(data);
 
         Assert.Null(label.Owner);
-        Assert.Null(label.Scope);
         Assert.Empty(data.Scope.GlobalFunctions);
         Assert.Equal("*label", label.LabelName);
     }

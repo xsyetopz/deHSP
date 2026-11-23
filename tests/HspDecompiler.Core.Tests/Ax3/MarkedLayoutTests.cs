@@ -19,7 +19,9 @@ public class MarkedLayoutTests
         new(line, kind, []) { Target = target };
 
     private static List<List<string>>? Place(List<MarkedItem> items, params string[] headers) =>
-        new MarkedPlacer(new ModuleScope(), [.. headers]).Place(items, part => $"x_{part}.hsp");
+        new MarkedPlacer(RenderContext.Of(Hsp33()), [.. headers]).Place(items, part =>
+            $"x_{part}.hsp"
+        );
 
     [Fact]
     public void BlankRowsTakeNoLineAndCodeJoinsCodeOrLabel()

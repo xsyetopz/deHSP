@@ -17,13 +17,13 @@ internal sealed class LiteralToken : OperandToken
 
     internal override int TokenOffset => _token == null ? -1 : _token.TokenOffset;
 
-    public override string ToString() =>
-        (_token!.CodeType == HspCodeType.Symbol) && (_token.ToString() == "?")
+    internal override string Render(RenderContext context) =>
+        _token!.Render(context) is var text && _token.CodeType == HspCodeType.Symbol && text == "?"
             ? ""
-            : _token.ToString();
+            : text;
 
-    internal override int Priority =>
-        IsNegativeNumber && _token!.Style.ParenthesizeNegatives ? -1 : 100;
+    internal override int Priority(RenderContext context) =>
+        IsNegativeNumber && context.Style.ParenthesizeNegatives ? -1 : 100;
 
     // An integer that is not a label or a symbol, or null.
     //
@@ -32,11 +32,11 @@ internal sealed class LiteralToken : OperandToken
 
     internal int? Integer => _token is IntegerPrimitive integer ? integer.Value : null;
 
-    internal void WriteInHex()
+    internal void MarkPokeByte()
     {
         if (_token is IntegerPrimitive integer)
         {
-            integer.Hex = true;
+            integer.PokeByte = true;
         }
     }
 

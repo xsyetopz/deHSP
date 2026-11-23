@@ -19,22 +19,22 @@ internal sealed class OnStatement : LogicalLine
 
     internal override int TokenOffset => _token!.TokenOffset;
 
-    public override string ToString()
+    internal override string Render(RenderContext context)
     {
         var builder = new StringBuilder();
         if (_token != null)
         {
-            builder.Append(_token);
+            builder.Append(_token.Render(context));
         }
         if (_exp != null)
         {
             builder.Append(' ');
-            builder.Append(_exp);
+            builder.Append(_exp.Render(context));
         }
         if (_func != null)
         {
             builder.Append(' ');
-            builder.Append(_func);
+            builder.Append(_func.Render(context));
         }
         return builder.ToString();
     }

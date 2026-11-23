@@ -19,7 +19,7 @@ internal class CommentLine : LogicalLine
 
     internal override int TabCount => 0;
 
-    public override string ToString()
+    internal override string Render(RenderContext context)
     {
         if (_comment == null)
         {

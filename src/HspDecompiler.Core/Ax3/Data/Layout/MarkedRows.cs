@@ -66,7 +66,11 @@ internal sealed class RowTable
     // 指定した行以降で最初の空行でない行。無ければ行数。
     internal int NextFilled(int row) => _next[row];
 
-    internal static List<MarkedRow> Build(List<LogicalLine> lines, List<LogicalLine> headers)
+    internal static List<MarkedRow> Build(
+        List<LogicalLine> lines,
+        List<LogicalLine> headers,
+        LineRenderer renderer
+    )
     {
         var rows = new List<MarkedRow>();
         foreach (LogicalLine line in lines)
@@ -83,7 +87,7 @@ internal sealed class RowTable
                 continue;
             }
 
-            int[] escapes = kind == LineKind.Code ? LongStrings.Escapes(line.ToString()) : [];
+            int[] escapes = kind == LineKind.Code ? LongStrings.Escapes(renderer.Render(line)) : [];
             rows.Add(new MarkedRow(line, kind, escapes));
         }
 

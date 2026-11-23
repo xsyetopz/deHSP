@@ -1,16 +1,20 @@
+using System.IO;
 using HspDecompiler.Core.Ax3.Data;
 using HspDecompiler.Core.Ax3.Data.Line;
+using HspDecompiler.Core.Ax3.Data.PP;
 using Xunit;
 
 namespace HspDecompiler.Core.Tests.Ax3;
 
 public class ModuleScopeTests
 {
-    private static ModuleScope Inside(string module)
+    private static RenderContext Inside(string module, AxData? data = null) =>
+        RenderContext.Of(data ?? new AxData()).In(module);
+
+    private static Label LabelAt(int offset)
     {
-        var scope = new ModuleScope();
-        _ = scope.Render(new ModuleStart(module, false, null, 0));
-        return scope;
+        using var reader = new BinaryReader(new MemoryStream(System.BitConverter.GetBytes(offset)));
+        return Label.FromBinaryReader(reader, new AxData(), 0);
     }
 
     [Theory]
@@ -19,64 +23,59 @@ public class ModuleScopeTests
     [InlineData("other@lib", "other@lib")]
     public void VariableInsideModuleUsesItsScope(string recorded, string expected)
     {
-        ModuleScope scope = Inside("mymod");
+        RenderContext context = Inside("mymod");
 
-        Assert.Equal(expected, scope.Variable(recorded));
+        Assert.Equal(expected, context.Variable(recorded));
     }
 
     [Fact]
     public void VariableKeepsSuffixWhenGlobalFunctionHoldsBareName()
     {
-        ModuleScope scope = Inside("a");
-        scope.AddGlobalFunction("show");
+        var data = new AxData();
+        data.Scope.AddGlobalFunction("show");
 
-        Assert.Equal("show@a", scope.Variable("show@a"));
+        Assert.Equal("show@a", Inside("a", data).Variable("show@a"));
     }
 
     [Fact]
-    public void GlobalLeavesModuleScope()
+    public void RendererEntersAtModuleAndLeavesAtGlobal()
     {
-        ModuleScope scope = Inside("mymod");
+        var label = new PreprocessorDeclaration(LabelAt(0));
+        var renderer = new LineRenderer(RenderContext.Of(new AxData()));
 
-        _ = scope.Render(new EndOfModule(0));
+        string[] text =
+        [
+            renderer.Render(label),
+            renderer.Render(new ModuleStart("mymod", false, null, 0)),
+            renderer.Render(label),
+            renderer.Render(new EndOfModule(0)),
+            renderer.Render(label),
+        ];
 
-        Assert.Equal("val@mymod", scope.Variable("val@mymod"));
-        Assert.Equal("gcount", scope.Variable("gcount"));
+        Assert.Equal(["*label", "#module mymod", "*label@", "#global", "*label"], text);
     }
 
     [Fact]
     public void LocalFunctionDropsOwnSuffix()
     {
-        ModuleScope scope = Inside("mymod");
+        RenderContext context = Inside("mymod");
 
-        Assert.Equal("helper", scope.Function("helper@mymod"));
-        Assert.Equal("twice@lib", scope.Function("twice@lib"));
+        Assert.Equal("helper", context.Function("helper@mymod"));
+        Assert.Equal("twice@lib", context.Function("twice@lib"));
     }
 
     [Fact]
-    public void ImportInsideModuleTakesGlobalScope()
-    {
-        ModuleScope scope = Inside("mymod");
-
-        Assert.Equal("GetTickCount@", scope.Import("GetTickCount"));
-    }
+    public void ImportInsideModuleTakesGlobalScope() =>
+        Assert.Equal("GetTickCount@", Inside("mymod").Import("GetTickCount"));
 
     [Fact]
-    public void ImportOutsideModuleStaysBare()
-    {
-        var scope = new ModuleScope();
-
-        Assert.Equal("GetTickCount", scope.Import("GetTickCount"));
-    }
+    public void ImportOutsideModuleStaysBare() =>
+        Assert.Equal("GetTickCount", RenderContext.Of(new AxData()).Import("GetTickCount"));
 
     [Theory]
     [InlineData("skip", "mymod", "skip")]
     [InlineData("init", null, "init@")]
     [InlineData("inner", "helper", "inner@helper")]
-    public void LabelInsideModuleUsesItsOwner(string name, string? owner, string expected)
-    {
-        ModuleScope scope = Inside("mymod");
-
-        Assert.Equal(expected, scope.Label(name, owner));
-    }
+    public void LabelInsideModuleUsesItsOwner(string name, string? owner, string expected) =>
+        Assert.Equal(expected, Inside("mymod").Label(name, owner));
 }

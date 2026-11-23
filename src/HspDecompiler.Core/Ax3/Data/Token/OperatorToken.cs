@@ -1,5 +1,4 @@
 using HspDecompiler.Core.Ax3.Data.Primitive;
-using HspDecompiler.Core.Pipeline;
 
 namespace HspDecompiler.Core.Ax3.Data.Token;
 
@@ -13,9 +12,7 @@ internal sealed class OperatorToken : ExpressionTermToken
     private readonly OperatorPrimitive? _primitive;
     internal override int TokenOffset => _primitive!.TokenOffset;
 
-    internal SourceStyle Style => _primitive!.Style;
-
-    public override string ToString() => _primitive!.ToString();
+    internal override string Render(RenderContext context) => _primitive!.Render(context);
 
     internal CalcCode Code => _primitive!.Code;
 
@@ -26,9 +23,9 @@ internal sealed class OperatorToken : ExpressionTermToken
     // 代入では演算子の後に '=' を付ける("+=")。'=' 自体と、hspcmp がそこでも読む 2 つの比較は
     // 除く。式の無い + と - はインクリメントとデクリメント。式の中の '=' と '!' は比較で、
     // "==" と "!=" と書く。
-    internal string ToString(bool isAssignment, bool hasExpression)
+    internal string Render(RenderContext context, bool isAssignment, bool hasExpression)
     {
-        string text = _primitive!.ToString();
+        string text = _primitive!.Render(context);
         return _primitive.CodeType != HspCodeType.Operator ? text
             : isAssignment
                 ? (Code, hasExpression) switch
@@ -46,5 +43,5 @@ internal sealed class OperatorToken : ExpressionTermToken
 
     internal override bool IsOperator => true;
 
-    internal override int Priority => _primitive!.OperatorPriority;
+    internal override int Priority(RenderContext context) => _primitive!.OperatorPriority;
 }

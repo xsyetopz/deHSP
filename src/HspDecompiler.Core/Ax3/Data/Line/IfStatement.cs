@@ -1,4 +1,3 @@
-using System.Text;
 using HspDecompiler.Core.Ax3.Data.Primitive;
 using HspDecompiler.Core.Ax3.Data.Token;
 using HspDecompiler.Core.Pipeline;
@@ -37,15 +36,14 @@ internal sealed class IfStatement : LogicalLine
     }
     internal override bool TabIncrement => _scopeEndIsDefined;
 
-    public override string ToString()
+    internal override string Render(RenderContext context)
     {
-        var builder = new StringBuilder(_ifToken!.ToString());
-        if (_arg != null)
-        {
-            builder.Append(Condition(_arg.ToString().TrimStart(' '), _ifToken.Style.IfParentheses));
-        }
-        builder.Append(" {");
-        return builder.ToString();
+        string head = _ifToken!.Render(context);
+        return _arg == null
+            ? head + " {"
+            : head
+                + Condition(_arg.Render(context).TrimStart(' '), context.Style.IfParentheses)
+                + " {";
     }
 
     private static string Condition(string condition, IfParentheses parentheses) =>

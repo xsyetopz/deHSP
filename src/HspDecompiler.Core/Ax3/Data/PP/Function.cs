@@ -61,7 +61,6 @@ internal class Function : Preprocessor
         : base(index) { }
 
     private int _dllIndex;
-    private ModuleScope? _scope;
     private int _functionIndex;
     private List<Param> _functionParams = [];
 
@@ -76,7 +75,6 @@ internal class Function : Preprocessor
     {
         var ret = new Function(index)
         {
-            _scope = parent.Scope,
             _dllIndex = reader.ReadInt16(),
             _functionIndex = reader.ReadInt16(),
         };
@@ -474,5 +472,7 @@ internal class Function : Preprocessor
             _ => "/*#deffunc?*/",
         };
 
-    public override string ToString() => ToString(_scope?.Current != null);
+    public override string ToString() => ToString(false);
+
+    internal override string Render(RenderContext context) => ToString(context.Module != null);
 }

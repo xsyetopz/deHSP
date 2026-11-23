@@ -1,4 +1,3 @@
-using System.Text;
 using HspDecompiler.Core.Ax3.Data.Primitive;
 using HspDecompiler.Core.Pipeline;
 
@@ -28,16 +27,24 @@ internal sealed class SubExpressionToken : OperandToken
     //
     // 詰めた書き方でも負の右オペランドの前には空白を残す。hspcmp は "a--1" を "a - -1" と
     // 読むが、人にはデクリメントに見えるためである。
-    private string ToStringForceDefault()
+    private string RenderInfix(RenderContext context)
     {
-        SourceStyle style = _op!.Style;
+        SourceStyle style = context.Style;
+        int priority = _op!.Priority(context);
         bool logical = style.LogicalOperators != LogicalOperators.Symbols && IsLogical;
-        string left = Operand(_p1!, _p1!.Priority < _op.Priority || (logical && _p1.IsComparison));
-        string right = Operand(
-            _p2!,
-            _p2!.Priority <= _op.Priority || (logical && _p2.IsComparison)
+        string left = Operand(
+            context,
+            _p1!,
+            _p1!.Priority(context) < priority || (logical && _p1.IsComparison)
         );
-        string op = logical ? LogicalText(style.LogicalOperators) : _op.ToString(false, true);
+        string right = Operand(
+            context,
+            _p2!,
+            _p2!.Priority(context) <= priority || (logical && _p2.IsComparison)
+        );
+        string op = logical
+            ? LogicalText(style.LogicalOperators)
+            : _op.Render(context, false, true);
         bool compact =
             style.CompactOperators
             && !(logical && style.LogicalOperators == LogicalOperators.Words);
@@ -46,8 +53,8 @@ internal sealed class SubExpressionToken : OperandToken
             : left + op + right;
     }
 
-    private static string Operand(OperandToken operand, bool parenthesize) =>
-        parenthesize ? "(" + operand + ")" : operand.ToString();
+    private static string Operand(RenderContext context, OperandToken operand, bool parenthesize) =>
+        parenthesize ? "(" + operand.Render(context) + ")" : operand.Render(context);
 
     private string LogicalText(LogicalOperators logical) =>
         (_op!.Code, logical) switch
@@ -68,44 +75,21 @@ internal sealed class SubExpressionToken : OperandToken
     private static bool IsCondition(OperandToken operand) =>
         operand.IsComparison || operand is SubExpressionToken { IsLogical: true };
 
-    internal string ToString(bool forceDefault)
-    {
-        if (forceDefault)
-        {
-            return ToStringForceDefault();
-        }
+    // var * -1 reads back as -var, which hspcmp compiles to the same multiplication.
+    //
+    // var * -1 は -var と書く。hspcmp は同じ乗算にコンパイルする。
+    internal override string Render(RenderContext context) =>
+        _op!.Code == CalcCode.Multiply
+        && (
+            (_p1 is LiteralToken { IsMinusOne: true } && _p2 is VariableToken right) ? right
+            : (_p2 is LiteralToken { IsMinusOne: true } && _p1 is VariableToken left) ? left
+            : null
+        )
+            is { } negated
+            ? "-" + negated.Render(context)
+            : RenderInfix(context);
 
-        var lit = _p1 as LiteralToken;
-        var var = _p2 as VariableToken;
-        if ((lit == null) || (var == null))
-        {
-            lit = _p2 as LiteralToken;
-            var = _p1 as VariableToken;
-        }
-        if ((lit == null) || (var == null))
-        {
-            return ToStringForceDefault();
-        }
-
-        if (!lit.IsMinusOne)
-        {
-            return ToStringForceDefault();
-        }
-
-        if (_op!.Code != CalcCode.Multiply)
-        {
-            return ToStringForceDefault();
-        }
-
-        var builder = new StringBuilder();
-        builder.Append('-');
-        builder.Append(var);
-        return builder.ToString();
-    }
-
-    public override string ToString() => ToString(false);
-
-    internal override int Priority => _op!.Priority;
+    internal override int Priority(RenderContext context) => _op!.Priority(context);
 
     internal override bool IsComparison => _op!.Code.IsComparison();
 

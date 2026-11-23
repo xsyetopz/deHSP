@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 
 namespace HspDecompiler.Core.Ax3.Data.Token;
 
@@ -77,29 +77,13 @@ internal sealed class ExpressionToken : CodeToken
 
     internal override int TokenOffset => _tokens.Count == 0 ? -1 : _tokens[0].TokenOffset;
 
-    internal string ToString(bool getRpnConverted)
-    {
-        if (getRpnConverted && (_convertedToken != null))
-        {
-            return _convertedToken.ToString();
-        }
-
-        var builder = new StringBuilder();
-        int i = 0;
-        foreach (ExpressionTermToken token in _tokens)
-        {
-            if (i != 0)
-            {
-                builder.Append(' ');
-            }
-
-            builder.Append(token);
-            i++;
-        }
-        return builder.ToString();
-    }
-
-    public override string ToString() => ToString(true);
+    // An expression the RPN fold could not take apart is written term by term in stored order.
+    //
+    // RPN の畳み込みで分解できなかった式は、格納順に項を並べて書く。
+    internal override string Render(RenderContext context) =>
+        _convertedToken != null
+            ? _convertedToken.Render(context)
+            : string.Join(' ', _tokens.Select(token => token.Render(context)));
 
     internal override void CheckLabel()
     {

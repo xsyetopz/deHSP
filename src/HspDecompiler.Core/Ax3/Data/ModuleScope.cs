@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using HspDecompiler.Core.Ax3.Data.Line;
 
 namespace HspDecompiler.Core.Ax3.Data;
 
@@ -19,45 +18,17 @@ internal sealed class ModuleScope
 {
     private readonly HashSet<string> _globalFunctions = new(StringComparer.OrdinalIgnoreCase);
 
-    internal string? Current { get; private set; }
-
     internal void AddGlobalFunction(string name) => _globalFunctions.Add(name);
 
     internal IReadOnlyCollection<string> GlobalFunctions => _globalFunctions;
 
-    // Returns to the given global functions outside any module, as before a layout that failed.
+    // Returns to the given global functions, as before a layout that failed.
     //
-    // 失敗した配置の前のように、与えたグローバル関数を持ち、どのモジュールの外にも居る状態に
-    // 戻る。
+    // 失敗した配置の前のように、与えたグローバル関数に戻る。
     internal void Reset(IEnumerable<string> globalFunctions)
     {
         _globalFunctions.Clear();
         _globalFunctions.UnionWith(globalFunctions);
-        Current = null;
-    }
-
-    // Leaves any module a finished pass left open, so the lines can be rendered again.
-    //
-    // 終えた出力が開いたままにしたモジュールを出て、行をもう一度出力できるようにする。
-    internal void Leave() => Current = null;
-
-    // Renders one line in order, entering a module at its #module and leaving it at #global.
-    //
-    // 行を順に出力し、#module でモジュールに入り #global で出る。
-    internal string Render(LogicalLine line)
-    {
-        if (line is EndOfModule)
-        {
-            Current = null;
-        }
-
-        string text = line.ToString();
-        if (line is ModuleStart start)
-        {
-            Current = start.Name;
-        }
-
-        return text;
     }
 
     // A module variable whose bare name a global function holds keeps its suffix, because the
@@ -65,9 +36,9 @@ internal sealed class ModuleScope
     //
     // 裸の名前をグローバル関数が持つモジュール変数は接尾辞を残す。裸の名前はその関数と読まれる
     // ためである。
-    internal string Variable(string name)
+    internal string Variable(string name, string? module)
     {
-        if (Current == null)
+        if (module == null)
         {
             return name;
         }
@@ -79,13 +50,13 @@ internal sealed class ModuleScope
         }
 
         string bare = name[..at];
-        return IsCurrent(name[(at + 1)..]) && !_globalFunctions.Contains(bare) ? bare : name;
+        return Is(module, name[(at + 1)..]) && !_globalFunctions.Contains(bare) ? bare : name;
     }
 
-    internal string Function(string name)
+    internal static string Function(string name, string? module)
     {
         int at = name.IndexOf('@', StringComparison.Ordinal);
-        return at >= 0 && IsCurrent(name[(at + 1)..]) ? name[..at] : name;
+        return at >= 0 && Is(module, name[(at + 1)..]) ? name[..at] : name;
     }
 
     // An import resolves inside a module only through the global scope: hspcmp 3.1 to 3.8
@@ -95,14 +66,14 @@ internal sealed class ModuleScope
     // インポートはモジュール内ではグローバルスコープを通してしか解決されない。hspcmp 3.1〜3.8 は
     // 外で宣言した #func をそこで裸で呼ぶとエラーにし、"名前@" は "#func global" 宣言と同じ
     // バイト列になる。
-    internal string Import(string name) =>
-        Current == null || name.Contains('@', StringComparison.Ordinal) ? name : name + "@";
+    internal static string Import(string name, string? module) =>
+        module == null || name.Contains('@', StringComparison.Ordinal) ? name : name + "@";
 
-    internal string Label(string name, string? owner) =>
-        owner == null ? (Current == null ? name : name + "@")
-        : IsCurrent(owner) ? name
+    internal static string Label(string name, string? owner, string? module) =>
+        owner == null ? (module == null ? name : name + "@")
+        : Is(module, owner) ? name
         : name + "@" + owner;
 
-    private bool IsCurrent(string module) =>
-        Current != null && module.Equals(Current, StringComparison.OrdinalIgnoreCase);
+    private static bool Is(string? module, string name) =>
+        module != null && name.Equals(module, StringComparison.OrdinalIgnoreCase);
 }

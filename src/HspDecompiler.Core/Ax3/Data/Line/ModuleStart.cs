@@ -36,8 +36,8 @@ internal sealed class ModuleStart : LogicalLine
 
     internal override int TabCount => 0;
 
-    public override string ToString() =>
-        _members != null ? _members.ToString(true)
+    internal override string Render(RenderContext context) =>
+        _members != null ? _members.Render(context.In(Name))
         : _anonymous ? "#module"
         : "#module " + Name;
 }

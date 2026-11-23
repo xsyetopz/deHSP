@@ -33,5 +33,6 @@ internal sealed class LineRecordMacro : LogicalLine
 
     internal override int TabCount => IsDefinition ? 0 : 1;
 
-    public override string ToString() => IsDefinition ? $"#define global {Name}(%1) %c" : Name;
+    internal override string Render(RenderContext context) =>
+        IsDefinition ? $"#define global {Name}(%1) %c" : Name;
 }

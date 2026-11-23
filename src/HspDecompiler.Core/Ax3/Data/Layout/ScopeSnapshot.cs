@@ -10,10 +10,10 @@ namespace HspDecompiler.Core.Ax3.Data.Layout;
 // 失敗した配置がデータを元のままに残せるようにする。
 internal sealed class ScopeSnapshot
 {
-    private readonly (Label Label, string? Owner, ModuleScope? Scope)[] _labels;
+    private readonly (Label Label, string? Owner)[] _labels;
     private readonly string[] _globalFunctions;
 
-    private ScopeSnapshot((Label, string?, ModuleScope?)[] labels, string[] globalFunctions)
+    private ScopeSnapshot((Label, string?)[] labels, string[] globalFunctions)
     {
         _labels = labels;
         _globalFunctions = globalFunctions;
@@ -21,16 +21,15 @@ internal sealed class ScopeSnapshot
 
     internal static ScopeSnapshot Take(AxData data) =>
         new(
-            [.. data.Labels.Select(label => (label, label.Owner, label.Scope))],
+            [.. data.Labels.Select(label => (label, label.Owner))],
             [.. data.Scope.GlobalFunctions]
         );
 
     internal void Restore(AxData data)
     {
-        foreach ((Label label, string? owner, ModuleScope? scope) in _labels)
+        foreach ((Label label, string? owner) in _labels)
         {
             label.Owner = owner;
-            label.Scope = scope;
         }
 
         data.Scope.Reset(_globalFunctions);

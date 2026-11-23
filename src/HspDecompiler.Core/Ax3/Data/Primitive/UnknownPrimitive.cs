@@ -5,5 +5,5 @@ internal sealed class UnknownPrimitive : PrimitiveToken
     internal UnknownPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet) { }
 
-    public override string ToString() => DefaultName;
+    internal override string Render(RenderContext context) => DefaultName;
 }

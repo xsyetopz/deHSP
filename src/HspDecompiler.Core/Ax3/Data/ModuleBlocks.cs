@@ -150,7 +150,6 @@ internal static class ModuleBlocks
         HashSet<string> names = new(blocks.Select(b => b.Name), StringComparer.OrdinalIgnoreCase);
         foreach (Label label in data.Labels)
         {
-            label.Scope = data.Scope;
             bool recorded = data.DebugInfo.LabelNames.ContainsKey(label.Index);
             string? owner = recorded
                 ? DebugNames.RecordedModule(data, label)

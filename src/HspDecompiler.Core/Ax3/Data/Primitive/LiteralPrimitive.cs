@@ -28,7 +28,8 @@ internal sealed class LabelPrimitive : LiteralPrimitive
 
     internal Label? Label => _label;
 
-    public override string ToString() => _label == null ? DefaultName : _label.LabelName;
+    internal override string Render(RenderContext context) =>
+        _label == null ? DefaultName : _label.Name(context);
 
     internal void LabelIsUsed()
     {
@@ -49,15 +50,22 @@ internal sealed class IntegerPrimitive : LiteralPrimitive
     internal override bool IsNegativeNumber => (Value < 0);
     internal override bool IsMinusOne => Value == -1;
 
-    internal bool Hex { get; set; }
+    // True for the byte a poke writes, which HexLiterals.Poke spells in hex.
+    //
+    // poke が書き込むバイトなら真。HexLiterals.Poke はこれを 16 進数で書く。
+    internal bool PokeByte { get; set; }
 
     // A negative value stays decimal: its hex spelling would be a 32-bit pattern such as
     // 0xFFFFFFFF that does not read as the number.
     //
     // 負の値は 10 進数のまま。16 進数で書くと 0xFFFFFFFF のような 32 ビットのパターンになり、
     // 数として読めない。
-    public override string ToString() =>
-        Value >= 0 && (Hex || (Style.HexLiterals == HexLiterals.All && Value >= 10))
+    internal override string Render(RenderContext context) =>
+        Value >= 0
+        && (
+            (PokeByte && context.Style.HexLiterals == HexLiterals.Poke)
+            || (context.Style.HexLiterals == HexLiterals.All && Value >= 10)
+        )
             ? "0x" + Value.ToString("X", CultureInfo.InvariantCulture)
             : Value.ToString(CultureInfo.InvariantCulture);
 }
@@ -74,7 +82,7 @@ internal sealed class DoublePrimitive : LiteralPrimitive
 
     internal override bool IsNegativeNumber => (_d < 0.0);
 
-    public override string ToString() => FormatLiteral(_d);
+    internal override string Render(RenderContext context) => FormatLiteral(_d);
 
     // The shortest text that hspcmp parses back to the same bits. hspcmp reads a literal
     // through atof and treats it as a double only when it holds '.' or a lowercase 'e'
@@ -108,7 +116,7 @@ internal sealed class StringPrimitive : LiteralPrimitive
     private readonly byte[] _text;
     private readonly ScriptStrings _strings;
 
-    public override string ToString() => "\"" + _strings.Decode(_text) + "\"";
+    internal override string Render(RenderContext context) => "\"" + _strings.Decode(_text) + "\"";
 }
 
 internal sealed class SymbolPrimitive : LiteralPrimitive

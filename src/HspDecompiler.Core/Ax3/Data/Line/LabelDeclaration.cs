@@ -17,5 +17,5 @@ internal sealed class PreprocessorDeclaration : LogicalLine
 
     internal override int TokenOffset => -1;
 
-    public override string ToString() => _pp!.ToString();
+    internal override string Render(RenderContext context) => _pp!.Render(context);
 }

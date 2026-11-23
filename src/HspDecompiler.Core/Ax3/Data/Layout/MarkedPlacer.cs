@@ -14,16 +14,21 @@ namespace HspDecompiler.Core.Ax3.Data.Layout;
 // その間の行は収まる限り 1 行ずつ保ち、収まらなければ空行を落とし、さらにコードを前の行に
 // 先頭からつなぐ。ソースの先頭の指示文は最初の記録の行より前に収まれば先頭に、そうでなければ
 // コードの後に置く。hspcmp はコードを生成する前にそれらを読むためである。
-internal sealed class MarkedPlacer(ModuleScope scope, List<string> headers)
+internal sealed class MarkedPlacer(RenderContext context, List<string> headers)
 {
     internal List<List<string>>? Place(List<MarkedItem> items, Func<int, string> partName)
     {
-        List<Slot> rendered = [.. items.Select(Render)];
+        var renderer = new LineRenderer(context);
+        List<Slot> rendered =
+        [
+            .. items.Select(item => new Slot(
+                renderer.Render(item.Line),
+                item.Line.TabCount,
+                item.Kind
+            )),
+        ];
         return Run(items, rendered, partName, true) ?? Run(items, rendered, partName, false);
     }
-
-    private Slot Render(MarkedItem item) =>
-        new(scope.Render(item.Line), item.Line.TabCount, item.Kind);
 
     private List<List<string>>? Run(
         List<MarkedItem> items,

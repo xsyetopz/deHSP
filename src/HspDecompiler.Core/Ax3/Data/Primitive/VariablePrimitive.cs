@@ -26,12 +26,12 @@ internal sealed class GlobalVariablePrimitive : VariablePrimitive
         _data = dataSet._parent!;
     }
 
-    public override string ToString()
+    internal override string Render(RenderContext context)
     {
         string? varName = _data.GetVariableName(Value);
         if (varName != null)
         {
-            return _data.Scope.Variable(varName);
+            return context.Variable(varName);
         }
 
         var bld = new StringBuilder("var");
@@ -61,7 +61,7 @@ internal sealed class ParameterPrimitive : VariablePrimitive
     // hspcmp は thismod を番号 -1 の引数参照として書く(hspcmd.cpp)。
     private const int ThisModIndex = -1;
 
-    public override string ToString() =>
+    internal override string Render(RenderContext context) =>
         _param != null ? _param.ParamName
         : Value == ThisModIndex ? "thismod"
         : DefaultName;

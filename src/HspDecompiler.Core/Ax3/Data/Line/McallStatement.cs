@@ -26,68 +26,33 @@ internal class McallStatement : LogicalLine
 
     internal override int TokenOffset => _token!.TokenOffset;
 
-    private string ToStringFunctionStyle()
+    private string RenderFunctionStyle(RenderContext context)
     {
         if (_arg == null)
         {
-            return _token!.ToString();
+            return _token!.Render(context);
         }
 
-        var builder = new StringBuilder();
-        builder.Append(_token);
+        var builder = new StringBuilder(_token!.Render(context));
         if (_var != null)
         {
             builder.Append(' ');
-            builder.Append(_var);
+            builder.Append(_var.Render(context));
             if (_exp != null)
             {
-                builder.Append(' ');
-                builder.Append(',');
-                builder.Append(_var);
+                builder.Append(" ,");
+                builder.Append(_var.Render(context));
             }
         }
-        if (_arg != null)
-        {
-            builder.Append(_arg);
-        }
+
+        builder.Append(_arg.Render(context));
         return builder.ToString();
     }
 
-    internal string ToString(bool convertMcall)
-    {
-        if (!convertMcall)
-        {
-            return ToStringFunctionStyle();
-        }
-
-        if (_var == null)
-        {
-            return ToStringFunctionStyle();
-        }
-
-        if (_exp == null)
-        {
-            return ToStringFunctionStyle();
-        }
-
-        if (_arg == null)
-        {
-            return ToStringFunctionStyle();
-        }
-
-        var builder = new StringBuilder();
-        builder.Append(_var);
-        builder.Append("->");
-        builder.Append(_exp);
-        if (_arg != null)
-        {
-            builder.Append(_arg.ToString(true));
-        }
-
-        return builder.ToString();
-    }
-
-    public override string ToString() => ToString(true);
+    internal override string Render(RenderContext context) =>
+        (_var == null) || (_exp == null) || (_arg == null)
+            ? RenderFunctionStyle(context)
+            : _var.Render(context) + "->" + _exp.Render(context) + _arg.Render(context, true);
 
     internal override void CheckLabel()
     {

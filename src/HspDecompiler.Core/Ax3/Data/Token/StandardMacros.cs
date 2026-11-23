@@ -98,30 +98,38 @@ internal static class StandardMacros
     // The macro spelling of a call, or null when no macro expands to it.
     //
     // 呼び出しのマクロとしての書き方。展開元のマクロが無ければ null。
-    internal static string? Spell(FunctionPrimitive function, ArgumentToken arguments)
+    internal static string? Spell(
+        FunctionPrimitive function,
+        ArgumentToken arguments,
+        RenderContext context
+    )
     {
         if (function is not HspFunctionPrimitive || !arguments.HasBrackets)
         {
             return null;
         }
 
-        string name = function.ToString();
+        string name = function.Name ?? string.Empty;
         List<ExpressionToken> exps = arguments.Exps;
         return
             exps.Count == 1
             && exps[0].Literal?.Integer is { } argument
             && s_calls.TryGetValue((name, argument), out (string Name, CompilerRelease Since) macro)
-            && function.Release.From(macro.Since)
+            && context.Release.From(macro.Since)
             ? macro.Name
-            : Objinfo(name, exps);
+            : Objinfo(name, exps, context);
     }
 
-    private static string? Objinfo(string name, List<ExpressionToken> exps) =>
+    private static string? Objinfo(
+        string name,
+        List<ExpressionToken> exps,
+        RenderContext context
+    ) =>
         name == "objinfo"
         && exps.Count == 2
         && exps[1].Literal?.Integer is { } mode
         && mode >= 0
         && mode < s_objinfo.Length
-            ? s_objinfo[mode] + "(" + exps[0] + ")"
+            ? s_objinfo[mode] + "(" + exps[0].Render(context) + ")"
             : null;
 }

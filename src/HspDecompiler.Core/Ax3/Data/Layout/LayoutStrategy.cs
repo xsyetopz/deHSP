@@ -96,11 +96,14 @@ internal sealed class InOrderLayout : ILayoutStrategy
 {
     public bool Applies(LayoutInput input) => true;
 
-    public DecodedSource? TryLayout(LayoutInput input) =>
-        DecodedSource.Single([
+    public DecodedSource? TryLayout(LayoutInput input)
+    {
+        var renderer = new LineRenderer(RenderContext.Of(input.Data));
+        return DecodedSource.Single([
             .. input.Directives(false),
             .. input
                 .Lines.Where(line => line.Visible)
-                .Select(line => new string('\t', line.TabCount) + input.Data.Scope.Render(line)),
+                .Select(line => new string('\t', line.TabCount) + renderer.Render(line)),
         ]);
+    }
 }

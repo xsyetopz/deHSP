@@ -20,7 +20,7 @@ internal abstract class LogicalLine
 
     internal void AddError(string error) => _errorMes.Add(error);
 
-    public abstract override string ToString();
+    internal abstract string Render(RenderContext context);
 
     private bool _visible = true;
     internal bool Visible

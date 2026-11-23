@@ -15,16 +15,14 @@ internal sealed class UserFunctionPrimitive : FunctionPrimitive
     internal UserFunctionPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet)
     {
-        _scope = dataSet._parent!.Scope;
         _func = dataSet._parent!.GetFunction(Value);
         _func?.MarkUsedAt(TokenOffset);
     }
 
     private readonly Function? _func;
-    private readonly ModuleScope _scope;
 
-    public override string ToString() =>
-        _func?.FunctionName is { } name ? _scope.Function(name) : DefaultName;
+    internal override string Render(RenderContext context) =>
+        _func?.FunctionName is { } name ? context.Function(name) : DefaultName;
 }
 
 internal sealed class DllFunctionPrimitive : FunctionPrimitive
@@ -32,16 +30,14 @@ internal sealed class DllFunctionPrimitive : FunctionPrimitive
     internal DllFunctionPrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet)
     {
-        _scope = dataSet._parent!.Scope;
         _func = dataSet._parent!.GetFunction(Value);
         _func?.MarkUsedAt(TokenOffset);
     }
 
     private readonly Function? _func;
-    private readonly ModuleScope _scope;
 
-    public override string ToString() =>
-        _func?.FunctionName is { } name ? _scope.Import(name) : DefaultName;
+    internal override string Render(RenderContext context) =>
+        _func?.FunctionName is { } name ? context.Import(name) : DefaultName;
 }
 
 internal sealed class PlugInFunctionPrimitive : FunctionPrimitive
@@ -55,7 +51,8 @@ internal sealed class PlugInFunctionPrimitive : FunctionPrimitive
 
     private readonly Cmd? _cmd;
 
-    public override string ToString() => _cmd == null ? DefaultName : _cmd.FunctionName;
+    internal override string Render(RenderContext context) =>
+        _cmd == null ? DefaultName : _cmd.FunctionName;
 }
 
 internal sealed class ComFunctionPrimitive : FunctionPrimitive
@@ -69,6 +66,6 @@ internal sealed class ComFunctionPrimitive : FunctionPrimitive
 
     private readonly Function? _func;
 
-    public override string ToString() =>
+    internal override string Render(RenderContext context) =>
         _func == null ? DefaultName : _func.FunctionName ?? DefaultName;
 }

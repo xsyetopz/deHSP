@@ -76,7 +76,9 @@ internal sealed class MarkedLayout
     internal static MarkedLayout? Match(List<LogicalLine> lines, AxData data, bool keepsImports)
     {
         var headers = new List<LogicalLine>();
-        var table = new RowTable(RowTable.Build(lines, headers));
+        var table = new RowTable(
+            RowTable.Build(lines, headers, new LineRenderer(RenderContext.Of(data)))
+        );
         IReadOnlyList<int> marks = data.DebugInfo.Marks;
         (bool Lone, bool Unused)[] attempts = keepsImports
             ? [(false, true)]
@@ -149,21 +151,15 @@ internal sealed class MarkedLayout
 
     private DecodedSource? Place(List<string> directives, string mainFile)
     {
-        ModuleScope scope = _data.Scope;
-        List<string> headers = [.. directives, .. _headers.Select(scope.Render)];
+        var context = RenderContext.Of(_data);
+        var headerRenderer = new LineRenderer(context);
+        List<string> headers = [.. directives, .. _headers.Select(headerRenderer.Render)];
         string stem = Path.GetFileNameWithoutExtension(mainFile);
         string extension = Path.GetExtension(mainFile);
         string PartName(int part) => $"{stem}_{part}{extension}";
-        List<List<string>>? parts = new MarkedPlacer(scope, headers).Place(
-            LabelsAfterGlobal(_items),
-            PartName
-        );
-        if (parts == null)
-        {
-            scope.Leave();
-            parts = new MarkedPlacer(scope, headers).Place(_items, PartName);
-        }
-
+        var placer = new MarkedPlacer(context, headers);
+        List<List<string>>? parts = placer.Place(LabelsAfterGlobal(_items), PartName)
+            ?? placer.Place(_items, PartName);
         if (parts == null)
         {
             return null;
@@ -435,7 +431,6 @@ internal static class MarkedModules
             bool owned =
                 home != null && (home.Name.Length > 0 || label.ReferenceOffsets.All(home.Holds));
             label.Owner = owned ? home!.Name : null;
-            label.Scope = data.Scope;
         }
     }
 }

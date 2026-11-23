@@ -1,4 +1,3 @@
-using System.Text;
 using HspDecompiler.Core.Ax3.Data.Primitive;
 
 namespace HspDecompiler.Core.Ax3.Data.Token;
@@ -24,26 +23,16 @@ internal sealed class FunctionToken : OperandToken
 
     internal override int TokenOffset => _primitive!.TokenOffset;
 
-    public override string ToString()
-    {
-        if (_arg == null)
-        {
-            return _primitive!.ToString();
-        }
-
-        if (_primitive!.Style.StandardMacros && StandardMacros.Spell(_primitive, _arg) is { } macro)
-        {
-            return macro;
-        }
-
-        var builder = new StringBuilder(_primitive.ToString());
-        builder.Append(_arg);
-        return builder.ToString();
-    }
+    internal override string Render(RenderContext context) =>
+        _arg == null ? _primitive!.Render(context)
+        : context.Style.StandardMacros
+        && StandardMacros.Spell(_primitive!, _arg, context) is { } macro
+            ? macro
+        : _primitive!.Render(context) + _arg.Render(context);
 
     internal ArgumentToken? Arguments => _arg;
 
-    internal override int Priority => 100;
+    internal override int Priority(RenderContext context) => 100;
 
     internal override void CheckLabel() => _arg?.CheckLabel();
 

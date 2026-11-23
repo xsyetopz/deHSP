@@ -10,5 +10,5 @@ internal sealed class UnknownToken : CodeToken
     private readonly PrimitiveToken? _token;
     internal override int TokenOffset => _token!.TokenOffset;
 
-    public override string ToString() => " /*" + _token + "*/";
+    internal override string Render(RenderContext context) => " /*" + _token + "*/";
 }

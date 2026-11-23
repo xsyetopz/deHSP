@@ -20,9 +20,12 @@ internal sealed class ArgumentToken : CodeToken
     internal override int TokenOffset =>
         (_exps == null) || (_exps.Count == 0) ? -1 : _exps[0].TokenOffset;
 
-    public override string ToString() => ToString(false);
+    internal override string Render(RenderContext context) => Render(context, false);
 
-    public string ToString(bool mcall)
+    // An mcall line writes its own receiver, so a null first argument takes no separator there.
+    //
+    // mcall 行は受け手を自分で書くため、そこでは空の第一引数に区切りを付けない。
+    internal string Render(RenderContext context, bool mcall)
     {
         var builder = new StringBuilder();
         if (_hasBrackets)
@@ -43,7 +46,7 @@ internal sealed class ArgumentToken : CodeToken
             }
 
             i++;
-            builder.Append(exp);
+            builder.Append(exp.Render(context));
         }
         if (_hasBrackets)
         {

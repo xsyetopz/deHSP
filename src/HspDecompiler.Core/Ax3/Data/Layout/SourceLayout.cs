@@ -93,14 +93,14 @@ internal static class SourceLayout
             .. header.Select(text => new LayoutItem(LineKind.Header, text, 0, mainFile, 0)),
         ];
         int first = items.Count;
-        ModuleScope scope = data.Scope;
+        var renderer = new LineRenderer(RenderContext.Of(data));
         List<DebugLine> code = [.. data.DebugInfo.Lines.Where(record => record.CodeSize > 0)];
         var breaks = new Dictionary<int, Queue<int>>();
         var blocks = new Stack<int>();
         int closed = -1;
         foreach (LogicalLine line in lines.Where(line => line.Visible))
         {
-            LayoutItem item = Classify(line, scope, code, breaks);
+            LayoutItem item = Classify(line, renderer, code, breaks);
             closed = Number(line, item, items.Count, blocks, closed);
             items.Add(item);
         }
@@ -116,12 +116,12 @@ internal static class SourceLayout
     // 戻している。ただし指示文は 1 行を占めるため、他のコードとはつながない。
     private static LayoutItem Classify(
         LogicalLine line,
-        ModuleScope scope,
+        LineRenderer renderer,
         List<DebugLine> code,
         Dictionary<int, Queue<int>> breaks
     )
     {
-        string text = scope.Render(line);
+        string text = renderer.Render(line);
         if (line.TokenOffset >= 0 && Find(code, line.TokenOffset) is { } record)
         {
             if (!breaks.TryGetValue(record.CodeOffset, out Queue<int>? pending))

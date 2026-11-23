@@ -1,4 +1,3 @@
-using System.Text;
 using HspDecompiler.Core.Ax3.Data.Token;
 
 namespace HspDecompiler.Core.Ax3.Data.Line;
@@ -24,20 +23,12 @@ internal sealed class Assignment : LogicalLine
 
     internal override int TokenOffset => _var == null ? -1 : _var.TokenOffset;
 
-    public override string ToString()
+    internal override string Render(RenderContext context)
     {
-        var builder = new StringBuilder(_var!.ToString());
-        if (_arg != null)
-        {
-            builder.Append(' ');
-            builder.Append(_op!.ToString(true, _arg != null));
-            builder.Append(_arg);
-        }
-        else
-        {
-            builder.Append(_op!.ToString(true, _arg != null));
-        }
-        return builder.ToString();
+        string target = _var!.Render(context);
+        return _arg != null
+            ? target + " " + _op!.Render(context, true, true) + _arg.Render(context)
+            : target + _op!.Render(context, true, false);
     }
 
     internal override void CheckLabel()

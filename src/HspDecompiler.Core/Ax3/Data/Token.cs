@@ -4,7 +4,7 @@ internal abstract class CodeToken
 {
     internal abstract int TokenOffset { get; }
 
-    public abstract override string ToString();
+    internal abstract string Render(RenderContext context);
 
     internal virtual void CheckLabel() { }
 
