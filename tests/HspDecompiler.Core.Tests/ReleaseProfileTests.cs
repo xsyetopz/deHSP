@@ -6,8 +6,12 @@ namespace HspDecompiler.Core.Tests;
 
 public class ReleaseProfileTests
 {
-    private static ReleaseProfile Infer(uint word, int marks = 0, bool flags = false) =>
-        ReleaseProfile.Infer(new AxEvidence(word, marks, flags));
+    private static ReleaseProfile Infer(
+        uint word,
+        int marks = 0,
+        bool flags = false,
+        FrameLayout? frames = null
+    ) => ReleaseProfile.Infer(new AxEvidence(word, marks, flags, frames));
 
     [Theory]
     [InlineData(0x300u, false, false, false)]
@@ -32,7 +36,7 @@ public class ReleaseProfileTests
     public void FormatWordSharedByReleasesKeepsEachOfThem()
     {
         Assert.Equal("3.1-3.4", Infer(0x301).ToString());
-        Assert.Equal("3.6-3.8β2", Infer(0x360).ToString());
+        Assert.Equal("3.6-3.8β2 x64", Infer(0x360).ToString());
     }
 
     [Fact]
@@ -59,7 +63,7 @@ public class ReleaseProfileTests
     [Fact]
     public void LaterFormatWordTakesTheNearestKnownOne()
     {
-        Assert.Equal("3.6-3.8β2", Infer(0x370).ToString());
+        Assert.Equal("3.6-3.8β2 x64", Infer(0x370).ToString());
         Assert.Equal(CompilerReleases.All.Length, Infer(0x200).Candidates.Length);
     }
 
@@ -68,9 +72,34 @@ public class ReleaseProfileTests
     {
         ReleaseProfile profile = Infer(0x360, marks: 3);
 
-        Assert.Equal("3.6-3.8β2", profile.ToString());
+        Assert.Equal("3.6-3.8β2 x64", profile.ToString());
         Assert.False(profile.MayWriteNormalBuildRecords);
     }
+
+    [Fact]
+    public void WideFramesNameTheX64Compiler()
+    {
+        ReleaseProfile profile = Infer(0x360, frames: FrameLayout.Wide);
+
+        Assert.Equal("3.8β2 x64", profile.ToString());
+        Assert.True(profile.WritesByDefault("hsp3_64", 0x43000));
+        Assert.False(profile.WritesByDefault("hsp3_64", 0x3000));
+        Assert.Equal(0x40000u, profile.DefaultBootOption);
+    }
+
+    [Fact]
+    public void NarrowFramesKeepTheRuntimeLine()
+    {
+        ReleaseProfile profile = Infer(0x360, frames: FrameLayout.Narrow);
+
+        Assert.Equal("3.6-3.8β2", profile.ToString());
+        Assert.False(profile.WritesByDefault("hsp3_64", 0x43000));
+        Assert.Equal(0u, profile.DefaultBootOption);
+    }
+
+    [Fact]
+    public void WithoutFramesNoRuntimeIsDefault() =>
+        Assert.False(Infer(0x360).WritesByDefault("hsp3_64", 0x43000));
 
     [Fact]
     public void ReleasesAreInOrder()

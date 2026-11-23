@@ -20,7 +20,6 @@ internal static class BootOptionDirectives
     internal const uint IoResume = 0x80000;
 
     internal const string Utf8StringsDirective = "#cmpopt utf8 1";
-    internal const string Hsp64Runtime = "hsp3_64";
 
     private static readonly (uint Bit, string Directive)[] s_plainOptions =
     [
@@ -42,7 +41,7 @@ internal static class BootOptionDirectives
         uint bootOption,
         bool utf8Strings,
         bool usesAwait,
-        string? runtimeName = null
+        uint defaultBits = 0
     )
     {
         var lines = new List<string>();
@@ -66,17 +65,20 @@ internal static class BootOptionDirectives
             lines.Add("#bootopt utf8 1");
         }
 
-        // hspcmp 3.8 beta 2 sets the HSP64 bit for `#runtime "hsp3_64"` by itself, in debug and
-        // normal builds alike, so beside that runtime `#bootopt hsp64 1` only adds a source line,
-        // and in a debug build a line record.
+        // defaultBits are the bits the compiler sets by itself for the runtime it targets when the
+        // source names none (the 64-bit hspcmp.exe of 3.8β2 sets HSP64). A directive for one of
+        // them would only add a source line, and in a debug build a line record. The 32-bit
+        // hspcmp.dll of 3.8β2 and 3.7 set no bit for `#runtime "hsp3_64"`, so for them the
+        // caller passes none and the #bootopt stays.
         //
-        // hspcmp 3.8 beta 2 は `#runtime "hsp3_64"` に対して自分で HSP64 ビットを立てる。
-        // デバッグビルドでも通常ビルドでも同じである。そのランタイムの横では
-        // `#bootopt hsp64 1` はソースの行を、デバッグビルドでは行の記録を増やすだけになる。
-        uint implied = runtimeName == Hsp64Runtime ? Hsp64 : 0;
+        // defaultBits は、ソースがランタイムを指定しない時にコンパイラが対象のランタイムに自分で
+        // 立てるビット(3.8β2 の 64 ビットの hspcmp.exe は HSP64 を立てる)。それらの
+        // ディレクティブはソースの行を、デバッグビルドでは行の記録を増やすだけになる。3.8β2 の
+        // 32 ビットの hspcmp.dll と 3.7 は `#runtime "hsp3_64"` にビットを立てないため、
+        // 呼び出し側は何も渡さず #bootopt が残る。
         foreach ((uint bit, string directive) in s_plainOptions)
         {
-            if ((bootOption & ~implied & bit) != 0)
+            if ((bootOption & ~defaultBits & bit) != 0)
             {
                 lines.Add(directive);
             }

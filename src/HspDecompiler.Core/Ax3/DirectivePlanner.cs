@@ -21,7 +21,7 @@ internal sealed record DirectiveFacts(
     uint BootOption,
     bool Utf8Strings,
     bool UsesAwait,
-    string? RuntimeName
+    uint DefaultBootBits
 );
 
 // Decides which #cmpopt and #bootopt lines a source needs so that hspcmp writes the same AX
@@ -48,8 +48,19 @@ internal static class DirectivePlanner
             data.Header!.BootOption,
             data.ScriptStrings.IsUtf8,
             data.UsesAwait,
-            data.Runtime?.Name
+            DefaultBootBitsOf(data)
         );
+
+    // True when every candidate compiler writes the AX's runtime for a source that names none,
+    // so the #runtime line can go.
+    //
+    // すべての候補のコンパイラが、ランタイムを指定しないソースに AX のランタイムを書く時に真。
+    // その時 #runtime の行は要らない。
+    internal static bool RuntimeIsDefault(AxData data) =>
+        data.Release.WritesByDefault(data.Runtime?.Name, data.Header!.BootOption);
+
+    private static uint DefaultBootBitsOf(AxData data) =>
+        RuntimeIsDefault(data) ? data.Release.DefaultBootOption : 0;
 
     internal static List<string> Plan(DirectiveFacts facts)
     {
@@ -112,7 +123,7 @@ internal static class DirectivePlanner
                 facts.BootOption,
                 facts.Utf8Strings,
                 facts.UsesAwait,
-                facts.RuntimeName
+                facts.DefaultBootBits
             )
         );
         return directives;

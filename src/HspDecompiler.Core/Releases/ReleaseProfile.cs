@@ -6,12 +6,19 @@ namespace HspDecompiler.Core.Releases;
 
 // What one AX shows about the compiler that wrote it, gathered once after the code is read.
 // FormatWord is the header version. NormalBuildMarks counts the line records of a build without
-// -d, and SingleItemFlags says some one-literal parameter carries hspcmp's optprm flag.
+// -d, SingleItemFlags says some one-literal parameter carries hspcmp's optprm flag, and Frames is
+// the parameter layout a user function shows, if any does.
 //
 // 1 つの AX が書いたコンパイラについて示すこと。コードを読んだ後に一度だけ集める。FormatWord は
 // ヘッダーのバージョン、NormalBuildMarks は -d 無しのビルドの行の記録の数、SingleItemFlags は
-// 1 リテラルの引数のどれかに hspcmp の optprm の印があることを示す。
-internal sealed record AxEvidence(uint FormatWord, int NormalBuildMarks, bool SingleItemFlags);
+// 1 リテラルの引数のどれかに hspcmp の optprm の印があること、Frames はユーザー関数が示す引数の
+// 並べ方(示すものがあれば)。
+internal sealed record AxEvidence(
+    uint FormatWord,
+    int NormalBuildMarks,
+    bool SingleItemFlags,
+    FrameLayout? Frames = null
+);
 
 // The releases that could have written one AX, and the questions the decompiler's stages ask of
 // them. Several releases share a format word, so a stage asks whether every candidate does a
@@ -46,6 +53,23 @@ internal sealed class ReleaseProfile
 
     internal bool RecordsStringEnds =>
         All(r => r.Records == NormalBuildRecords.ModulesAndStringEnds);
+
+    // True when every candidate writes this runtime and these boot bits for a source that names
+    // no runtime, so the source needs neither the #runtime line nor the #bootopt for those bits.
+    //
+    // ランタイムを指定しないソースに対して、すべての候補がこのランタイムとこれらの起動ビットを
+    // 書く時に真。その時ソースには #runtime の行もそのビットの #bootopt も要らない。
+    internal bool WritesByDefault(string? runtime, uint bootOption) =>
+        runtime != null
+        && All(r =>
+            r.DefaultRuntime == runtime && (bootOption & r.DefaultBootOption) == r.DefaultBootOption
+        );
+
+    // The boot bits every candidate sets by default.
+    //
+    // すべての候補が既定で立てる起動ビット。
+    internal uint DefaultBootOption =>
+        Candidates.Aggregate(uint.MaxValue, (bits, r) => bits & r.DefaultBootOption);
 
     // True when every candidate came with or after the given release, so it has what that
     // release added.
@@ -90,6 +114,11 @@ internal sealed class ReleaseProfile
         if (evidence.SingleItemFlags)
         {
             candidates = Keep(candidates, r => r.Optprm == OptprmSupport.Known);
+        }
+
+        if (evidence.Frames is { } frames)
+        {
+            candidates = Keep(candidates, r => r.Frames == frames);
         }
 
         return new ReleaseProfile(candidates);

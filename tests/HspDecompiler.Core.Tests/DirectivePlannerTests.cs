@@ -26,7 +26,7 @@ public class DirectivePlannerTests
             0,
             false,
             false,
-            null
+            0
         );
 
     [Theory]

@@ -58,6 +58,8 @@ internal class Function : Preprocessor
     private List<Param> _functionParams = [];
 
     internal IReadOnlyList<Param> Parameters => _functionParams;
+
+    internal int FrameSize { get; private set; }
     private int _strIndex;
     private int _labelIndex;
     private int _flags;
@@ -84,10 +86,12 @@ internal class Function : Preprocessor
             ret._defaultName = parent.ReadStringLiteral(ret._strIndex);
         }
 
-        // STRUCTDAT.size, the stack size of the parameters; the source does not spell it out.
+        // STRUCTDAT.size, the stack size of the parameters. The source does not spell it out,
+        // but it tells which compiler build laid the stack out.
         //
-        // STRUCTDAT.size。引数のスタックサイズで、ソースには現れない。
-        _ = reader.ReadInt32();
+        // STRUCTDAT.size。引数のスタックサイズ。ソースには現れないが、どのコンパイラのビルドが
+        // スタックを組んだかを示す。
+        ret.FrameSize = reader.ReadInt32();
         ret._labelIndex = reader.ReadInt32();
 
         _ = reader.ReadInt16();

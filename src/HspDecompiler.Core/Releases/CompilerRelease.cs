@@ -42,20 +42,27 @@ internal enum NormalBuildRecords
     ModulesAndStringEnds,
 }
 
-// One hspcmp release and what it does that shows in, or decides, the AX it writes. Order is the
-// release's position among all of them, so "from 3.2" compares orders. FormatWord is the header
-// version hspcmp writes, which several releases share.
+// One hspcmp build and what it does that shows in, or decides, the AX it writes. Order is the
+// build's position among all of them, so "from 3.2" compares orders. FormatWord is the header
+// version hspcmp writes, which several releases share. Frames is how it lays out parameters.
+// DefaultRuntime and DefaultBootOption are what it writes for a source that names no runtime:
+// the 64-bit hspcmp.exe of 3.8β2 targets hsp3_64 unless -x selects the 32-bit runtime.
 //
-// 1 つの hspcmp リリースと、それが書く AX に現れる、または AX を決める振る舞い。Order は
-// 全リリース中の位置で、"3.2 から" は Order を比べる。FormatWord は hspcmp が書くヘッダーの
-// バージョンで、複数のリリースが共有する。
+// 1 つの hspcmp のビルドと、それが書く AX に現れる、または AX を決める振る舞い。Order は全ビルド
+// 中の位置で、"3.2 から" は Order を比べる。FormatWord は hspcmp が書くヘッダーのバージョンで、
+// 複数のリリースが共有する。Frames は引数の並べ方。DefaultRuntime と DefaultBootOption は
+// ランタイムを指定しないソースに書くもので、3.8β2 の 64 ビットの hspcmp.exe は -x で 32 ビットの
+// ランタイムを選ばない限り hsp3_64 を対象にする。
 internal sealed record CompilerRelease(
     string Name,
     int Order,
     uint FormatWord,
     OptcodeMode Optcode,
     OptprmSupport Optprm,
-    NormalBuildRecords Records
+    NormalBuildRecords Records,
+    FrameLayout Frames = FrameLayout.Narrow,
+    string? DefaultRuntime = null,
+    uint DefaultBootOption = 0
 );
 
 // Every hspcmp release deHSP knows, oldest first. A difference between compilers is a column here
@@ -193,6 +200,15 @@ internal static class CompilerReleases
             NormalBuildRecords.None
         );
 
+    // The HSP64 boot bit (hsp3struct.h HSPHED_BOOTOPT_HSP64) and the runtime name it pairs with.
+    //
+    // HSP64 の起動ビット(hsp3struct.h の HSPHED_BOOTOPT_HSP64)と、それと組になるランタイム名。
+    internal const uint Hsp64BootOption = 0x40000;
+    internal const string Hsp64Runtime = "hsp3_64";
+
+    // The 3.8β2 hspcmp.dll, which the script editor loads; a 32-bit build.
+    //
+    // スクリプトエディタが読み込む 3.8β2 の hspcmp.dll。32 ビットのビルド。
     internal static CompilerRelease Hsp38B2 { get; } =
         new(
             "3.8β2",
@@ -201,6 +217,22 @@ internal static class CompilerReleases
             OptcodeMode.DropsUnusedAndPoolsStrings,
             OptprmSupport.Known,
             NormalBuildRecords.None
+        );
+
+    // The 3.8β2 command-line hspcmp.exe, a 64-bit build.
+    //
+    // 3.8β2 のコマンドラインの hspcmp.exe。64 ビットのビルド。
+    internal static CompilerRelease Hsp38B2X64 { get; } =
+        new(
+            "3.8β2 x64",
+            14,
+            Word36,
+            OptcodeMode.DropsUnusedAndPoolsStrings,
+            OptprmSupport.Known,
+            NormalBuildRecords.None,
+            FrameLayout.Wide,
+            Hsp64Runtime,
+            Hsp64BootOption
         );
 
     internal static ImmutableArray<CompilerRelease> All { get; } =
@@ -219,5 +251,6 @@ internal static class CompilerReleases
         Hsp36,
         Hsp37,
         Hsp38B2,
+        Hsp38B2X64,
     ];
 }

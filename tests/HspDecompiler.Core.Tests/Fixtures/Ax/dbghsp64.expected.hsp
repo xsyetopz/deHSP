@@ -27,4 +27,3 @@
 	newmod o, obj, 3
 	show o
 	stop
-#runtime "hsp3_64"

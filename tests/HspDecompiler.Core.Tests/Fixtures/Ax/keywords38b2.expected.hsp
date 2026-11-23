@@ -1,3 +1,4 @@
+#bootopt hsp64 1
 #runtime "hsp3_64"
 
 	screen 0, 320, 240

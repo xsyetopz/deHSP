@@ -113,7 +113,7 @@ internal class SyntacticAnalyzer
 
     private static int SubAnalyzePreprocessor(List<LogicalLine> ret, AxData data)
     {
-        if (data.Runtime != null)
+        if (data.Runtime != null && !DirectivePlanner.RuntimeIsDefault(data))
         {
             ret.Add(new PreprocessorDeclaration(data.Runtime));
             ret.Add(new CommentLine());

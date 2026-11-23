@@ -1,3 +1,4 @@
+#bootopt hsp64 1
 #runtime "hsp3_64"
 
 	var_0 = "日本語テスト ①～"

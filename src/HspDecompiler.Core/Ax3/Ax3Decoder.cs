@@ -69,7 +69,8 @@ internal class Ax3Decoder : ISourceDecoder
                 new AxEvidence(
                     data.Header!.Version,
                     data.DebugInfo.HasLines ? 0 : data.DebugInfo.Marks.Count,
-                    data.HasSingleItemFlags
+                    data.HasSingleItemFlags,
+                    FramesOf(data)
                 )
             );
             data.ScriptStrings.Resolve(
@@ -155,6 +156,15 @@ internal class Ax3Decoder : ISourceDecoder
             }
         }
     }
+
+    // The parameter layout the first user function that tells the two apart shows.
+    //
+    // 2 つの並べ方を区別できる最初のユーザー関数が示す引数の並べ方。
+    private static FrameLayout? FramesOf(AxData data) =>
+        data
+            .Functions.Where(f => f.IsUserFunction)
+            .Select(f => FrameLayouts.Of(f.Parameters.Select(p => p.TypeCode), f.FrameSize))
+            .FirstOrDefault(layout => layout != null);
 
     private static IEnumerable<string> Indented(List<LogicalLine> lines, AxData data) =>
         lines
