@@ -46,6 +46,7 @@ internal class AxData
         {
             buffer[i] = BitConverter.ToInt32(headerBuffer, i * 4);
         }
+
         try
         {
             _header = Header.FromIntArray(buffer);
@@ -58,6 +59,7 @@ internal class AxData
                 e
             );
         }
+
         if (_header == null)
         {
             throw new HspDecoderException("AxHeader", Strings.HeaderAnalysisFailed);
@@ -82,6 +84,7 @@ internal class AxData
         {
             throw new HspDecoderException("AxHeader", Strings.UnexpectedErrorDuringStreamRead, e);
         }
+
         stream.Seek(startPosition, SeekOrigin.Begin);
     }
 
@@ -94,15 +97,18 @@ internal class AxData
     }
 
     #region create
+
     internal static AxData FromStream(Stream stream)
     {
         var data = new AxData();
         data.ReadData(stream);
         return data;
     }
+
     #endregion
 
     #region read
+
     internal string GetString(int offset) => ReadString(offset, _stringData!);
 
     private string ReadString(int offset) => ReadString(offset, _stringData!);
@@ -123,6 +129,7 @@ internal class AxData
 
             buffer.Add(token);
         }
+
         if (buffer.Count == 0)
         {
             return "";
@@ -445,6 +452,7 @@ internal class AxData
                 break;
             }
         }
+
         return line;
     }
 
@@ -505,6 +513,7 @@ internal class AxData
             line += " {";
             _ifEnd.Add(ifJumpTo);
         }
+
         return new SourceLine(line, _lineAnchor);
     }
 

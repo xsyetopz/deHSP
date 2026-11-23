@@ -16,9 +16,11 @@ internal class AxData
     private static readonly CompositeFormat s_userFunctionNameFormat = CompositeFormat.Parse(
         "{0}_{1}"
     );
+
     private static readonly CompositeFormat s_dllFunctionNameFormat = CompositeFormat.Parse(
         "func_{0}"
     );
+
     private static readonly CompositeFormat s_comFunctionNameFormat = CompositeFormat.Parse(
         "comfunc_{0}"
     );
@@ -130,12 +132,14 @@ internal class AxData
                     chars.Add(token);
                     break;
             }
+
             count++;
             if (count >= max_count)
             {
                 break;
             }
         }
+
         char[] arrayChars = new char[chars.Count];
         chars.CopyTo(arrayChars);
         _reader.BaseStream.Seek(nowPosition, SeekOrigin.Begin);
@@ -253,6 +257,7 @@ internal class AxData
                 e
             );
         }
+
         return;
     }
 
@@ -333,6 +338,7 @@ internal class AxData
                 _runtime = new Runtime(runtimeName);
             }
         }
+
         ReadTables(_header);
         if ((_header.PluginCount != 0) && (_header.PluginParameterCount != 0))
         {
@@ -343,6 +349,7 @@ internal class AxData
         {
             param.SetFunction(this);
         }
+
         RenameFunctions(dictionary!);
 
         ReadDebugInfo();
@@ -386,6 +393,7 @@ internal class AxData
                             )
                         );
                     }
+
                     break;
                 case FunctionType.NULL:
                     break;
@@ -393,6 +401,7 @@ internal class AxData
                     break;
             }
         }
+
         RenameUserFunctions(functionNames, initializer);
         RenameDllFunctions(functionNames, dllfuncs);
         RenameComFunctions(functionNames, comfuncs);
@@ -413,6 +422,7 @@ internal class AxData
                 functionNames.Add(defName.ToLower(System.Globalization.CultureInfo.CurrentCulture));
                 continue;
             }
+
             string newName = defName;
             int index = 1;
             do
@@ -425,6 +435,7 @@ internal class AxData
                 );
                 index++;
             } while (functionNames.Contains(newName));
+
             func.SetName(newName);
             functionNames.Add(newName.ToLower(System.Globalization.CultureInfo.CurrentCulture));
         }
@@ -476,6 +487,7 @@ internal class AxData
             {
                 candidates.Add(undecorated);
             }
+
             candidates.Add(bare + "_dll");
             // Flattened modules each import the same export (CloseHandle in three #module
             // blocks), so repeats get a number per export.
@@ -508,6 +520,7 @@ internal class AxData
             numbered = string.Format(CultureInfo.InvariantCulture, s_dllFunctionNameFormat, index);
             index++;
         } while (takenLowerNames.Contains(numbered));
+
         return numbered;
     }
 
@@ -537,6 +550,7 @@ internal class AxData
                 );
                 index++;
             } while (functionNames.Contains(newName));
+
             func.SetName(newName);
             functionNames.Add(newName.ToLower(System.Globalization.CultureInfo.CurrentCulture));
         }
@@ -558,6 +572,7 @@ internal class AxData
         {
             _labels[i].LabelName = string.Format(CultureInfo.InvariantCulture, labelFormat, i);
         }
+
         return;
     }
 
@@ -588,6 +603,7 @@ internal class AxData
                     break;
             }
         }
+
         return false;
     }
 }
