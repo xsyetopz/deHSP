@@ -78,7 +78,7 @@ internal static class CommonIncludes
                 continue;
             }
 
-            ImportDeclaration? own = CommonHeader.ParseImport(function.ToString());
+            var own = function.ToImportDeclaration();
             ImportDeclaration? match = candidates.Find(c =>
                 own != null && c.Signature == own.Signature
             );

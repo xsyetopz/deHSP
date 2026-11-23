@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using HspDecompiler.Core.Ax3.Data.Layout;
 
 namespace HspDecompiler.Core.Ax3.Data.PP;
 
@@ -346,15 +347,48 @@ internal class Function : Preprocessor
     //
     // hspcmp が古い形式の印を付けた宣言は古い形式に戻す。引数が合えば数値の型コード、合わなければ
     // hspcmp 3.7 以前が _name@16 に飾る裸の名前を使う。どちらの書き方でも印が付き直す。
+    private ImportParts Import()
+    {
+        string name = _defaultName ?? string.Empty;
+        List<string> types = [.. _functionParams.Select(p => p.ToString())];
+        return _functionIndex != FuncIndexOldDll ? new ImportParts(name, true, types)
+            : OldFuncTypeCode.TryEncode(_functionParams, out int code)
+                ? new ImportParts(name, true, [code.ToString(CultureInfo.InvariantCulture)])
+            : TryUndecorate(_defaultName, out string bareName)
+                ? new ImportParts(bareName, false, types)
+            : new ImportParts(name, true, types);
+    }
+
     private string ImportText()
     {
-        string quotedName = "\"" + _defaultName + "\"";
-        return _functionIndex != FuncIndexOldDll ? quotedName + ParamsText(0)
-            : OldFuncTypeCode.TryEncode(_functionParams, out int code)
-                ? quotedName + " " + code.ToString(CultureInfo.InvariantCulture)
-            : (TryUndecorate(_defaultName, out string bareName) ? bareName : quotedName)
-                + ParamsText(0);
+        ImportParts import = Import();
+        string export = import.Quoted ? "\"" + import.Export + "\"" : import.Export;
+        return import.Parameters.Count == 0
+            ? export
+            : export + " " + string.Join(", ", import.Parameters);
     }
+
+    // The import as a common header would declare it, for matching against that header.
+    //
+    // 共通ヘッダーが宣言する形のインポート。そのヘッダーとの照合に使う。
+    internal ImportDeclaration? ToImportDeclaration()
+    {
+        if (!IsDllFunction)
+        {
+            return null;
+        }
+
+        ImportParts import = Import();
+        return ImportDeclaration.Of(
+            FunctionName ?? string.Empty,
+            Type == FunctionType.Func ? "#func" : "#cfunc",
+            (Flags & FunctionFlags.OnExit) == FunctionFlags.OnExit,
+            import.Export,
+            import.Parameters
+        );
+    }
+
+    private sealed record ImportParts(string Export, bool Quoted, List<string> Parameters);
 
     private static bool TryUndecorate(string? name, out string bareName)
     {

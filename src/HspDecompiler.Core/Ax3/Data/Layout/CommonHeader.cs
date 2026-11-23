@@ -11,7 +11,44 @@ namespace HspDecompiler.Core.Ax3.Data.Layout;
 //
 // 1 行の #func か #cfunc を AX に届く部分(キーワード・onexit・エクスポート名・引数の型)に
 // 絞ったもの。別名は AX に残らないため分けて持つ。
-internal sealed record ImportDeclaration(string Alias, string Signature, string Export);
+internal sealed record ImportDeclaration(string Alias, string Signature, string Export)
+{
+    // A single number is the old type code; "$202" and "514" are the same code.
+    //
+    // 数値 1 つは古い形式の型コードで、"$202" と "514" は同じコードである。
+    internal static ImportDeclaration Of(
+        string alias,
+        string keyword,
+        bool onExit,
+        string export,
+        IEnumerable<string> parameters
+    )
+    {
+        List<string> parts = [.. parameters.Select(token => token.ToLowerInvariant())];
+        string normalized =
+            parts.Count == 1 && TryParseNumber(parts[0], out int code)
+                ? code.ToString(CultureInfo.InvariantCulture)
+                : string.Join(',', parts);
+        string signature = string.Join(
+            ' ',
+            keyword.ToLowerInvariant(),
+            onExit ? "onexit" : "-",
+            export,
+            normalized
+        );
+        return new ImportDeclaration(alias, signature, export);
+    }
+
+    private static bool TryParseNumber(string token, out int value)
+    {
+        int prefix =
+            token.StartsWith('$') ? 1
+            : token.StartsWith("0x", StringComparison.Ordinal) ? 2
+            : 0;
+        NumberStyles style = prefix == 0 ? NumberStyles.None : NumberStyles.HexNumber;
+        return int.TryParse(token[prefix..], style, CultureInfo.InvariantCulture, out value);
+    }
+}
 
 // The declarations of a common header such as hspcmp.as, read without running its #ifdef
 // blocks: both branches of "#ifdef __hsp64__" count, so each export can match whichever
@@ -47,15 +84,6 @@ internal sealed class CommonHeader
         }
 
         return header;
-    }
-
-    // Reads one declaration line such as deHSP itself writes, for comparison with the header.
-    //
-    // deHSP 自身が書く形の宣言 1 行を、ヘッダーとの比較用に読む。
-    internal static ImportDeclaration? ParseImport(string line)
-    {
-        bool inBlock = false;
-        return ReadImport(Tokenize(line, ref inBlock));
     }
 
     private void Add(List<string> tokens)
@@ -101,15 +129,7 @@ internal sealed class CommonHeader
         }
 
         string export = Unquote(tokens[at++]);
-        string parameters = NormalizeParameters(tokens.Skip(at));
-        string signature = string.Join(
-            ' ',
-            tokens[0].ToLowerInvariant(),
-            onExit ? "onexit" : "-",
-            export,
-            parameters
-        );
-        return new ImportDeclaration(alias, signature, export);
+        return ImportDeclaration.Of(alias, tokens[0], onExit, export, tokens.Skip(at));
     }
 
     // The name after a defining keyword, skipping "global", "ctype" and "local" modifiers.
@@ -137,27 +157,6 @@ internal sealed class CommonHeader
         return tokens
             .Skip(1)
             .FirstOrDefault(token => !modifiers.Contains(token.ToLowerInvariant()));
-    }
-
-    // A single number is the old type code; "$202" and "514" are the same code.
-    //
-    // 数値 1 つは古い形式の型コードで、"$202" と "514" は同じコードである。
-    private static string NormalizeParameters(IEnumerable<string> tokens)
-    {
-        List<string> parts = [.. tokens.Select(token => token.ToLowerInvariant())];
-        return parts.Count == 1 && TryParseNumber(parts[0], out int code)
-            ? code.ToString(CultureInfo.InvariantCulture)
-            : string.Join(',', parts);
-    }
-
-    private static bool TryParseNumber(string token, out int value)
-    {
-        int prefix =
-            token.StartsWith('$') ? 1
-            : token.StartsWith("0x", StringComparison.Ordinal) ? 2
-            : 0;
-        NumberStyles style = prefix == 0 ? NumberStyles.None : NumberStyles.HexNumber;
-        return int.TryParse(token[prefix..], style, CultureInfo.InvariantCulture, out value);
     }
 
     private static string Unquote(string token) =>

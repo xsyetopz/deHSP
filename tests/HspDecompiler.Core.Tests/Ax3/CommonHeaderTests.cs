@@ -39,10 +39,11 @@ public class CommonHeaderTests
     [Fact]
     public void OldTypeCodeMatchesDecimalSpelling()
     {
-        ImportDeclaration? hex = CommonHeader.ParseImport("#func f \"F\" $202");
-        ImportDeclaration? dec = CommonHeader.ParseImport("#func g \"F\" 514");
+        var header = CommonHeader.Parse("#func f \"F\" $202\n#func g \"F\" 514");
+        ImportDeclaration hex = header.Imports[0];
+        ImportDeclaration dec = header.Imports[1];
 
-        Assert.Equal(hex!.Signature, dec!.Signature);
+        Assert.Equal(hex.Signature, dec.Signature);
         Assert.Equal("f", hex.Alias);
     }
 }
