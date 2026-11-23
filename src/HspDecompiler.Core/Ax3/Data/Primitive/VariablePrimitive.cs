@@ -13,19 +13,25 @@ internal abstract class VariablePrimitive : OperandPrimitive
 
 internal sealed class GlobalVariablePrimitive : VariablePrimitive
 {
-    private readonly string? _varName;
+    // The name is looked up at output time, because its encoding is known only after the lexer
+    // has seen every script string.
+    //
+    // 名前のエンコーディングは字句解析が全スクリプト文字列を見た後でしか決まらないため、
+    // 出力時に名前を引く。
+    private readonly AxData _data;
 
     internal GlobalVariablePrimitive(PrimitiveTokenDataSet dataSet)
         : base(dataSet)
     {
-        _varName = dataSet._parent!.GetVariableName(Value);
+        _data = dataSet._parent!;
     }
 
     public override string ToString()
     {
-        if (_varName != null)
+        string? varName = _data.GetVariableName(Value);
+        if (varName != null)
         {
-            return _varName;
+            return varName;
         }
 
         var bld = new StringBuilder("var");

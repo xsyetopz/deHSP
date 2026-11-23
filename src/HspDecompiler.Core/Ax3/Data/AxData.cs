@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.PP;
+using HspDecompiler.Core.Encoding;
 using HspDecompiler.Core.Exceptions;
 using HspDecompiler.Core.Resources;
 
@@ -42,7 +43,7 @@ internal class AxData
     private readonly List<PlugIn> _plugIns = [];
     private Runtime? _runtime;
     private readonly List<Function> _modules = [];
-    private readonly List<string> _variableName = [];
+    private readonly List<byte[]> _variableName = [];
 
     internal List<Function> Modules => _modules;
 
@@ -91,63 +92,79 @@ internal class AxData
     internal string? GetVariableName(int index) =>
         index < 0 ? null
         : index >= _variableName.Count ? null
-        : _variableName[index];
+        : ScriptStrings.Encoding.GetString(_variableName[index]);
 
     internal Cmd? AddCmd(int pluginIndex, int methodIndex) =>
         pluginIndex < 0 ? null
         : pluginIndex >= _plugIns.Count ? null
         : _plugIns[pluginIndex].AddCmd(methodIndex);
 
-    internal string ReadString(int offset, int maxCount)
+    // Reads the NUL-terminated bytes at the offset, at most maxCount of them, so a missing
+    // terminator near the end of the file stops at the segment instead of throwing.
+    //
+    // 指定位置から NUL 終端のバイト列を最大 maxCount バイト読む。ファイル末尾付近で終端が
+    // 無くても、例外を投げずにセグメントの終わりで止まる。
+    private byte[] ReadBytes(int offset, int maxCount)
     {
-        long seekOffset = _seekOrigin + offset;
-        long nowPosition = _reader!.BaseStream.Position;
-        _reader.BaseStream.Seek(seekOffset, SeekOrigin.Begin);
-        var chars = new List<char>();
-        int count = 0;
-        char token;
-        while ((token = _reader.ReadChar()) != '\0')
+        Stream stream = _reader!.BaseStream;
+        long nowPosition = stream.Position;
+        stream.Seek(_seekOrigin + offset, SeekOrigin.Begin);
+        var bytes = new List<byte>();
+        int next;
+        while (bytes.Count < maxCount && (next = stream.ReadByte()) > 0)
         {
-            switch (token)
-            {
-                case '\\':
-                    chars.Add('\\');
-                    chars.Add('\\');
-                    break;
-                case '\"':
-                    chars.Add('\\');
-                    chars.Add('\"');
-                    break;
-                case '\t':
-                    chars.Add('\\');
-                    chars.Add('t');
-                    break;
-                case '\n':
-                    chars.Add('\\');
-                    chars.Add('n');
-                    break;
-                case '\r':
-                    break;
-                default:
-                    chars.Add(token);
-                    break;
-            }
+            bytes.Add((byte)next);
+        }
 
-            count++;
-            if (count >= maxCount)
+        stream.Seek(nowPosition, SeekOrigin.Begin);
+        return [.. bytes];
+    }
+
+    internal string ReadString(int offset, int maxCount) =>
+        ScriptStrings.Escape(ShiftJisHelper.Encoding.GetString(ReadBytes(offset, maxCount)));
+
+    internal string ReadStringLiteral(int offset) =>
+        ScriptStrings.Escape(ShiftJisHelper.Encoding.GetString(ReadLiteralBytes(offset)));
+
+    internal byte[] ReadScriptString(int offset) => ScriptStrings.Add(ReadLiteralBytes(offset));
+
+    // hspcmp under optcode stores each non-empty string once and points every later use at the
+    // first copy (codegen.cpp PutDSStr, CMembuf::SearchIndexedData). The same text at two
+    // offsets therefore shows that the AX was compiled with optcode off.
+    //
+    // optcode 指定時の hspcmp は空でない文字列を一度だけ格納し、以降の使用は最初の写しを
+    // 指す(codegen.cpp の PutDSStr、CMembuf::SearchIndexedData)。同じ文字列が 2 か所に
+    // あれば、その AX は optcode を切ってコンパイルされている。
+    private readonly Dictionary<string, int> _literalOffsets = [];
+
+    internal bool HasRepeatedStrings { get; private set; }
+
+    private byte[] ReadLiteralBytes(int offset)
+    {
+        byte[] bytes = ReadBytes(
+            (int)(_header!.LiteralStart + offset),
+            (int)(_header.LiteralSize - offset)
+        );
+        if (bytes.Length != 0)
+        {
+            string key = Convert.ToHexString(bytes);
+            if (!_literalOffsets.TryAdd(key, offset) && _literalOffsets[key] != offset)
             {
-                break;
+                HasRepeatedStrings = true;
             }
         }
 
-        char[] arrayChars = new char[chars.Count];
-        chars.CopyTo(arrayChars);
-        _reader.BaseStream.Seek(nowPosition, SeekOrigin.Begin);
-        return new string(arrayChars);
+        return bytes;
     }
 
-    internal string ReadStringLiteral(int offset) =>
-        ReadString((int)(_header!.LiteralStart + offset), (int)(_header.LiteralSize - offset));
+    internal ScriptStrings ScriptStrings { get; } = new();
+
+    // Set when the code calls await. OpenHSP's hspcmp then leaves the NOMMTIMER boot bit clear,
+    // and sets it otherwise (codegen.cpp hed_autoopt_timer).
+    //
+    // コードが await を呼ぶと立つ。OpenHSP の hspcmp はその場合 NOMMTIMER 起動ビットを立てず、
+    // それ以外では立てる(codegen.cpp の hed_autoopt_timer)。
+    internal bool UsesAwait { get; set; }
 
     internal double ReadDoubleLiteral(int offset)
     {
@@ -582,7 +599,7 @@ internal class AxData
             {
                 int literalOffset =
                     _reader.ReadByte() ^ (_reader.ReadByte() << 8) ^ (_reader.ReadByte() << 16);
-                _variableName.Add(ReadStringLiteral(literalOffset));
+                _variableName.Add(ReadScriptString(literalOffset));
                 i += 5;
             }
             else if (marker == DebugMarkerFileName)

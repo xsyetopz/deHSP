@@ -131,5 +131,6 @@ internal sealed class AxHeader
     internal uint PluginCount => _data[21] / (int)HeaderDataSize.Plugin;
     internal uint PluginParameterCount => _data[22];
     internal uint PluginEnd => PluginStart + PluginSize;
+    internal uint BootOption => _data[23];
     internal uint RuntimeStart => _data[24];
 }

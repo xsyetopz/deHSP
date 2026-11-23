@@ -1,0 +1,7 @@
+#uselib "user32.dll"
+#func MessageBeep "MessageBeep" int
+
+	MessageBeep 0
+	mes "dup"
+	mes "dup"
+	stop

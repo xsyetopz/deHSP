@@ -18,6 +18,9 @@ public class DecompileAxFileTests
     [InlineData("h2labels", ".as")]
     [InlineData("optprm", ".hsp")]
     [InlineData("h2include", ".as")]
+    [InlineData("bootopts", ".hsp")]
+    [InlineData("uncalledfunc", ".hsp")]
+    [InlineData("pooledstrings", ".hsp")]
     public async Task AxFixtureDecompilesToExpectedSourceInMissingOutputDirectory(
         string fixture,
         string extension

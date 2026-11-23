@@ -1,0 +1,10 @@
+#runtime "hsp3utf"
+#bootopt utf8 1
+#bootopt nogdip 1
+#bootopt float32 1
+#bootopt orgrnd 1
+#bootopt ioresume 1
+#bootopt notimer 1
+	mes "“ú–{Œê"
+	await 10
+	stop

@@ -1,4 +1,3 @@
-#cmpopt optcode 0
 	var_0 = 14
 	var_1 = 531
 	if ( var_0 == 14 ) {

@@ -16,6 +16,12 @@ internal class LexicalAnalyzer
         _dictionary = theDic;
     }
 
+    // TYPE_PROGCMD and the await code within it (hsp3struct.h, Dictionary.xml).
+    //
+    // TYPE_PROGCMD とその中の await のコード(hsp3struct.h、Dictionary.xml)。
+    private const int ProgramCommandType = 0x0F;
+    private const int AwaitCode = 0x08;
+
     private readonly Hsp3Dictionary? _dictionary;
     private int _tokenOffset;
 
@@ -62,6 +68,11 @@ internal class LexicalAnalyzer
         if ((flag & HspTokenFlag.SingleItem) != 0)
         {
             data.HasSingleItemFlags = true;
+        }
+
+        if (type == ProgramCommandType && value == AwaitCode)
+        {
+            data.UsesAwait = true;
         }
 
         var key = new HspDictionaryKey { _type = type, _value = value };
@@ -127,7 +138,7 @@ internal class LexicalAnalyzer
             HspCodeType.Label => new LabelPrimitive(dataset),
             HspCodeType.IntegerValue => new IntegerPrimitive(dataset),
             HspCodeType.DoubleValue => new DoublePrimitive(dataset, data.ReadDoubleLiteral(value)),
-            HspCodeType.StringValue => new StringPrimitive(dataset, data.ReadStringLiteral(value)),
+            HspCodeType.StringValue => new StringPrimitive(dataset, data.ReadScriptString(value)),
             HspCodeType.Symbol => new SymbolPrimitive(dataset),
             HspCodeType.Param => new ParameterPrimitive(dataset),
             HspCodeType.Variable => new GlobalVariablePrimitive(dataset),

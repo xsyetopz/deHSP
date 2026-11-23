@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using HspDecompiler.Core.Ax3.Data.PP;
 
 namespace HspDecompiler.Core.Ax3.Data.Primitive;
@@ -81,22 +80,22 @@ internal sealed class DoublePrimitive : LiteralPrimitive
 
 internal sealed class StringPrimitive : LiteralPrimitive
 {
-    internal StringPrimitive(PrimitiveTokenDataSet dataSet, string str)
+    internal StringPrimitive(PrimitiveTokenDataSet dataSet, byte[] text)
         : base(dataSet)
     {
-        _str = str;
+        _text = text;
+        _strings = dataSet._parent!.ScriptStrings;
     }
 
-    private readonly string? _str;
+    // The bytes stay raw until output, because the encoding is known only after the lexer has
+    // seen every script string.
+    //
+    // エンコーディングは字句解析が全スクリプト文字列を見た後でしか決まらないため、出力時まで
+    // バイト列のまま持つ。
+    private readonly byte[] _text;
+    private readonly ScriptStrings _strings;
 
-    public override string ToString()
-    {
-        var builder = new StringBuilder();
-        builder.Append('"');
-        builder.Append(_str);
-        builder.Append('"');
-        return builder.ToString();
-    }
+    public override string ToString() => "\"" + _strings.Decode(_text) + "\"";
 }
 
 internal sealed class SymbolPrimitive : LiteralPrimitive
