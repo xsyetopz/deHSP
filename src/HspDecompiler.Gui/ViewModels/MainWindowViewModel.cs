@@ -44,6 +44,12 @@ public partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<DpmFileEntry> DpmFiles { get; } = [];
 
     /// <summary>
+    /// <para xml:lang="en">How the next run spells the source; the Style menu edits it.</para>
+    /// <para xml:lang="ja">次の処理でソースをどう綴るか。スタイルメニューで変更する。</para>
+    /// </summary>
+    public SourceStyle Style { get; set; } = new();
+
+    /// <summary>
     /// <para xml:lang="en">
     /// Decompiles a file beside itself, with decryption allowed, and shows the log and archive
     /// entries. Errors go to the log instead of being thrown. A missing file is ignored.
@@ -83,6 +89,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 InputPath = filePath,
                 AllowDecryption = true,
                 SkipEncrypted = false,
+                Style = Style,
             };
 
             pipeline.Initialize();

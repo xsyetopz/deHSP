@@ -46,6 +46,14 @@ namespace HspDecompiler.Gui.Resources
         internal static string MenuExit => ResourceManager.GetString("MenuExit", resourceCulture);
         internal static string MenuHelp => ResourceManager.GetString("MenuHelp", resourceCulture);
         internal static string MenuAbout => ResourceManager.GetString("MenuAbout", resourceCulture);
+        internal static string MenuStyle => ResourceManager.GetString("MenuStyle", resourceCulture);
+        internal static string StyleIfParens => ResourceManager.GetString("StyleIfParens", resourceCulture);
+        internal static string StyleOneLineIf => ResourceManager.GetString("StyleOneLineIf", resourceCulture);
+        internal static string StyleParenNegatives => ResourceManager.GetString("StyleParenNegatives", resourceCulture);
+        internal static string StyleLogical => ResourceManager.GetString("StyleLogical", resourceCulture);
+        internal static string StyleCompact => ResourceManager.GetString("StyleCompact", resourceCulture);
+        internal static string StyleMacros => ResourceManager.GetString("StyleMacros", resourceCulture);
+        internal static string StyleHex => ResourceManager.GetString("StyleHex", resourceCulture);
 
         // DataGrid columns
         internal static string ColumnFilename => ResourceManager.GetString("ColumnFilename", resourceCulture);

@@ -39,6 +39,14 @@
   <data name="MenuExit" xml:space="preserve"><value>終了</value></data>
   <data name="MenuHelp" xml:space="preserve"><value>ヘルプ</value></data>
   <data name="MenuAbout" xml:space="preserve"><value>バージョン情報</value></data>
+  <data name="MenuStyle" xml:space="preserve"><value>スタイル</value></data>
+  <data name="StyleIfParens" xml:space="preserve"><value>if の条件の括弧</value></data>
+  <data name="StyleOneLineIf" xml:space="preserve"><value>1 行の if</value></data>
+  <data name="StyleParenNegatives" xml:space="preserve"><value>負のリテラルを括弧で囲む</value></data>
+  <data name="StyleLogical" xml:space="preserve"><value>論理演算子</value></data>
+  <data name="StyleCompact" xml:space="preserve"><value>演算子の空白を詰める</value></data>
+  <data name="StyleMacros" xml:space="preserve"><value>標準マクロ</value></data>
+  <data name="StyleHex" xml:space="preserve"><value>16 進数のリテラル</value></data>
 
   <!-- DataGrid columns -->
   <data name="ColumnFilename" xml:space="preserve"><value>ファイル名</value></data>

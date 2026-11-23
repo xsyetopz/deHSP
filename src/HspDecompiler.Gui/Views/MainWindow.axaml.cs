@@ -38,6 +38,13 @@ public partial class MainWindow : Window
         Title = Strings.WindowTitle;
         SetUpMenu();
         LocalizeFileGrid();
+        if (
+            this.FindControl<MenuItem>("MenuStyle") is { Items.Count: 0 } style
+            && DataContext is MainWindowViewModel vm
+        )
+        {
+            StyleMenu.Fill(style, vm);
+        }
     }
 
     private void SetUpMenu()

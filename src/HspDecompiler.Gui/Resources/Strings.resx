@@ -39,6 +39,14 @@
   <data name="MenuExit" xml:space="preserve"><value>Exit</value></data>
   <data name="MenuHelp" xml:space="preserve"><value>Help</value></data>
   <data name="MenuAbout" xml:space="preserve"><value>About...</value></data>
+  <data name="MenuStyle" xml:space="preserve"><value>Style</value></data>
+  <data name="StyleIfParens" xml:space="preserve"><value>Parentheses around if conditions</value></data>
+  <data name="StyleOneLineIf" xml:space="preserve"><value>One-line if</value></data>
+  <data name="StyleParenNegatives" xml:space="preserve"><value>Parenthesize negative literals</value></data>
+  <data name="StyleLogical" xml:space="preserve"><value>Logical operators</value></data>
+  <data name="StyleCompact" xml:space="preserve"><value>Compact operators</value></data>
+  <data name="StyleMacros" xml:space="preserve"><value>Standard macros</value></data>
+  <data name="StyleHex" xml:space="preserve"><value>Hexadecimal literals</value></data>
 
   <!-- DataGrid columns -->
   <data name="ColumnFilename" xml:space="preserve"><value>Filename</value></data>

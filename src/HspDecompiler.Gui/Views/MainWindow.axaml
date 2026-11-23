@@ -21,6 +21,7 @@
         <Separator />
         <MenuItem Header="Exit" x:Name="MenuExit" />
       </MenuItem>
+      <MenuItem Header="Style" x:Name="MenuStyle" />
       <MenuItem Header="Help" x:Name="MenuHelp">
         <MenuItem Header="About..." x:Name="MenuAbout" />
       </MenuItem>
