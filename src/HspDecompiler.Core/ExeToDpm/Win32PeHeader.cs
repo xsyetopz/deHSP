@@ -1,385 +1,75 @@
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace HspDecompiler.Core.ExeToDpm;
 
-// The type and field names follow the winnt.h structures they read, so the Windows SDK
-// documentation applies to each field.
+// Reads only the PE fields that locate the end of the executable image: the DOS header's
+// e_lfanew, the file header's section count and optional header size, and each section's raw
+// data range. Offsets follow the IMAGE_* structures in winnt.h.
 //
-// 型名とフィールド名は読み取る winnt.h の構造体に合わせているため、各フィールドの意味は
-// Windows SDK のドキュメントに従う。
-internal sealed class IMAGE_NT_HEADERS
-{
-    // "PE\0\0" read as a little-endian value.
-    //
-    // リトルエンディアンで読んだ "PE\0\0"。
-    private const int ImageNtSignature = 0x4550;
-    internal uint _signature;
-    internal IMAGE_FILE_HEADER? _fileHeader;
-    internal IMAGE_OPTIONAL_HEADER? _optionalHeader;
-
-    internal static IMAGE_NT_HEADERS? FromBinaryReader(BinaryReader reader)
-    {
-        var ret = new IMAGE_NT_HEADERS { _signature = reader.ReadUInt32() };
-        if (ret._signature != ImageNtSignature)
-        {
-            return null;
-        }
-
-        var fileHeader = IMAGE_FILE_HEADER.FromBinaryReader(reader);
-        if (fileHeader == null)
-        {
-            return null;
-        }
-
-        ret._fileHeader = fileHeader;
-        var optHeader = IMAGE_OPTIONAL_HEADER.FromBinaryReader(reader);
-        if (optHeader == null)
-        {
-            return null;
-        }
-
-        ret._optionalHeader = optHeader;
-        return ret;
-    }
-}
-
-internal sealed class IMAGE_FILE_HEADER
-{
-    internal ushort _machine;
-    internal ushort _numberOfSections;
-    internal uint _timeDateStamp;
-    internal uint _pointerToSymbolTable;
-    internal uint _numberOfSymbols;
-    internal ushort _sizeOfOptionalHeader;
-    internal ushort _characteristics;
-
-    internal static IMAGE_FILE_HEADER? FromBinaryReader(BinaryReader reader)
-    {
-        var ret = new IMAGE_FILE_HEADER();
-        try
-        {
-            ret._machine = reader.ReadUInt16();
-            ret._numberOfSections = reader.ReadUInt16();
-            ret._timeDateStamp = reader.ReadUInt32();
-            ret._pointerToSymbolTable = reader.ReadUInt32();
-            ret._numberOfSymbols = reader.ReadUInt32();
-            ret._sizeOfOptionalHeader = reader.ReadUInt16();
-            ret._characteristics = reader.ReadUInt16();
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-        return ret;
-    }
-}
-
-internal sealed class IMAGE_OPTIONAL_HEADER
-{
-    private const int ImageNumberofDirectoryEntries = 16;
-    internal ushort _magic;
-    internal byte _majorLinkerVersion;
-    internal byte _minorLinkerVersion;
-    internal uint _sizeOfCode;
-    internal uint _sizeOfInitializedData;
-    internal uint _sizeOfUninitializedData;
-    internal uint _addressOfEntryPoint;
-    internal uint _baseOfCode;
-    internal uint _baseOfData;
-    internal uint _imageBase;
-    internal uint _sectionAlignment;
-    internal uint _fileAlignment;
-    internal ushort _majorOperatingSystemVersion;
-    internal ushort _minorOperatingSystemVersion;
-    internal ushort _majorImageVersion;
-    internal ushort _minorImageVersion;
-    internal ushort _majorSubsystemVersion;
-    internal ushort _minorSubsystemVersion;
-    internal uint _win32VersionValue;
-    internal uint _sizeOfImage;
-    internal uint _sizeOfHeaders;
-    internal uint _checkSum;
-    internal ushort _subsystem;
-    internal ushort _dllCharacteristics;
-    internal uint _sizeOfStackReserve;
-    internal uint _sizeOfStackCommit;
-    internal uint _sizeOfHeapReserve;
-    internal uint _sizeOfHeapCommit;
-    internal uint _loaderFlags;
-    internal uint _numberOfRvaAndSizes;
-    internal IMAGE_DATA_DIRECTORY[] _dataDirectory = new IMAGE_DATA_DIRECTORY[
-        ImageNumberofDirectoryEntries
-    ];
-
-    internal static IMAGE_OPTIONAL_HEADER? FromBinaryReader(BinaryReader reader)
-    {
-        var ret = new IMAGE_OPTIONAL_HEADER();
-        try
-        {
-            ret._magic = reader.ReadUInt16();
-            ret._majorLinkerVersion = reader.ReadByte();
-            ret._minorLinkerVersion = reader.ReadByte();
-            ret._sizeOfCode = reader.ReadUInt32();
-            ret._sizeOfInitializedData = reader.ReadUInt32();
-            ret._sizeOfUninitializedData = reader.ReadUInt32();
-            ret._addressOfEntryPoint = reader.ReadUInt32();
-            ret._baseOfCode = reader.ReadUInt32();
-            ret._baseOfData = reader.ReadUInt32();
-            ret._imageBase = reader.ReadUInt32();
-            ret._sectionAlignment = reader.ReadUInt32();
-            ret._fileAlignment = reader.ReadUInt32();
-            ret._majorOperatingSystemVersion = reader.ReadUInt16();
-            ret._minorOperatingSystemVersion = reader.ReadUInt16();
-            ret._majorImageVersion = reader.ReadUInt16();
-            ret._minorImageVersion = reader.ReadUInt16();
-            ret._majorSubsystemVersion = reader.ReadUInt16();
-            ret._minorSubsystemVersion = reader.ReadUInt16();
-            ret._win32VersionValue = reader.ReadUInt32();
-            ret._sizeOfImage = reader.ReadUInt32();
-            ret._sizeOfHeaders = reader.ReadUInt32();
-            ret._checkSum = reader.ReadUInt32();
-            ret._subsystem = reader.ReadUInt16();
-            ret._dllCharacteristics = reader.ReadUInt16();
-            ret._sizeOfStackReserve = reader.ReadUInt32();
-            ret._sizeOfStackCommit = reader.ReadUInt32();
-            ret._sizeOfHeapReserve = reader.ReadUInt32();
-            ret._sizeOfHeapCommit = reader.ReadUInt32();
-            ret._loaderFlags = reader.ReadUInt32();
-            ret._numberOfRvaAndSizes = reader.ReadUInt32();
-
-            for (int i = 0; i < ImageNumberofDirectoryEntries; i++)
-            {
-                ret._dataDirectory[i] = new IMAGE_DATA_DIRECTORY
-                {
-                    _virtualAddress = reader.ReadUInt32(),
-                    _size = reader.ReadUInt32(),
-                };
-            }
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-        return ret;
-    }
-}
-
-internal sealed class IMAGE_DATA_DIRECTORY
-{
-    internal uint _virtualAddress;
-    internal uint _size;
-}
-
-internal sealed class IMAGE_SECTION_HEADER
-{
-    internal const int ImageSizeofShortName = 8;
-    internal byte[] _name = new byte[ImageSizeofShortName];
-    internal uint _physicalAddress;
-    internal uint _virtualSize
-    {
-        get => _physicalAddress;
-        set => _physicalAddress = value;
-    }
-    internal uint _virtualAddress;
-    internal uint _sizeOfRawData;
-    internal uint _pointerToRawData;
-    internal uint _pointerToRelocations;
-    internal uint _pointerToLinenumbers;
-    internal ushort _numberOfRelocations;
-    internal ushort _numberOfLinenumbers;
-    internal uint _characteristics;
-
-    internal static IMAGE_SECTION_HEADER? FromBinaryReader(BinaryReader reader)
-    {
-        var ret = new IMAGE_SECTION_HEADER();
-        try
-        {
-            for (int i = 0; i < ImageSizeofShortName; i++)
-            {
-                ret._name[i] = reader.ReadByte();
-            }
-
-            ret._physicalAddress = reader.ReadUInt32();
-            ret._virtualAddress = reader.ReadUInt32();
-            ret._sizeOfRawData = reader.ReadUInt32();
-            ret._pointerToRawData = reader.ReadUInt32();
-            ret._pointerToRelocations = reader.ReadUInt32();
-            ret._pointerToLinenumbers = reader.ReadUInt32();
-            ret._numberOfRelocations = reader.ReadUInt16();
-            ret._numberOfLinenumbers = reader.ReadUInt16();
-            ret._characteristics = reader.ReadUInt32();
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-        return ret;
-    }
-}
-
-internal sealed class IMAGE_DOS_HEADER
-{
-    // "MZ" read as a little-endian value.
-    //
-    // リトルエンディアンで読んだ "MZ"。
-    private const int ImageDosSignature = 0x5A4D;
-    internal ushort _e_magic;
-    internal ushort _e_cblp;
-    internal ushort _e_cp;
-    internal ushort _e_crlc;
-    internal ushort _e_cparhdr;
-    internal ushort _e_minalloc;
-    internal ushort _e_maxalloc;
-    internal ushort _e_ss;
-    internal ushort _e_sp;
-    internal ushort _e_csum;
-    internal ushort _e_ip;
-    internal ushort _e_cs;
-    internal ushort _e_lfarlc;
-    internal ushort _e_ovno;
-    internal ushort[] _e_res = new ushort[4];
-    internal ushort _e_oemid;
-    internal ushort _e_oeminfo;
-    internal ushort[] _e_res2 = new ushort[10];
-    internal uint _e_lfanew;
-
-    internal static IMAGE_DOS_HEADER? FromBinaryReader(BinaryReader reader)
-    {
-        var ret = new IMAGE_DOS_HEADER();
-        try
-        {
-            ret._e_magic = reader.ReadUInt16();
-            if (ret._e_magic != ImageDosSignature)
-            {
-                return null;
-            }
-
-            ret._e_cblp = reader.ReadUInt16();
-            ret._e_cp = reader.ReadUInt16();
-            ret._e_crlc = reader.ReadUInt16();
-            ret._e_cparhdr = reader.ReadUInt16();
-            ret._e_minalloc = reader.ReadUInt16();
-            ret._e_maxalloc = reader.ReadUInt16();
-            ret._e_ss = reader.ReadUInt16();
-            ret._e_sp = reader.ReadUInt16();
-            ret._e_csum = reader.ReadUInt16();
-            ret._e_ip = reader.ReadUInt16();
-            ret._e_cs = reader.ReadUInt16();
-            ret._e_lfarlc = reader.ReadUInt16();
-            ret._e_ovno = reader.ReadUInt16();
-            for (int i = 0; i < 4; i++)
-            {
-                ret._e_res[i] = reader.ReadUInt16();
-            }
-
-            ret._e_oemid = reader.ReadUInt16();
-            ret._e_oeminfo = reader.ReadUInt16();
-            for (int i = 0; i < 10; i++)
-            {
-                ret._e_res2[i] = reader.ReadUInt16();
-            }
-
-            ret._e_lfanew = reader.ReadUInt32();
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-        return ret;
-    }
-}
-
-internal sealed class IMAGE_IMPORT_DESCRIPTOR
-{
-    internal uint _originalFirstThunk;
-    internal uint _timeDataStamp;
-    internal uint _forwarderChain;
-    internal uint _name;
-    internal uint _firstThunk;
-
-    internal static IMAGE_IMPORT_DESCRIPTOR? FromBinaryReader(BinaryReader reader)
-    {
-        var ret = new IMAGE_IMPORT_DESCRIPTOR();
-        try
-        {
-            ret._originalFirstThunk = reader.ReadUInt32();
-            ret._timeDataStamp = reader.ReadUInt32();
-            ret._forwarderChain = reader.ReadUInt32();
-            ret._name = reader.ReadUInt32();
-            ret._firstThunk = reader.ReadUInt32();
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-        return ret;
-    }
-}
-
+// 実行イメージの終端を求めるのに必要な PE のフィールドだけを読む。DOS ヘッダーの e_lfanew、
+// ファイルヘッダーのセクション数とオプションヘッダーのサイズ、各セクションの生データ範囲である。
+// オフセットは winnt.h の IMAGE_* 構造体に従う。
 internal sealed class Win32PeHeader
 {
-    private IMAGE_DOS_HEADER? _dosHeader;
-    private IMAGE_NT_HEADERS? _ntHeader;
-    private readonly List<IMAGE_SECTION_HEADER> _sectionHeaders = [];
+    // "MZ" and "PE\0\0" read as little-endian values.
+    //
+    // リトルエンディアンで読んだ "MZ" と "PE\0\0"。
+    private const ushort DosSignature = 0x5A4D;
+    private const uint NtSignature = 0x4550;
+    private const int LfanewOffset = 0x3C;
+    private const int FileHeaderSize = 20;
+    private const int SectionHeaderSize = 40;
+    private const int SectionRawDataOffset = 16;
 
-    internal long EndOfExecutableRegion =>
-        _sectionHeaders.Count == 0
-            ? -1
-            : _sectionHeaders.Max(section =>
-                (long)section._pointerToRawData + section._sizeOfRawData
-            );
+    private Win32PeHeader(long endOfExecutableRegion)
+    {
+        EndOfExecutableRegion = endOfExecutableRegion;
+    }
+
+    internal long EndOfExecutableRegion { get; }
 
     internal static Win32PeHeader? FromBinaryReader(BinaryReader reader)
     {
         try
         {
-            long startPosition = reader.BaseStream.Position;
-            long length = reader.BaseStream.Length - startPosition;
-            if (length < 0x1000)
+            Stream stream = reader.BaseStream;
+            long start = stream.Position;
+            if (stream.Length - start < 0x1000 || reader.ReadUInt16() != DosSignature)
             {
                 return null;
             }
 
-            var ret = new Win32PeHeader { _dosHeader = IMAGE_DOS_HEADER.FromBinaryReader(reader) };
-            if (ret._dosHeader == null)
+            stream.Seek(start + LfanewOffset, SeekOrigin.Begin);
+            uint lfanew = reader.ReadUInt32();
+            stream.Seek(start + lfanew, SeekOrigin.Begin);
+            if (lfanew == 0 || reader.ReadUInt32() != NtSignature)
             {
                 return null;
             }
 
-            if (ret._dosHeader._e_lfanew <= 0)
-            {
-                return ret;
-            }
-
-            reader.BaseStream.Seek(startPosition + ret._dosHeader._e_lfanew, SeekOrigin.Begin);
-            ret._ntHeader = IMAGE_NT_HEADERS.FromBinaryReader(reader);
-            if (ret._ntHeader == null)
-            {
-                return null;
-            }
+            stream.Seek(2, SeekOrigin.Current);
+            ushort sectionCount = reader.ReadUInt16();
+            stream.Seek(12, SeekOrigin.Current);
+            ushort optionalHeaderSize = reader.ReadUInt16();
 
             // Packers such as UPX write their own header right after the section table, so the
             // table is read by the count in the file header instead of up to an all-zero entry.
             //
             // UPX などのパッカーはセクション表の直後に独自のヘッダーを書くため、全ゼロの項目まで
             // ではなく、ファイルヘッダーのセクション数だけ表を読む。
-            IMAGE_FILE_HEADER fileHeader = ret._ntHeader._fileHeader!;
-            reader.BaseStream.Seek(
-                startPosition + ret._dosHeader._e_lfanew + 24 + fileHeader._sizeOfOptionalHeader,
-                SeekOrigin.Begin
-            );
-            for (int i = 0; i < fileHeader._numberOfSections; i++)
+            long table = start + lfanew + 4 + FileHeaderSize + optionalHeaderSize;
+            long end = -1;
+            for (int i = 0; i < sectionCount; i++)
             {
-                var section = IMAGE_SECTION_HEADER.FromBinaryReader(reader);
-                if (section == null)
-                {
-                    return null;
-                }
-                ret._sectionHeaders.Add(section);
+                stream.Seek(
+                    table + (i * SectionHeaderSize) + SectionRawDataOffset,
+                    SeekOrigin.Begin
+                );
+                uint size = reader.ReadUInt32();
+                uint pointer = reader.ReadUInt32();
+                end = long.Max(end, (long)pointer + size);
             }
-            return ret;
+            return new Win32PeHeader(end);
         }
         catch (IOException)
         {
