@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.DpmToAx.Crypto;
@@ -47,25 +46,50 @@ internal class HspCryptoTransform
     internal static HspCryptoTransform? CrackEncryption(
         byte[] encrypted,
         Func<byte[], bool> validator
-    )
-    {
-        byte[] plain3 = System.Text.Encoding.ASCII.GetBytes(Hsp3Magic);
-        HspCryptoTransform? hsp3crypto = CrackEncryption(plain3, encrypted, validator);
-        if (hsp3crypto != null)
-        {
-            return hsp3crypto;
-        }
-
-        byte[] plain2 = System.Text.Encoding.ASCII.GetBytes(Hsp2Magic);
-        HspCryptoTransform? hsp2crypto = CrackEncryption(plain2, encrypted, validator);
-        return hsp2crypto;
-    }
+    ) =>
+        CrackEncryption(System.Text.Encoding.ASCII.GetBytes(Hsp3Magic), encrypted, validator)
+        ?? CrackEncryption(System.Text.Encoding.ASCII.GetBytes(Hsp2Magic), encrypted, validator);
 
     internal static HspCryptoTransform? CrackEncryption(
         byte[] plain,
         byte[] encrypted,
         Func<byte[], bool> validator
     )
+    {
+        byte[] difBuffer = GetDifBuffer(plain, encrypted);
+        for (int i = 0; i < 0x100; i++)
+        {
+            XorAddTransform xoradd;
+            byte add = (byte)(i & 0x7F);
+            xoradd._xorSum = (i >= 0x80);
+            xoradd._addByte = add;
+            xoradd._xorByte = XorAddTransform.GetXorByte(
+                add,
+                difBuffer[0],
+                encrypted[0],
+                xoradd._xorSum
+            );
+            if (!EncodesAll(xoradd, difBuffer, encrypted))
+            {
+                continue;
+            }
+
+            var decryptor = new HspCryptoTransform { _xorAdd = xoradd };
+            if (validator(decryptor.Decryption((byte[])encrypted.Clone())))
+            {
+                return decryptor;
+            }
+        }
+
+        return null;
+    }
+
+    // The byte-to-byte differences of the known plain text must hit every bit both ways, or
+    // the XOR and ADD keys cannot be told apart.
+    // ---
+    // 既知の平文のバイト間の差分がすべてのビットで 0 と 1 の両方を含まないと、XOR と ADD の
+    // キーを区別できない。
+    private static byte[] GetDifBuffer(byte[] plain, byte[] encrypted)
     {
         int count = Math.Min(plain.Length, encrypted.Length);
         if (count < 2)
@@ -84,51 +108,22 @@ internal class HspCryptoTransform
             andByte &= difBuffer[i];
             orByte |= difBuffer[i];
         }
-        if ((andByte != 0x00) || (orByte != 0xFF))
-        {
-            throw new InvalidOperationException(Strings.InsufficientDecryptionInfo);
-        }
 
-        var transformList = new List<XorAddTransform>();
-        for (int i = 0; i < 0x100; i++)
-        {
-            XorAddTransform xoradd;
-            bool ok = true;
-            byte add = (byte)(i & 0x7F);
-            xoradd._xorSum = (i >= 0x80);
-            xoradd._addByte = add;
-            xoradd._xorByte = XorAddTransform.GetXorByte(
-                add,
-                difBuffer[0],
-                encrypted[0],
-                xoradd._xorSum
-            );
-            for (int index = 1; index < count; index++)
-            {
-                if (encrypted[index] != xoradd.Encode(difBuffer[index]))
-                {
-                    ok = false;
-                    break;
-                }
-            }
-            if (ok)
-            {
-                var decryptor = new HspCryptoTransform { _xorAdd = xoradd };
-                byte[] buffer = (byte[])encrypted.Clone();
-                buffer = decryptor.Decryption(buffer);
+        return (andByte == 0x00) && (orByte == 0xFF)
+            ? difBuffer
+            : throw new InvalidOperationException(Strings.InsufficientDecryptionInfo);
+    }
 
-                if (validator(buffer))
-                {
-                    transformList.Add(xoradd);
-                    break;
-                }
+    private static bool EncodesAll(XorAddTransform xoradd, byte[] difBuffer, byte[] encrypted)
+    {
+        for (int index = 1; index < difBuffer.Length; index++)
+        {
+            if (encrypted[index] != xoradd.Encode(difBuffer[index]))
+            {
+                return false;
             }
         }
-        if (transformList.Count == 1)
-        {
-            var ret = new HspCryptoTransform { _xorAdd = transformList[0] };
-            return ret;
-        }
-        return null;
+
+        return true;
     }
 }

@@ -13,6 +13,8 @@ internal sealed class PreprocessorDeclaration : LogicalLine
 
     private readonly Preprocessor? _pp;
 
+    internal Preprocessor? Declared => _pp;
+
     internal override int TabCount => 0;
 
     internal override int TokenOffset => -1;

@@ -55,5 +55,5 @@ internal sealed class IfStatement : LogicalLine
 
     internal override void CheckLabel() => _arg?.CheckLabel();
 
-    internal override bool CheckRpn() => _arg != null ? _arg.CheckRpn() : true;
+    internal override bool CheckRpn() => _arg == null || _arg.CheckRpn();
 }

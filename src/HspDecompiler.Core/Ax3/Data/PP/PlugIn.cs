@@ -27,7 +27,7 @@ internal class PlugIn : Preprocessor
         return ret;
     }
 
-    private readonly Dictionary<int, Cmd> _cmds = new();
+    private readonly Dictionary<int, Cmd> _cmds = [];
     private int _extendedTypeCount;
 
     internal int ExtendedTypeCount

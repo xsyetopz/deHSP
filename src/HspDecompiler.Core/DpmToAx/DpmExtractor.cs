@@ -87,7 +87,7 @@ internal sealed class DpmExtractor
     }
 
     private BinaryReader? _reader;
-    private readonly List<DpmFileEntry> _files = new();
+    private readonly List<DpmFileEntry> _files = [];
 
     /// <summary>
     /// DPMX header (16 bytes):

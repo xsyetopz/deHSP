@@ -19,7 +19,7 @@ public class HspCryptoTransformTests
             },
         };
 
-        byte[] plaintext = new byte[] { 0x48, 0x53, 0x50, 0x33, 0x00, 0xFF, 0x80 };
+        byte[] plaintext = [0x48, 0x53, 0x50, 0x33, 0x00, 0xFF, 0x80];
         byte[] encrypted = transform.Encryption(plaintext);
         byte[] decrypted = transform.Decryption(encrypted);
 
@@ -68,7 +68,7 @@ public class HspCryptoTransformTests
             },
         };
 
-        byte[] plaintext = new byte[] { 0x48, 0x53, 0x50, 0x33, 0x01, 0x02, 0x03, 0x04 };
+        byte[] plaintext = [0x48, 0x53, 0x50, 0x33, 0x01, 0x02, 0x03, 0x04];
         byte[] encrypted = originalTransform.Encryption(plaintext);
 
         static bool validator(byte[] data) =>

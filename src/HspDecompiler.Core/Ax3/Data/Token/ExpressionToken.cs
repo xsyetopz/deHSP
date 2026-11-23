@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -16,10 +15,7 @@ internal sealed class ExpressionToken : CodeToken
     private readonly List<ExpressionTermToken>? _tokens;
     private ExpressionTermToken? _convertedToken;
     private bool _tryConvert;
-    internal bool CanRpnConvert =>
-        _convertedToken != null ? true
-        : !_tryConvert ? RpnConvert()
-        : false;
+    internal bool CanRpnConvert => _convertedToken != null || !_tryConvert && RpnConvert();
 
     internal bool RpnConvert()
     {
@@ -39,50 +35,41 @@ internal sealed class ExpressionToken : CodeToken
             _convertedToken = _tokens[0];
             return true;
         }
-        var stack = new List<ExpressionTermToken>();
-        var source = new List<ExpressionTermToken>();
-        try
+        _convertedToken = Fold(_tokens);
+        return _convertedToken != null;
+    }
+
+    // Folds the RPN term list into one tree, or returns null when an operator lacks two operands
+    // or terms remain.
+    // ---
+    // RPN の項の並びを一つの木にまとめる。演算子に二つのオペランドが無い場合や項が余る場合は
+    // null を返す。
+    private static ExpressionTermToken? Fold(List<ExpressionTermToken> tokens)
+    {
+        var stack = new Stack<ExpressionTermToken>();
+        foreach (ExpressionTermToken token in tokens)
         {
-            source.AddRange(_tokens);
-            while (source.Count != 0)
+            if (!token.IsOperator)
             {
-                ExpressionTermToken token = source[0];
-                source.RemoveAt(0);
-                if (token.IsOperator)
-                {
-                    var right = (OperandToken)stack[^1];
-                    stack.RemoveAt(stack.Count - 1);
-                    var left = (OperandToken)stack[^1];
-                    stack.RemoveAt(stack.Count - 1);
-                    stack.Add(
-                        (ExpressionTermToken)(
-                            new SubExpressionToken(left, right, (OperatorToken)token)
-                        )
-                    );
-                }
-                else
-                {
-                    stack.Add(token);
-                }
+                stack.Push(token);
+                continue;
             }
-        }
-        catch (InvalidCastException)
-        {
-            // RPN token list has wrong structure (non-operand/operator in wrong position)
-            return false;
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            // Stack underflow — malformed RPN expression
-            return false;
-        }
-        if (stack.Count != 1)
-        {
-            return false;
+
+            if (
+                (token is not OperatorToken op)
+                || !stack.TryPop(out ExpressionTermToken? rightTerm)
+                || !stack.TryPop(out ExpressionTermToken? leftTerm)
+                || (rightTerm is not OperandToken right)
+                || (leftTerm is not OperandToken left)
+            )
+            {
+                return null;
+            }
+
+            stack.Push(new SubExpressionToken(left, right, op));
         }
 
-        _convertedToken = stack[0];
-        return true;
+        return stack.Count == 1 ? stack.Pop() : null;
     }
 
     internal override int TokenOffset

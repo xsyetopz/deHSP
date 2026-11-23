@@ -5,7 +5,7 @@ namespace HspDecompiler.Core.Ax3.Data.Analyzer;
 
 internal sealed class TokenCollection
 {
-    private List<PrimitiveToken> _primitives = new();
+    private List<PrimitiveToken> _primitives = [];
 
     internal List<PrimitiveToken> Primitives => _primitives;
 
@@ -93,12 +93,12 @@ internal sealed class TokenCollection
 
     internal bool NextIsEndOfStream => (_position >= _primitives.Count);
 
-    internal bool NextIsEndOfLine => NextIsEndOfStream ? true : _primitives[_position].IsLineHead;
+    internal bool NextIsEndOfLine => NextIsEndOfStream || _primitives[_position].IsLineHead;
 
     internal bool NextIsEndOfParam =>
-        NextIsEndOfStream ? true
-        : _primitives[_position].IsLineHead ? true
-        : _primitives[_position].IsParamHead;
+        NextIsEndOfStream
+        || _primitives[_position].IsLineHead
+        || _primitives[_position].IsParamHead;
 
     internal bool NextIsBracketStart
     {

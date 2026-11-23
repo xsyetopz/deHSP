@@ -36,5 +36,5 @@ internal sealed class OnEventStatement : LogicalLine
 
     internal override void CheckLabel() => _func?.CheckLabel();
 
-    internal override bool CheckRpn() => _func != null ? _func.CheckRpn() : true;
+    internal override bool CheckRpn() => _func == null || _func.CheckRpn();
 }

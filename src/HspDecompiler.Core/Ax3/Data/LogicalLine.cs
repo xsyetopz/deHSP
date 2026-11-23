@@ -14,7 +14,7 @@ internal abstract class LogicalLine
         set => _tabCount = value;
     }
 
-    protected List<string> _errorMes = new();
+    protected List<string> _errorMes = [];
 
     internal List<string> GetErrorMes() => _errorMes;
 

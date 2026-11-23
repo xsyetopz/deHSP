@@ -1,11 +1,12 @@
 using System.Text;
+using System.Threading;
 
 namespace HspDecompiler.Core.Encoding;
 
 public static class ShiftJisHelper
 {
     private static System.Text.Encoding? s_encoding;
-    private static readonly object s_lock = new();
+    private static readonly Lock s_lock = new();
 
     public static System.Text.Encoding Encoding
     {
@@ -22,6 +23,7 @@ public static class ShiftJisHelper
                     }
                 }
             }
+
             return s_encoding;
         }
     }

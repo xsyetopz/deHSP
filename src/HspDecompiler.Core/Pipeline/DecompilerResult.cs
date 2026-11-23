@@ -7,7 +7,7 @@ public sealed class DecompilerResult
 {
     public bool Success { get; set; }
     public string? OutputPath { get; set; }
-    public List<string> Warnings { get; } = new List<string>();
-    public List<DpmFileEntry> DpmFiles { get; } = new List<DpmFileEntry>();
+    public List<string> Warnings { get; } = [];
+    public List<DpmFileEntry> DpmFiles { get; } = [];
     public string? ErrorMessage { get; set; }
 }

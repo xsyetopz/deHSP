@@ -32,5 +32,5 @@ internal sealed class Command : LogicalLine
 
     internal override void CheckLabel() => _function?.CheckLabel();
 
-    internal override bool CheckRpn() => _function != null ? _function.CheckRpn() : true;
+    internal override bool CheckRpn() => _function == null || _function.CheckRpn();
 }

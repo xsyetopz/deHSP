@@ -12,7 +12,7 @@ internal sealed class LiteralToken : OperandToken
     }
 
     private readonly LiteralPrimitive? _token;
-    internal bool IsNegativeNumber => _token == null ? false : _token.IsNegativeNumber;
+    internal bool IsNegativeNumber => _token != null && _token.IsNegativeNumber;
 
     internal bool IsMinusOne => _token!.IsMinusOne;
 

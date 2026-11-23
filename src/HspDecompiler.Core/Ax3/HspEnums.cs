@@ -4,7 +4,7 @@ namespace HspDecompiler.Core.Ax3;
 
 public enum HspCodeType
 {
-    NONE = 0x00,
+    None = 0x00,
     Operator = 0xFF,
     Symbol = 0xFE,
     Variable = 0x01,
@@ -29,7 +29,7 @@ public enum HspCodeType
 [Flags]
 public enum HspCodeExtraOptions
 {
-    NONE = 0x00,
+    None = 0x00,
     HasExtraInt16 = 0x0001,
     HasGhostLabel = 0x0002,
     HasGhostGoto = 0x0004,

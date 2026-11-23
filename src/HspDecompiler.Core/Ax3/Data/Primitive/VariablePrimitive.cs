@@ -45,10 +45,7 @@ internal sealed class ParameterPrimitive : VariablePrimitive
         : base(dataSet)
     {
         _param = dataSet._parent!.GetParam(Value);
-        if (_param != null)
-        {
-            _param.ParamNameIsUsed = true;
-        }
+        _param?.ParamNameIsUsed = true;
     }
 
     private readonly Param? _param;
