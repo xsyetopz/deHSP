@@ -17,7 +17,8 @@ publish *targets=rids:
                 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
                 -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false
         done
-        find "$stage" -name '*.pdb' -delete
+        # Doc-comment XML serves IDEs, not the app; the dictionary is an embedded resource.
+        find "$stage" \( -name '*.pdb' -o -name '*.xml' \) -delete
         (cd "$stage" && zip -qr "../deHSP-{{ version }}-$rid.zip" .)
         rm -rf "$stage"
         echo "-> {{ artifacts }}/deHSP-{{ version }}-$rid.zip"

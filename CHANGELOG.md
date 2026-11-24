@@ -121,6 +121,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Breaking:** an archive whose options block every entry fails with a message. That covers
   an archive where every entry is encrypted, and one with encrypted entries when neither
   decryption nor skipping is allowed. Before, the run reported success and wrote nothing.
+- **Breaking:** the command-line tool is `deHSP-cli`, no longer `dehsp`. The GUI stays
+  `deHSP`. Each release zip now holds both; the 2.2.0 zips held only the CLI, because on
+  case-insensitive file systems the CLI's `dehsp` overwrote the GUI's `deHSP`.
 - The default HSP 3 spelling follows common HSP style. An `if` condition has no
   parentheses, a negative literal stays bare (`a - -1`), `hspdef.as` macros replace their
   expansions, and one-line blocks of a debug build use `:`. `--if-parens spaced`,

@@ -6,10 +6,10 @@ using HspDecompiler.Core.Pipeline;
 
 namespace HspDecompiler.Cli;
 
-// The dehsp root command. It writes through the invocation's Output and Error writers instead of
+// The deHSP-cli root command. It writes through the invocation's Output and Error writers instead of
 // Console, so tests can run the command in-process and read what it printed.
 //
-// dehsp のルートコマンド。Console ではなく呼び出し構成の Output と Error に書き込むため、
+// deHSP-cli のルートコマンド。Console ではなく呼び出し構成の Output と Error に書き込むため、
 // テストはプロセス内でコマンドを実行して出力を読める。
 internal sealed class DecompileCommand : RootCommand
 {
@@ -104,7 +104,7 @@ internal sealed class DecompileCommand : RootCommand
     };
 
     internal DecompileCommand()
-        : base("deHSP - decompile HSP 2 and HSP 3 programs")
+        : base("deHSP - decompile HSP 1, HSP 2 and HSP 3 programs")
     {
         Arguments.Add(_input);
         Options.Add(_output);
