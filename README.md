@@ -44,7 +44,7 @@ Options:
 ```text
 dehsp <input-file> [options]
   -o, --output <output>              Output directory
-  -d, --dictionary <dictionary>      Custom dictionary XML (default: built-in table for hspcmp 2.5 to 3.8beta2)
+  -d, --dictionary <dictionary>      Custom dictionary XML (default: built-in table for hspcmp 2.4 to 3.8beta2)
   --no-decrypt                       Skip encrypted file decryption
   --skip-encrypted                   Extract only non-encrypted files
   --utf8                             Write UTF-8 without a BOM instead of Shift_JIS; recompile with hspcmp -i or -j
@@ -156,6 +156,17 @@ explains came from a macro whose expansion broke into more lines than the source
 keeps no macro bodies, so the output defines `#define global __line_record(%1) %c` on line 1
 and writes `__line_record` on the line before each such record.
 
+### HSP 2 programs
+
+deHSP reads the AX of every hspcmp from 2.4 to 2.61. Each format word names its release
+(0x203 for 2.4, 0x205 for 2.5, 0x255 for 2.55, 0x206 for 2.6 and 2.61), so none needs
+`--compiler`. HSP 2.4 has no `{ }` blocks, `#deffunc` or `#module`: an `if` takes the rest of
+its line, so its block comes back as `if x : a : else : b`, and a string longer than the 248
+bytes 2.4 keeps on one line comes back as a `{"..."}` block. The 2.4 samples that compile
+with 2.4 rebuild to the same AX, apart from the first label word, which hspcmp 2.4 leaves
+uninitialized. The AX records the main file's name as hspcmp got it, which can be a full
+path; a rebuild from another directory writes a different name.
+
 ### Source style
 
 Some constructs compile to the same bytes however they are spelled. The style options pick
@@ -216,7 +227,7 @@ UTF-8 strings for every hsp64 program, so this applies to its output even withou
 
 ## Dictionary
 
-One keyword table covers every hspcmp release the decompiler reads, HSP 2.5 to 3.8β2, and is
+One keyword table covers every hspcmp release the decompiler reads, HSP 2.4 to 3.8β2, and is
 built into the decompiler, so no file has to sit next to it. It holds the built-in commands,
 functions, and parameter types, and the hspdef.as macros such as `dir_exe`. The source is
 [`Dictionary.xml`](src/HspDecompiler.Core/Keywords/Dictionary.xml).

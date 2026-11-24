@@ -6,11 +6,11 @@ using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax2.Reading;
 
-// Reads an HSP 2 object file into an AxData: the 80-byte header, each segment it points at, and
-// the label, DLL, #func and #deffunc tables.
+// Reads an HSP 2 object file into an AxData: the header (64 bytes from 2.4, 80 from 2.5), each
+// segment it points at, and the label, DLL, #func and #deffunc tables.
 //
-// HSP 2 のオブジェクトファイルを AxData に読む。80 バイトのヘッダー、それが指す各セグメント、
-// ラベル・DLL・#func・#deffunc のテーブル。
+// HSP 2 のオブジェクトファイルを AxData に読む。ヘッダー(2.4 は 64 バイト、2.5 から 80
+// バイト)、それが指す各セグメント、ラベル・DLL・#func・#deffunc のテーブル。
 internal static class Ax2ImageReader
 {
     private const int HeaderSize = 80;
@@ -61,12 +61,13 @@ internal static class Ax2ImageReader
     private static Header ReadHeader(Stream stream)
     {
         byte[] headerBuffer = new byte[HeaderSize];
-        if (stream.Read(headerBuffer, 0, HeaderSize) < HeaderSize)
+        int read = stream.ReadAtLeast(headerBuffer, HeaderSize, throwOnEndOfStream: false);
+        if (read < Header.ShortHeaderWords * 4)
         {
             throw new HspDecoderException("AxData", Strings.FileHeaderMissing);
         }
 
-        int[] words = new int[HeaderSize / 4];
+        int[] words = new int[read / 4];
         for (int i = 0; i < words.Length; i++)
         {
             words[i] = BitConverter.ToInt32(headerBuffer, i * 4);

@@ -44,7 +44,7 @@ dotnet run --project src/HspDecompiler.Cli -- game.exe -o ./extracted
 ```text
 dehsp <入力ファイル> [オプション]
   -o, --output <output>              出力ディレクトリ
-  -d, --dictionary <dictionary>      独自の辞書 XML（デフォルト: 組み込みの hspcmp 2.5〜3.8beta2 の表）
+  -d, --dictionary <dictionary>      独自の辞書 XML（デフォルト: 組み込みの hspcmp 2.4〜3.8beta2 の表）
   --no-decrypt                       暗号化ファイルを復号しない
   --skip-encrypted                   暗号化されていないファイルだけを取り出す
   --utf8                             Shift_JIS ではなく BOM なしの UTF-8 で書く（hspcmp -i か -j で再コンパイル）
@@ -156,6 +156,17 @@ deHSP は AX のフォーマットワード、記録、`optprm` の印からこ�
 `#define global __line_record(%1) %c` を定義し、そのような記録の前の行に `__line_record` を
 書きます。
 
+### HSP 2 のプログラム
+
+deHSP は 2.4 から 2.61 までのすべての hspcmp の AX を読みます。フォーマットワードがそれぞれの
+リリースを示すため(2.4 は 0x203、2.5 は 0x205、2.55 は 0x255、2.6 と 2.61 は 0x206)、
+どれも `--compiler` は要りません。HSP 2.4 には `{ }` のブロック、`#deffunc`、`#module` が
+ありません。`if` はその行の残りに及ぶため、ブロックは `if x : a : else : b` の形で戻り、
+2.4 が 1 行で読む 248 バイトより長い文字列は `{"..."}` のブロックで戻ります。2.4 で
+コンパイルできる 2.4 のサンプルは、hspcmp 2.4 が初期化しない最初のラベルのワードを除いて同じ
+AX に戻ります。AX はメインファイルの名前を hspcmp が受け取った形で記録し、それはフルパスの
+こともあります。別のディレクトリから再ビルドすると別の名前が書かれます。
+
 ### ソースの書き方
 
 いくつかの構文は、どう書いても同じバイト列にコンパイルされます。書き方のオプションはその綴りを
@@ -213,7 +224,7 @@ UTF-8 の文字列を持つプログラムの Shift_JIS 出力も再コンパイ
 
 ## 辞書
 
-デコンパイラーが読むすべての hspcmp リリース(HSP 2.5 から 3.8β2)を 1 つのキーワード表で
+デコンパイラーが読むすべての hspcmp リリース(HSP 2.4 から 3.8β2)を 1 つのキーワード表で
 扱います。表はデコンパイラーに組み込まれているため、隣にファイルを置く必要はありません。
 組み込み命令・関数・引数の型と、`dir_exe` のような hspdef.as のマクロを収録しています。
 元データは [`Dictionary.xml`](src/HspDecompiler.Core/Keywords/Dictionary.xml) です。

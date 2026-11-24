@@ -57,6 +57,13 @@ internal sealed class Ax2Emitter
         {
             _lines.Add(line.Value);
         }
+
+        if (!_release.BraceBlocks)
+        {
+            List<SourceLine> folded = LineIfs.Fold(_lines);
+            _lines.Clear();
+            _lines.AddRange(folded);
+        }
     }
 
     // HSP 2 lets a #deffunc replace a built-in after #undef; the original stays callable as

@@ -105,6 +105,23 @@ internal sealed class ReleaseProfile
 
     internal bool LabelsRepeat => All(r => r.LabelsRepeat);
 
+    // A release without brace blocks reads "{" as a token, so a block goes on its if line.
+    //
+    // ブロックの括弧の無いリリースは "{" をトークンとして読むため、ブロックは if の行に置く。
+    internal bool BraceBlocks => All(r => r.BraceBlocks);
+
+    // The longest string, in escaped source bytes, that every candidate keeps whole on one line;
+    // 0 when none cuts one.
+    //
+    // すべての候補が 1 行で切らずに読む文字列の最長(エスケープしたソースのバイト数)。どの候補も
+    // 切らない時は 0。
+    internal int InlineStringLimit =>
+        Candidates
+            .Where(r => r.InlineStringLimit > 0)
+            .Select(r => r.InlineStringLimit)
+            .DefaultIfEmpty(0)
+            .Min();
+
     // The format word alone sets the token packing, so the candidates never disagree on it.
     //
     // トークンの詰め方は形式のワードだけで決まるため、候補の間で食い違うことは無い。

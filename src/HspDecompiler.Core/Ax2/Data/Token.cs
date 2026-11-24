@@ -180,7 +180,7 @@ internal class Token
         {
             Ax2TokenType.Operator => OperatorText(Value),
             Ax2TokenType.Integer => IntegerText(Value),
-            Ax2TokenType.String => "\"" + Escape(_data.GetString(Value)) + "\"",
+            Ax2TokenType.String => StringLiteral(Escape(_data.GetString(Value))),
             Ax2TokenType.Label => "label_" + Value.ToString(CultureInfo.InvariantCulture),
             Ax2TokenType.Variable => "var_" + Value.ToString(CultureInfo.InvariantCulture),
             _ => NamedText() ?? RawText,
@@ -235,6 +235,41 @@ internal class Token
         : name;
 
     internal bool IsKnown => !GetString().Equals(RawText, StringComparison.Ordinal);
+
+    // A release that cuts a string written on one line gets a longer one as a {"..."} block, whose
+    // lines it reads in full; each "\n" becomes the line break it stands for.
+    //
+    // 1 行に書いた文字列を切り詰めるリリースでは、それより長い文字列を {"..."} のブロックにする。
+    // ブロックの行は全部読まれる。各 "\n" は、それが表す改行になる。
+    private string StringLiteral(string escaped)
+    {
+        int limit = _data.Release.InlineStringLimit;
+        return
+            limit > 0
+            && ShiftJisHelper.Encoding.GetByteCount(escaped) > limit
+            && escaped.Contains("\\n", StringComparison.Ordinal)
+            ? "{\"" + BreakLines(escaped) + "\"}"
+            : "\"" + escaped + "\"";
+    }
+
+    private static string BreakLines(string escaped)
+    {
+        var text = new StringBuilder(escaped.Length);
+        for (int i = 0; i < escaped.Length; i++)
+        {
+            if (escaped[i] == '\\' && i + 1 < escaped.Length)
+            {
+                i++;
+                text.Append(escaped[i] == 'n' ? "\n" : "\\" + escaped[i]);
+            }
+            else
+            {
+                text.Append(escaped[i]);
+            }
+        }
+
+        return text.ToString();
+    }
 
     // hspcmp 2.x turns "\n" into CR LF and "\r" into a lone CR, so a CR LF pair goes back to
     // "\n" and any other CR to "\r".

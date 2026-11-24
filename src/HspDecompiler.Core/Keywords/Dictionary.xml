@@ -16,7 +16,7 @@
   xmlns="urn:dehsp:dictionary"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="urn:dehsp:dictionary Dictionary.xsd"
-  version="2.5-3.8beta2"
+  version="2.4-3.8beta2"
 >
   <codes since="3.0">
     <code type="0x00" value="0x0000" name="+" kind="Operator" priority="3" />
@@ -322,19 +322,21 @@
     <code type="0x0D" value="0x0200" name="int64" kind="HspFunction" since="3.8β2" />
   </codes>
   <!--
-    HSP 2.5 to 2.61 built-ins, from the keyword table each hspcmp.dll carries ("$104 8 onexit":
-    code, type, name). The token type is the table's type times 8: 0x38 system variables, 0x40
-    program control and memory commands, 0x48 GUI, file and ll_ commands. The code's high bits
-    are attributes, so the token value is its low byte. 2.55 moved the note commands from 0x48 to
-    0x40, and 2.6 put onerror at 0x40/0x08, where 2.55 had on.
+    HSP 2.4 to 2.61 built-ins, from the keyword table each hspcmp.dll, or the HSED2.EXE of
+    2.4, carries ("$104 8 onexit": code, type, name). The token type is the table's type times
+    8: 0x38 system variables, 0x40 program control and memory commands, 0x48 GUI, file and ll_
+    commands. The code's high bits are attributes, so the token value is its low byte. 2.5 added
+    strmid, instr, continue, mref, exedir and objsel, and renamed hspmode to objmode. 2.55 moved
+    the note commands from 0x48 to 0x40, and 2.6 put onerror at 0x40/0x08, where 2.55 had on.
 
-    HSP 2.5〜2.61 の組み込み命令。各 hspcmp.dll が持つキーワード表("$104 8 onexit": コード、型、
-    名前)による。トークン型は表の型の 8 倍で、0x38 はシステム変数、0x40 はプログラム制御と
-    メモリの命令、0x48 は GUI・ファイル・ll_ の命令。コードの上位ビットは属性なので、トークンの
-    値はその下位バイト。2.55 は note 系の命令を 0x48 から 0x40 へ移し、2.6 は 2.55 で on が
-    あった 0x40/0x08 に onerror を置いた。
+    HSP 2.4〜2.61 の組み込み命令。各 hspcmp.dll、または 2.4 の HSED2.EXE が持つキーワード表
+    ("$104 8 onexit": コード、型、名前)による。トークン型は表の型の 8 倍で、0x38 はシステム
+    変数、0x40 はプログラム制御とメモリの命令、0x48 は GUI・ファイル・ll_ の命令。コードの上位
+    ビットは属性なので、トークンの値はその下位バイト。2.5 は strmid・instr・continue・mref・
+    exedir・objsel を加え、hspmode を objmode に改名した。2.55 は note 系の命令を 0x48 から
+    0x40 へ移し、2.6 は 2.55 で on があった 0x40/0x08 に onerror を置いた。
   -->
-  <codes since="2.5" until="2.61">
+  <codes since="2.4" until="2.61">
     <code type="0x38" value="0x0000" name="system" kind="HspFunction" />
     <code type="0x38" value="0x0001" name="hspstat" kind="HspFunction" />
     <code type="0x38" value="0x0002" name="hspver" kind="HspFunction" />
@@ -365,7 +367,7 @@
     <code type="0x38" value="0x0061" name="windir" kind="HspFunction" />
     <code type="0x38" value="0x0062" name="curdir" kind="HspFunction" />
     <code type="0x38" value="0x0063" name="refstr" kind="HspFunction" />
-    <code type="0x38" value="0x0064" name="exedir" kind="HspFunction" />
+    <code type="0x38" value="0x0064" name="exedir" kind="HspFunction" since="2.5" />
     <code type="0x40" value="0x0000" name="goto" kind="HspFunction" />
     <code type="0x40" value="0x0001" name="gosub" kind="HspFunction" />
     <code type="0x40" value="0x0002" name="return" kind="HspFunction" />
@@ -403,10 +405,10 @@
     <code type="0x40" value="0x0026" name="strlen" kind="HspFunction" />
     <code type="0x40" value="0x0027" name="getstr" kind="HspFunction" />
     <code type="0x40" value="0x0028" name="exist" kind="HspFunction" />
-    <code type="0x40" value="0x0029" name="strmid" kind="HspFunction" />
-    <code type="0x40" value="0x002A" name="instr" kind="HspFunction" />
-    <code type="0x40" value="0x002B" name="continue" kind="HspFunction" />
-    <code type="0x40" value="0x002C" name="mref" kind="HspFunction" />
+    <code type="0x40" value="0x0029" name="strmid" kind="HspFunction" since="2.5" />
+    <code type="0x40" value="0x002A" name="instr" kind="HspFunction" since="2.5" />
+    <code type="0x40" value="0x002B" name="continue" kind="HspFunction" since="2.5" />
+    <code type="0x40" value="0x002C" name="mref" kind="HspFunction" since="2.5" />
     <code type="0x40" value="0x002D" name="logmode" kind="HspFunction" since="2.55" />
     <code type="0x40" value="0x002E" name="logmes" kind="HspFunction" since="2.55" />
     <code type="0x40" value="0x002F" name="memcpy" kind="HspFunction" since="2.55" />
@@ -469,7 +471,8 @@
     <code type="0x48" value="0x003F" name="chdir" kind="HspFunction" />
     <code type="0x48" value="0x0040" name="objprm" kind="HspFunction" />
     <code type="0x48" value="0x0041" name="objsend" kind="HspFunction" />
-    <code type="0x48" value="0x0042" name="objmode" kind="HspFunction" />
+    <code type="0x48" value="0x0042" name="hspmode" kind="HspFunction" until="2.4" />
+    <code type="0x48" value="0x0042" name="objmode" kind="HspFunction" since="2.5" />
     <code type="0x48" value="0x0043" name="notesel" kind="HspFunction" until="2.5" />
     <code type="0x48" value="0x0043" name="sysinfo" kind="HspFunction" since="2.6" />
     <code type="0x48" value="0x0044" name="noteadd" kind="HspFunction" until="2.5" />
@@ -481,7 +484,7 @@
     <code type="0x48" value="0x0049" name="dirlist" kind="HspFunction" />
     <code type="0x48" value="0x004A" name="delete" kind="HspFunction" />
     <code type="0x48" value="0x004B" name="listbox" kind="HspFunction" />
-    <code type="0x48" value="0x004C" name="objsel" kind="HspFunction" />
+    <code type="0x48" value="0x004C" name="objsel" kind="HspFunction" since="2.5" />
     <code type="0x48" value="0x004D" name="ll_ret" kind="HspFunction" since="2.6" />
     <code type="0x48" value="0x004E" name="ll_retset" kind="HspFunction" since="2.6" />
     <code type="0x48" value="0x004F" name="ll_getptr" kind="HspFunction" since="2.6" />

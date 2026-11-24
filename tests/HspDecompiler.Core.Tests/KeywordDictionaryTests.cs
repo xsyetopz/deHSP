@@ -32,7 +32,7 @@ public sealed class KeywordDictionaryTests : IDisposable
     {
         KeywordDictionary dict = KeywordDictionary.BuiltIn;
 
-        Assert.Equal("2.5-3.8beta2", dict.Version);
+        Assert.Equal("2.4-3.8beta2", dict.Version);
         Assert.True(
             dict.CodeLookUp(
                 new HspDictionaryKey(0x0F, 0x001E),
@@ -231,6 +231,9 @@ public sealed class KeywordDictionaryTests : IDisposable
     [InlineData(CompilerReleases.Word26, 0x40, 0x09, "on")]
     [InlineData(CompilerReleases.Word25, 0x48, 0x43, "notesel")]
     [InlineData(CompilerReleases.Word26, 0x48, 0x43, "sysinfo")]
+    [InlineData(CompilerReleases.Word24, 0x48, 0x42, "hspmode")]
+    [InlineData(CompilerReleases.Word25, 0x48, 0x42, "objmode")]
+    [InlineData(CompilerReleases.Word24, 0x48, 0x43, "notesel")]
     public void Hsp2CodeTakesItsReleasesName(uint word, int type, int value, string expected) =>
         Assert.Equal(
             expected,

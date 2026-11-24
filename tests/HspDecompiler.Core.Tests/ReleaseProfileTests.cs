@@ -140,6 +140,21 @@ public class ReleaseProfileTests
         Assert.Equal(byteValues, profile.TokenLayout == Ax2TokenLayout.ByteValue);
         Assert.Equal(!byteValues, profile.LabelsRepeat);
         Assert.False(profile.IncludesHspdef);
+        Assert.True(profile.BraceBlocks);
+        Assert.Equal(0, profile.InlineStringLimit);
+    }
+
+    [Fact]
+    public void Hsp24WordNamesTheReleaseWithoutBraceBlocks()
+    {
+        // Act
+        ReleaseProfile profile = Infer(CompilerReleases.Word24);
+
+        // Assert
+        Assert.Equal("2.4", profile.ToString());
+        Assert.False(profile.BraceBlocks);
+        Assert.Equal(248, profile.InlineStringLimit);
+        Assert.Equal(Ax2TokenLayout.ByteValue, profile.TokenLayout);
     }
 
     [Fact]

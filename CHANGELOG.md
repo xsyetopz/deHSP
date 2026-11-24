@@ -12,7 +12,7 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
   `DecompilerPipeline.Initialize(string)` read only XML in that schema. If a file is
   missing, unreadable or fails the schema, `Initialize` logs the reason with the line
   number and returns `false`.
-- The keyword dictionary covers every release from HSP 2.5 to 3.8β2 and moved to
+- The keyword dictionary covers every release from HSP 2.4 to 3.8β2 and moved to
   `src/HspDecompiler.Core/Keywords/`. Entries carry `since` and `until`, `codes` and `macros`
   sections set their defaults, and a code can have one entry per release range. The HSP 2
   built-in names and the hspdef.as macros moved from code into the file, so a custom
@@ -88,6 +88,14 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
     `#include "loadlib.as"` inside `#deffunc setpoke` in llmod's `_poke.as`. Where that
     include ends cannot be told from the AX, so `llmod/mcn/_ddrop_mcn.as` on 2.55 recompiles
     to a different AX.
+- Programs from hspcmp 2.4 (format word 0x203) decompile and recompile to the same AX:
+  - The 2.4 header is 64 bytes, without the `#deffunc` and `#module` tables 2.5 added, and
+    its tokens pack as in 2.5. The keyword table marks the six keywords 2.5 added and
+    `hspmode`, which 2.5 renamed `objmode`.
+  - 2.4 has no `{ }` blocks, so each `if` and `else` block goes on its `if` line, joined with
+    ` : `. A string longer than the 248 bytes 2.4 reads on one line goes in a `{"..."}` block.
+  - Each of the 16 samples in the 2.4 distribution that 2.4 compiles rebuilds to the same AX,
+    apart from the first label word, which 2.4 leaves uninitialized.
 - The CLI exits with 0 on success and 1 on any failure.
 - The public API has XML documentation in English and Japanese.
 

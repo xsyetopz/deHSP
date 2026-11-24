@@ -18,6 +18,7 @@ public class DecompileAxFileTests
     [InlineData("h2labels", ".as", false)]
     [InlineData("optprm", ".hsp", false)]
     [InlineData("h2include", ".as", false)]
+    [InlineData("h24tokens", ".as", false)]
     [InlineData("h25tokens", ".as", false)]
     [InlineData("h255tokens", ".as", false)]
     [InlineData("h255modules", ".as", false)]
