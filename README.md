@@ -44,7 +44,7 @@ Options:
 ```text
 dehsp <input-file> [options]
   -o, --output <output>              Output directory
-  -d, --dictionary <dictionary>      Custom dictionary XML (default: built-in HSP 3.8beta2 table)
+  -d, --dictionary <dictionary>      Custom dictionary XML (default: built-in table for hspcmp 2.5 to 3.8beta2)
   --no-decrypt                       Skip encrypted file decryption
   --skip-encrypted                   Extract only non-encrypted files
   --utf8                             Write UTF-8 without a BOM instead of Shift_JIS; recompile with hspcmp -i or -j
@@ -118,10 +118,14 @@ Recompile the output with `hspcmp -d` to get the same debug segment. The debug f
 
 - The AX does not hold comments, `#define` macros, the case of names, or the alias of a
   `#func` that no common header declares, so those cannot come back.
-- The 64-bit hspcmp 3.8β2 sets hsp64 and `#runtime "hsp3_64"` without being asked; a 32-bit
-  hspcmp needs the `#runtime "hsp3_64"` line, which sets hsp64 as well. The line goes into the
-  first gap without code. When a source has no such gap, it goes after the last line, and a
-  32-bit recompile records that one extra line.
+- The 64-bit hspcmp.exe of 3.8β2 sets hsp64 and `#runtime "hsp3_64"` without being asked.
+  An AX names that compiler when a user function shows its 64-bit parameter frames, or when a
+  debug build has code on every source line, so no line could have held a `#runtime`. Such
+  output has no `#runtime` and rebuilds with that hspcmp.exe. Any other hsp64 output gets
+  `#runtime "hsp3_64"`, which sets hsp64 as well, in the first line without code. A source
+  with no such line and an `#include` gets it after the last line, and a recompile records
+  that one extra line. The 32-bit hspcmp.dll writes 32-bit parameter frames, so it cannot
+  rebuild a 64-bit AX that has user functions.
 
 ### Normal builds from hspcmp 3.1 to 3.32
 
@@ -212,12 +216,21 @@ UTF-8 strings for every hsp64 program, so this applies to its output even withou
 
 ## Dictionary
 
-The HSP 3 keyword table is built into the decompiler, so no file has to sit next to it. It
-covers HSP 3.8beta2: the built-in commands, functions, and parameter types. The source is
-[`Dictionary.xml`](src/HspDecompiler.Core/Ax3/Dictionary.xml).
+One keyword table covers every hspcmp release the decompiler reads, HSP 2.5 to 3.8β2, and is
+built into the decompiler, so no file has to sit next to it. It holds the built-in commands,
+functions, and parameter types, and the hspdef.as macros such as `dir_exe`. The source is
+[`Dictionary.xml`](src/HspDecompiler.Core/Keywords/Dictionary.xml).
+
+Each entry names the releases that have it with `since` and `until`, and a `codes` or `macros`
+section gives the default for the entries inside it. One code can therefore carry a different
+name in different releases: `0x0F 0x1E` is `resume` up to 3.6 and `varprop` from 3.7. The
+decompiler uses the table twice. The codes a program uses rule out the releases that lack
+them, so a program that calls `strrep` is not taken for 3.3. Once the release is inferred, each
+code takes the name that release gives it. When the program cannot tell two releases apart,
+the newer name wins, and `--compiler` settles it.
 
 To use your own table, copy `Dictionary.xml`, edit it, and pass it with `--dictionary`.
-[`Dictionary.xsd`](src/HspDecompiler.Core/Ax3/Dictionary.xsd) defines the format, and an
+[`Dictionary.xsd`](src/HspDecompiler.Core/Keywords/Dictionary.xsd) defines the format, and an
 editor with XML schema support checks your file as you type. Numbers are fixed-width uppercase
 hex (`0x0F`, `0x001E`). The decompiler validates the file before it reads it and stops with the
 line of the first error.

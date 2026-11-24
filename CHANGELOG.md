@@ -12,6 +12,12 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
   `DecompilerPipeline.Initialize(string)` read only XML in that schema. If a file is
   missing, unreadable or fails the schema, `Initialize` logs the reason with the line
   number and returns `false`.
+- The keyword dictionary covers every release from HSP 2.5 to 3.8β2 and moved to
+  `src/HspDecompiler.Core/Keywords/`. Entries carry `since` and `until`, `codes` and `macros`
+  sections set their defaults, and a code can have one entry per release range. The HSP 2
+  built-in names and the hspdef.as macros moved from code into the file, so a custom
+  dictionary without a `macros` section writes no macro names. One code listed twice for the
+  same release is an error that names its line.
 - `DecompilerOptions.DictionaryPath` and `DecompilerOptions.Verbose` are gone, because
   the pipeline never read them. Load a dictionary with `DecompilerPipeline.Initialize(string)`.
 - An archive whose options block every entry now fails with a message. That covers an
@@ -68,6 +74,20 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
 - Calls that an `hspdef.as` macro expands to are written as the macro, such as `dir_exe` for
   `dirinfo(1)`. `ginfo_newid`, `dir_tv` and the sensor macros are written only for AX
   version 3.5 or later, since some earlier compilers lack them.
+- Programs from hspcmp 2.5 and 2.55 decompile and recompile to the same AX:
+  - Each release has its own AX format word, so neither needs `--compiler`. 2.5 packs a token
+    value in one byte and follows a larger one with 16 or 32 bits.
+  - Neither release includes `hspdef.as` by itself, so the first file switch names the main
+    file. A 2.5 `repeat` carries no loop-end label, so the label after it is read as a label
+    of its own.
+  - `#module` and `#global` blocks come back from the module records these releases write.
+    A nameless block stays nameless, `#deffunc` names lose the `@module` suffix hspcmp stores,
+    and a variable or `#func` name written in a block that does not own it gets `@` or
+    `@module`.
+  - One limit remains: hspcmp can write no file switch back from an include, as after the
+    `#include "loadlib.as"` inside `#deffunc setpoke` in llmod's `_poke.as`. Where that
+    include ends cannot be told from the AX, so `llmod/mcn/_ddrop_mcn.as` on 2.55 recompiles
+    to a different AX.
 - The CLI exits with 0 on success and 1 on any failure.
 - The public API has XML documentation in English and Japanese.
 
@@ -109,8 +129,15 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
 - A `#module` used only through `newmod` counts as used, so its output no longer gets a
   needless `#cmpopt optcode 0`.
 - An hsp64 program from hspcmp 3.8β2 gets `#runtime "hsp3_64"` without `#bootopt hsp64 1`,
-  since the runtime line sets the bit by itself. A debug build without a free line now
-  recompiles with one extra line record instead of two.
+  since the runtime line sets the bit by itself. When user functions show 64-bit parameter
+  frames, or a debug build has code on every source line, the program is taken for the 64-bit
+  hspcmp.exe, which writes that runtime by itself, so the output has no `#runtime` and
+  rebuilds byte for byte.
+- HSP 2 include files are placed by the file switches even when a return skips a level, as
+  after an include whose last line is an `#include`. An include that ends in `#func` lines or
+  in `#global` ends there, so the lines after it stay in the parent.
+- Only hspcmp 2.61 accepts a `#deffunc` named after a built-in, so such a program is taken for
+  2.61 instead of 2.6.
 - The `#struct` warning is logged only for a `#struct` line the output holds, with its line.
 - The GUI logs errors from Open, drag and drop, and About instead of crashing, and keeps
   decompile continuations on the UI thread.

@@ -44,7 +44,7 @@ dotnet run --project src/HspDecompiler.Cli -- game.exe -o ./extracted
 ```text
 dehsp <入力ファイル> [オプション]
   -o, --output <output>              出力ディレクトリ
-  -d, --dictionary <dictionary>      独自の辞書 XML（デフォルト: 組み込みの HSP 3.8beta2 の表）
+  -d, --dictionary <dictionary>      独自の辞書 XML（デフォルト: 組み込みの hspcmp 2.5〜3.8beta2 の表）
   --no-decrypt                       暗号化ファイルを復号しない
   --skip-encrypted                   暗号化されていないファイルだけを取り出す
   --utf8                             Shift_JIS ではなく BOM なしの UTF-8 で書く（hspcmp -i か -j で再コンパイル）
@@ -119,10 +119,14 @@ hspcmp 3.8β2 でビルドされた 41 KB のプログラムはバイト単位�
 
 - AX はコメント、`#define` マクロ、名前の大文字・小文字、共通ヘッダーが宣言しない `#func`
   の別名を持たないため、これらは戻せません。
-- 64 ビット版の hspcmp 3.8β2 は指定が無くても hsp64 と `#runtime "hsp3_64"` を設定しますが、
-  32 ビット版には `#runtime "hsp3_64"` の行が必要です。この行で hsp64 も立ちます。行はコードの
-  無い最初の隙間に入れます。隙間の無いソースでは最後の行の後に置くため、32 ビット版で
-  再コンパイルするとその 1 行が記録されます。
+- 3.8β2 の 64 ビット版 hspcmp.exe は指定が無くても hsp64 と `#runtime "hsp3_64"` を
+  設定します。ユーザー関数が 64 ビットの引数フレームを示す時、またはデバッグビルドでソースの
+  すべての行にコードがあり `#runtime` を書ける行が無かった時、AX はそのコンパイラを示します。
+  その出力には `#runtime` が無く、その hspcmp.exe で同じに戻ります。それ以外の hsp64 の出力は
+  コードの無い最初の行に `#runtime "hsp3_64"` を入れ、この行で hsp64 も立ちます。そのような行
+  が無く `#include` を持つソースでは最後の行の後に置くため、再コンパイルするとその 1 行が
+  記録されます。32 ビット版の hspcmp.dll は 32 ビットの引数フレームを書くため、ユーザー関数を
+  持つ 64 ビットの AX は作れません。
 
 ### hspcmp 3.1〜3.32 の通常ビルド
 
@@ -209,12 +213,20 @@ UTF-8 の文字列を持つプログラムの Shift_JIS 出力も再コンパイ
 
 ## 辞書
 
-HSP 3 のキーワード表はデコンパイラーに組み込まれているため、隣にファイルを置く必要はありません。
-HSP 3.8beta2 の組み込み命令・関数・引数の型を収録しています。元データは
-[`Dictionary.xml`](src/HspDecompiler.Core/Ax3/Dictionary.xml) です。
+デコンパイラーが読むすべての hspcmp リリース(HSP 2.5 から 3.8β2)を 1 つのキーワード表で
+扱います。表はデコンパイラーに組み込まれているため、隣にファイルを置く必要はありません。
+組み込み命令・関数・引数の型と、`dir_exe` のような hspdef.as のマクロを収録しています。
+元データは [`Dictionary.xml`](src/HspDecompiler.Core/Keywords/Dictionary.xml) です。
+
+各項目は `since` と `until` でそれを持つリリースを示し、`codes` や `macros` の節は中の項目の
+既定値を与えます。そのため 1 つのコードがリリースごとに別の名前を持てます。`0x0F 0x1E` は
+3.6 までは `resume`、3.7 からは `varprop` です。デコンパイラーは表を 2 度使います。まず
+プログラムが使うコードから、それを持たないリリースを除きます。`strrep` を呼ぶプログラムは
+3.3 とは見なしません。リリースを推定した後、各コードはそのリリースでの名前を取ります。
+プログラムから 2 つのリリースを区別できない時は新しい方の名前を使い、`--compiler` で決められます。
 
 独自の表を使うには、`Dictionary.xml` をコピーして編集し、`--dictionary` で渡します。形式は
-[`Dictionary.xsd`](src/HspDecompiler.Core/Ax3/Dictionary.xsd) で定義しており、XML スキーマに
+[`Dictionary.xsd`](src/HspDecompiler.Core/Keywords/Dictionary.xsd) で定義しており、XML スキーマに
 対応したエディターなら入力中に検査できます。数値は桁数固定の大文字 16 進数(`0x0F`、`0x001E`)
 です。デコンパイラーは読む前にファイルを検証し、最初の誤りの行番号を示して止まります。
 
