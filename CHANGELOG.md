@@ -12,7 +12,7 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
   `DecompilerPipeline.Initialize(string)` read only XML in that schema. If a file is
   missing, unreadable or fails the schema, `Initialize` logs the reason with the line
   number and returns `false`.
-- The keyword dictionary covers every release from HSP 2.4 to 3.8β2 and moved to
+- The keyword dictionary covers every release from HSP 1.1 to 3.8β2 and moved to
   `src/HspDecompiler.Core/Keywords/`. Entries carry `since` and `until`, `codes` and `macros`
   sections set their defaults, and a code can have one entry per release range. The HSP 2
   built-in names and the hspdef.as macros moved from code into the file, so a custom
@@ -88,14 +88,36 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
     `#include "loadlib.as"` inside `#deffunc setpoke` in llmod's `_poke.as`. Where that
     include ends cannot be told from the AX, so `llmod/mcn/_ddrop_mcn.as` on 2.55 recompiles
     to a different AX.
-- Programs from hspcmp 2.4 (format word 0x203) decompile and recompile to the same AX:
-  - The 2.4 header is 64 bytes, without the `#deffunc` and `#module` tables 2.5 added, and
-    its tokens pack as in 2.5. The keyword table marks the six keywords 2.5 added and
-    `hspmode`, which 2.5 renamed `objmode`.
-  - 2.4 has no `{ }` blocks, so each `if` and `else` block goes on its `if` line, joined with
-    ` : `. A string longer than the 248 bytes 2.4 reads on one line goes in a `{"..."}` block.
-  - Each of the 16 samples in the 2.4 distribution that 2.4 compiles rebuilds to the same AX,
-    apart from the first label word, which 2.4 leaves uninitialized.
+- Programs from hspcmp 2.3d to 2.4h decompile and recompile to the same AX:
+  - 2.3d to 2.4f write format word 0x203, and 2.4g and 2.4h write 0x204. The header is 64
+    bytes, without the `#deffunc` and `#module` tables 2.5 added, and its tokens pack as in
+    2.5.
+  - The keyword table marks the keywords each 2.4 update added or renamed, so the commands a
+    program calls narrow the release: `strmid` means 2.4d or later and `continue` 2.4f or
+    later. Code 0x48 0x42 is `hspmode` up to 2.4e and `keysend` from 2.4f; when the AX does not
+    settle which, the newer name is written with a warning, and `--compiler` picks the other.
+  - 2.3d and 2.4 have no `{ }` blocks, so each `if` and `else` block goes on its `if` line,
+    joined with ` : `. A string longer than the 248 bytes these releases read on one line goes
+    in a `{"..."}` block.
+  - The 16 programs of the 2.4 SAMPLE and SSAVER folders that compile, a fixture of the 2.4
+    tokens and one of the 2.4d and 2.4f keywords rebuild with START.AX on each of 2.3d, 2.4,
+    2.4c, 2.4e, 2.4f and 2.4h to the same AX, apart from the first label word. SAMPLES.AS
+    defines `*endbtn` and `*owari` twice, so no release compiles it.
+  - The `obj` that the 2.3d run command writes holds a line table, and the output does not
+    keep the source's blank and comment lines, so a rebuild differs from it in that table.
+- Programs from HSP 1.1 and 1.2f decompile and recompile to the same AX. deHSP reads the
+  "Aspo" AX that ASC.EXE writes, in debug and `/r` builds, and the plain DPM that DPM.EXE packs:
+  - 1.1 (ASC ver.A6) and 1.2f (ver.A5) share one format; the index of the first user variable,
+    0x10 or 0x20, tells them apart, since 1.2f gives map commands codes that are operators in
+    1.1.
+  - ASC reads at most 255 bytes of a line. A string that would make a line longer, and one
+    with a `\"` inside it, which ends an ASC literal, come back as `"text"+` continuation
+    lines, which ASC appends to the string before them.
+  - TEST.AS, MAPED.AS and SAMP.AS from both releases, and the shipped TEST.AX and TEST.DPM,
+    rebuild to the same AX as debug and `/r` builds on the ASC that wrote them.
+  - deHSP warns where a rebuild can differ: stored bytes no literal produces, label references
+    ASC left as indices after the first `end`, labels or locals out of ASC's order, a debug
+    build with too few free lines for a string's continuations, and unknown tokens.
 - The CLI exits with 0 on success and 1 on any failure.
 - The public API has XML documentation in English and Japanese.
 

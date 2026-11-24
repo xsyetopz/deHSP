@@ -1,10 +1,10 @@
 # HSP Decompiler (deHSP)
 
-Converts HSP (Hot Soup Processor) 2 and 3 compiled files back to source code. Accepts `.ax`, `.exe`, and `.dpm` files and produces `.hsp` or `.as` output.
+Converts HSP (Hot Soup Processor) 1, 2 and 3 compiled files back to source code. Accepts `.ax`, `.exe`, and `.dpm` files and produces `.hsp` or `.as` output.
 
 ## Features
 
-- Decompiles HSP3 (`.ax` → `.hsp`) and HSP2 (`.ax` → `.as`) compiled files
+- Decompiles HSP3 (`.ax` → `.hsp`), HSP2 and HSP1 (`.ax` → `.as`) compiled files
 - Extracts files from DPM archives
 - Extracts DPM from HSP executables (`.exe`), including ones packed with UPX
 - Decrypts encrypted files in DPM archives (brute-force XOR+ADD)
@@ -44,7 +44,7 @@ Options:
 ```text
 dehsp <input-file> [options]
   -o, --output <output>              Output directory
-  -d, --dictionary <dictionary>      Custom dictionary XML (default: built-in table for hspcmp 2.4 to 3.8beta2)
+  -d, --dictionary <dictionary>      Custom dictionary XML (default: built-in table for ASC 1.1 to hspcmp 3.8beta2)
   --no-decrypt                       Skip encrypted file decryption
   --skip-encrypted                   Extract only non-encrypted files
   --utf8                             Write UTF-8 without a BOM instead of Shift_JIS; recompile with hspcmp -i or -j
@@ -75,7 +75,8 @@ settings as the CLI options in [Source style](#source-style).
 
 ## Output
 
-An HSP 3 program becomes one `.hsp` file. An HSP 2 program becomes an `.as` file, and each
+An HSP 3 program becomes one `.hsp` file. An HSP 1 program becomes one `.as` file. An HSP 2
+program becomes an `.as` file, and each
 file it included becomes its own `.as` file next to it, referenced by `#include`.
 
 ### Recompiling
@@ -158,14 +159,48 @@ and writes `__line_record` on the line before each such record.
 
 ### HSP 2 programs
 
-deHSP reads the AX of every hspcmp from 2.4 to 2.61. Each format word names its release
-(0x203 for 2.4, 0x205 for 2.5, 0x255 for 2.55, 0x206 for 2.6 and 2.61), so none needs
-`--compiler`. HSP 2.4 has no `{ }` blocks, `#deffunc` or `#module`: an `if` takes the rest of
-its line, so its block comes back as `if x : a : else : b`, and a string longer than the 248
-bytes 2.4 keeps on one line comes back as a `{"..."}` block. The 2.4 samples that compile
-with 2.4 rebuild to the same AX, apart from the first label word, which hspcmp 2.4 leaves
-uninitialized. The AX records the main file's name as hspcmp got it, which can be a full
-path; a rebuild from another directory writes a different name.
+deHSP reads the AX of every hspcmp from 2.3d to 2.61. The format word names the release or a
+run of releases: 0x203 for 2.3d to 2.4f, 0x204 for 2.4g and 2.4h, 0x205 for 2.5, 0x255 for
+2.55, 0x206 for 2.6 and 2.61. The 2.4 updates differ in their keyword tables, so the built-ins
+a program calls narrow the run: `strmid` means 2.4d or later, `continue` 2.4f or later. Code
+0x48 0x42 is `hspmode` up to 2.4e and `keysend` in 2.4f to 2.4h; when the AX leaves both
+readings open, the newer name is written with a warning, and `--compiler` picks the other.
+
+HSP 2.3d and 2.4 have no `{ }` blocks, `#deffunc` or `#module`: an `if` takes the rest of its
+line, so its block comes back as `if x : a : else : b`, and a string longer than the 248 bytes
+these releases keep on one line comes back as a `{"..."}` block. The 16 2.4 samples that
+compile with each of 2.3d, 2.4, 2.4c, 2.4e, 2.4f and 2.4h rebuild with that release's START.AX
+command to the same AX, apart from the first label word, which these releases leave
+uninitialized; SAMPLES.AS defines two labels twice and compiles with none of them. The `obj`
+that the 2.3d run command writes also holds a line table, and the output does not keep the
+source's blank and comment lines, so a rebuild differs in that table. The AX records the
+main file's name as the editor passed it: a full path, `start.as`, or `hsptmp` from the 2.4c
+to 2.4f START.AX command. A rebuild from another directory writes a different name.
+
+### HSP 1 programs
+
+deHSP reads the "Aspo" AX of ASC.EXE from HSP 1.1 (ver.A6) and 1.2f (ver.A5), in debug builds
+and in `/r` builds. Both share one format, so the index ASC gives the first user variable
+tells them apart: 0x10 in 1.1 and 0x20 in 1.2f, where map commands such as `mspleft` take
+codes that are operators in 1.1. The output names variables `v0`, `v1` and so on, labels
+`*l0`, `*l1`, and turns each `define` alias into `define d40 40`. A debug build keeps every
+source line in its place; a `/r` build has no line markers, so statements go one per line
+apart from an `if` and the rest of its line. ASC reads at most 255 bytes of a line and stops
+on a longer one. A string that would make a line longer, and a string with `\"` inside it,
+which ends an ASC literal, come back as continuation lines: a line holding only `"text"+`
+appends to the string before it.
+
+The 1.1 and 1.2f samples (TEST.AS, MAPED.AS, SAMP.AS) and the shipped TEST.AX and TEST.DPM
+rebuild to the same AX on the ASC that wrote them, as debug and `/r` builds. The AX does not
+record everything, and deHSP warns at the offset where the rebuild can differ:
+
+- stored bytes no source literal produces, such as a lone CR or a `\n` kept as two bytes;
+- label references after the first `end`, which ASC leaves as label indices, and an AX
+  whose labels ASC never resolved;
+- a label number or a local variable out of the order ASC assigns them;
+- a string in a debug build that needs more continuation lines than the build left free after
+  its line;
+- tokens the reader does not know.
 
 ### Source style
 
@@ -227,7 +262,7 @@ UTF-8 strings for every hsp64 program, so this applies to its output even withou
 
 ## Dictionary
 
-One keyword table covers every hspcmp release the decompiler reads, HSP 2.4 to 3.8β2, and is
+One keyword table covers every compiler release the decompiler reads, HSP 1.1 to 3.8β2, and is
 built into the decompiler, so no file has to sit next to it. It holds the built-in commands,
 functions, and parameter types, and the hspdef.as macros such as `dir_exe`. The source is
 [`Dictionary.xml`](src/HspDecompiler.Core/Keywords/Dictionary.xml).
