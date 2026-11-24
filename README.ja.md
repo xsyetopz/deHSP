@@ -1,314 +1,139 @@
 # HSP Decompiler (deHSP)
 
-HSP（Hot Soup Processor）1/2/3でコンパイルされたファイル（`.ax`、`.exe`、`.dpm`）をソースファイル（`.hsp`、`.as`）に戻すツールです。
+日本語 | [English](README.md)
 
-## 機能
+HSP（Hot Soup Processor）でコンパイルされたファイル（`.ax`、`.exe`、`.dpm`）を、ソース
+（`.hsp`、`.as`）に戻すツールです。Windows・macOS・Linux で動き、GUI 版と CLI 版があります。
 
-- HSP3（`.ax` → `.hsp`）、HSP2 および HSP1（`.ax` → `.as`）のデコンパイル
-- DPMアーカイブからのファイル抽出
-- HSP実行ファイル（`.exe`）からのDPM抽出（UPX で圧縮されたものも含む）
-- DPMアーカイブ内の暗号化ファイルの復号（XOR+ADDブルートフォース）
-- クロスプラットフォーム対応（Windows、macOS、Linux）
-- CLIツールおよびGUIアプリケーション
+## 3.0 の新機能
 
-## 動作環境
+- HSP 1.1 から 3.8β2 まで、すべてのバージョンに対応しました。
+- 出力を同じコンパイラで再コンパイルすると、元と同じ AX に戻ります。
+- デバッグビルドからは、変数名・ラベル名・行の位置・`#include` したファイルを復元します。
+- `#bootopt`・`#runtime`・`#cmpopt` など、AX に残るコンパイル設定を復元します。
+- `--utf8` で UTF-8 のソースを書き出せます。
+- .NET 10 と Avalonia 12 になりました。
 
-- .NET 10 SDK
+変更点の一覧は [CHANGELOG](CHANGELOG.md) にあります。
 
-## ビルド
+## ダウンロード
 
-```bash
-dotnet build HspDecompiler.sln
-```
+[Releases](https://github.com/xsyetopz/deHSP/releases) から OS に合った zip をダウンロードして
+展開してください。GUI 版の `deHSP` と CLI 版の `deHSP-cli` が入っています。.NET を
+インストールする必要はありません。
+
+## 対応するバージョン
+
+| HSP | コンパイラ | 出力 |
+| --- | --- | --- |
+| 1.1、1.2f | ASC.EXE（デバッグビルドと `/r` ビルド） | `.as` |
+| 2.3d〜2.61 | hspcmp | `.as`（取り込んだファイルは別の `.as`） |
+| 3.0a〜3.8β2 | hspcmp（通常ビルドとデバッグビルド） | `.hsp` |
+
+`.exe` と `.dpm` からは中のファイルを取り出します。UPX で圧縮された `.exe` と、暗号化された
+DPM のファイルにも対応します。
 
 ## 使い方
+
+### GUI
+
+アプリを起動し、ファイルをウィンドウにドラッグ＆ドロップします。「スタイル」メニューで出力の
+書き方を選べます。
 
 ### CLI
 
 ```bash
-# .axファイルをデコンパイル
-dotnet run --project src/HspDecompiler.Cli -- input.ax
-
-# 出力ディレクトリを指定してデコンパイル
-dotnet run --project src/HspDecompiler.Cli -- input.ax -o ./output
-
-# DPMアーカイブを展開
-dotnet run --project src/HspDecompiler.Cli -- archive.dpm -o ./extracted
-
-# HSP実行ファイルから展開
-dotnet run --project src/HspDecompiler.Cli -- game.exe -o ./extracted
+deHSP-cli input.ax                # input.ax をデコンパイル
+deHSP-cli input.ax -o ./output    # 出力先を指定
+deHSP-cli game.exe -o ./extracted # 実行ファイルの中身を取り出してデコンパイル
 ```
 
-オプション:
-
 ```text
-dehsp <入力ファイル> [オプション]
+deHSP-cli <入力ファイル> [オプション]
   -o, --output <output>              出力ディレクトリ
-  -d, --dictionary <dictionary>      独自の辞書 XML（デフォルト: 組み込みの ASC 1.1〜hspcmp 3.8beta2 の表）
-  --no-decrypt                       暗号化ファイルを復号しない
+  -d, --dictionary <dictionary>      独自の辞書 XML（デフォルト: 組み込みの ASC 1.1〜hspcmp 3.8β2 の表）
+  --no-decrypt                       暗号化されたファイルを復号しない
   --skip-encrypted                   暗号化されていないファイルだけを取り出す
   --utf8                             Shift_JIS ではなく BOM なしの UTF-8 で書く（hspcmp -i か -j で再コンパイル）
-  --common <common>                  HSP の common ディレクトリ。デバッグビルドで一致する共通ヘッダーの #include を戻す
-  --if-parens <None|Spaced|Tight>    if の条件の括弧: 無し、詰める '(x)'、空ける '( x )'（デフォルト: None）
-  --one-line-if <Braces|Colon>       1 行の if ブロック（デバッグビルド）: コロン 'if x : y'、波括弧（デフォルト: Colon）
-  --paren-negatives                  演算子の隣の負のリテラルを 'a - (-1)' と書く
-  --logical <Doubled|Symbols|Words>  条件をつなぐ & と |: 記号、重ねる '&&'、単語 'and'（デフォルト: Symbols）
-  --compact                          二項演算子を空白無しで書く: 'a+1'
+  --common <common>                  HSP の common ディレクトリ。デバッグビルドで共通ヘッダーの #include を戻す
+  --compiler <compiler>              プログラムを書いた hspcmp のバージョン（3.32、3.8b2 など）
+  --if-parens <None|Spaced|Tight>    if の条件の括弧: 無し、'(x)'、'( x )'（デフォルト: None）
+  --one-line-if <Braces|Colon>       1 行の if ブロック（デバッグビルド）: 'if x : y'、波括弧（デフォルト: Colon）
+  --paren-negatives                  演算子の隣の負の数を 'a - (-1)' と書く
+  --logical <Doubled|Symbols|Words>  条件をつなぐ & と |: 記号、'&&'、'and'（デフォルト: Symbols）
+  --compact                          演算子の前後に空白を入れない: 'a+1'
   --no-macros                        hspdef.as のマクロを展開して書く: 'dir_exe' ではなく 'dirinfo(1)'
-  --hex <All|None|Poke>              整数を 16 進数で書く: 無し、poke（128 以上の poke の値）、すべて（デフォルト: None）
-  -v, --verbose                      詳細なログを出す
-  -?, -h, --help                     ヘルプと使い方を表示
+  --hex <All|None|Poke>              整数を 16 進数で書く: 無し、poke の 128 以上の値、すべて（デフォルト: None）
+  -v, --verbose                      詳しいログを出す
+  -?, -h, --help                     ヘルプを表示
   --version                          バージョンを表示
 ```
 
-`dehsp` は成功すると 0、失敗すると 1 で終了します。失敗には、引数の誤り、辞書を読み込めない
-場合、デコンパイルできない入力が含まれます。
+`deHSP-cli` は成功すると 0、失敗すると 1 で終了します。
 
-### GUI
+書き方のオプション（`--if-parens` から `--hex` まで）は見た目だけを変えます。どれを選んでも、
+再コンパイルの結果は同じです。
 
-```bash
-dotnet run --project src/HspDecompiler.Gui
-```
+## 戻るもの・戻らないもの
 
-またはファイルをアプリケーションウィンドウにドラッグ＆ドロップしてください。スタイルメニューには
-[ソースの書き方](#ソースの書き方) の CLI オプションと同じ設定があります。
+出力は、元のプログラムをビルドしたコンパイラで再コンパイルすると、同じ AX に戻るように
+書かれます。ソースは既定で Shift_JIS で書き出すため、日本語の文字列もそのままコンパイル
+できます。
 
-## 出力
+- **デバッグビルド**（`hspcmp -d`）は名前と行の位置を持っているため、元に近いソースに戻ります。
+- **通常ビルド**は名前を残さないため、変数は `var_0`、ラベルは `*label_0` のような名前に
+  なります（HSP 1 では `v0`、`*l0`）。`#cmpopt varname 1` でビルドした HSP 3 のプログラムは
+  変数名が戻ります。
+- **コメント**、`#define` のマクロ、名前の大文字・小文字は AX に残らないため、戻せません。
+- UTF-8 の文字列を持つプログラムは `--utf8` で書き出し、`hspcmp -i` か `-j` でコンパイルして
+  ください。
 
-HSP 3 のプログラムは 1 つの `.hsp` ファイルになります。HSP 1 のプログラムは 1 つの `.as`
-ファイルになります。HSP 2 のプログラムは `.as` ファイルに
-なり、取り込んでいたファイルはそれぞれ隣に別の `.as` ファイルとして書き出され、`#include` で
-参照されます。
-
-### 再コンパイル
-
-出力は元と同じ AX のバイト列に戻ることを目指しています。先頭の行で AX に記録された
-オプションを復元するため、hspcmp は同じ設定でビルドします。
-
-| 行 | AX が次の条件のときに書く |
-| --- | --- |
-| `#cmpopt optcode 0` | 呼ばれない `#func`・`#cfunc` か、何にも使われない `#module` がある（形式 3.1 以降）、または同じ文字列を 2 回格納している（文字列を共有する最初の 3.6 以降） |
-| `#cmpopt varname 1` | 変数名を含み、デバッグビルドではない |
-| `#cmpopt optprm 0` | 1 つのリテラルだけの引数の印が無い（形式 3.5 以降。hspcmp 3.1〜3.21 はこの行を拒否する） |
-| `#cmpopt utf8 1` | UTF-8 の文字列を含む（utf8 起動フラグの無い hsp64 のプログラムを除く） |
-| `#bootopt ...` | 起動フラグが立っている（hsp64、nogdip、float32、orgrnd、ioresume、utf8、notimer） |
-| `#runtime "..."` | ランタイム名を持つ |
-
-テスト用のフィクスチャは hspcmp 3.5、3.7、3.8β2 でバイト単位まで同じ AX に再コンパイルされます。
-
-### デバッグビルド
-
-デバッグモード（`hspcmp -d`）でコンパイルされたプログラムは、ファイル名、各文のソース行、
-変数・ラベル・引数の名前を持っています。deHSP はそれらからソースを組み直します。
-
-- コードを持つファイルは記録された名前でメインのソースの隣に書き出し、その `#include` は
-  元の行に戻します。
-- 各文は元のソース行に戻します。同じ行にあった文は ` : ` でつなぎ、`{"..."}` の文字列は
-  改行を取り戻します。
-- 変数・ラベル・引数は元の名前になります。
-- `#module` と `#global` のブロックを、`#modinit`・`#modfunc`・`#modcfunc`・`#modterm`・
-  `#deffunc local`・名前の無い `#module`・`thismod` とともに戻します。ブロックの中の名前は
-  そのスコープに合わせて書きます。自身の変数は `val`、グローバル変数は `gcount@`、
-  グローバルのラベルは `*init@` です。
-- `--common` には HSP の `common` ディレクトリを指定します。`hspcmp.as` のように定義しか
-  残さない共通ヘッダーは `#include` が戻り、出力からはそのヘッダーが宣言するインポートを
-  除きます。`--common` が無ければその `#include` はコメントのままです。
-
-出力を `hspcmp -d` で再コンパイルすると同じデバッグ情報になります。デバッグ用のフィクスチャと、
-hspcmp 3.8β2 でビルドされた 41 KB のプログラムはバイト単位まで同じに戻ります。残る制限は
-2 つです。
-
-- AX はコメント、`#define` マクロ、名前の大文字・小文字、共通ヘッダーが宣言しない `#func`
-  の別名を持たないため、これらは戻せません。
-- 3.8β2 の 64 ビット版 hspcmp.exe は指定が無くても hsp64 と `#runtime "hsp3_64"` を
-  設定します。ユーザー関数が 64 ビットの引数フレームを示す時、またはデバッグビルドでソースの
-  すべての行にコードがあり `#runtime` を書ける行が無かった時、AX はそのコンパイラを示します。
-  その出力には `#runtime` が無く、その hspcmp.exe で同じに戻ります。それ以外の hsp64 の出力は
-  コードの無い最初の行に `#runtime "hsp3_64"` を入れ、この行で hsp64 も立ちます。そのような行
-  が無く `#include` を持つソースでは最後の行の後に置くため、再コンパイルするとその 1 行が
-  記録されます。32 ビット版の hspcmp.dll は 32 ビットの引数フレームを書くため、ユーザー関数を
-  持つ 64 ビットの AX は作れません。
-
-### hspcmp 3.1〜3.32 の通常ビルド
-
-hspcmp 3.1〜3.32 は `-d` が無くても行を記録します。各 `#module` と `#global` の行を 1 つずつ、
-3.3 からは各 `{"..."}` 文字列が終わる行も記録します。記録にファイル名は無く、行番号は取り込み
-ファイルごとに数え直します。deHSP は各記録をモジュールブロックか文字列に結び付け、それを軸に
-ソースを組み直します。
-
-- `#module` と `#global` のブロックを記録された行に戻します。通常ビルドはモジュール名を
-  持たないため、ブロックの名前は `#modinit`・`#modfunc` のメンバーか `local` の関数があれば
-  そこから取り、無ければ名前の無い `#module` として書きます。
-- `{"..."}` の文字列は記録された行で終わります。
-- それ以外の行は収まる限り 1 行ずつ保ちます。収まらなければ空行を落とし、さらに文を前の行に
-  ` : ` でつなぎます。
-- 行番号が数え直される所から先は `<名前>_1.hsp`・`<名前>_2.hsp` … に書き、それぞれを前の
-  ファイルの最後で `#include` します。
-
-同じ hspcmp で `-d` 無しで再コンパイルすると、記録も含めて同じ AX に戻ります。通常ビルドの
-フィクスチャと、hspcmp 3.1・3.21・3.3・3.32 で確かめた 80 個の試験プログラムはそうなります。
-hspcmp 3.4 以降はこの記録を書きません。記録に収まる配置が無ければ行を順に書きます。その時は
-再コンパイルしてもコードとデータは同じで、記録だけが異なります。
-
-deHSP は AX のフォーマットワード、記録、`optprm` の印からこれらのビルドを見分け、候補の
-リリースを絞ります。一部の候補しか受け付けない指示文やマクロは、すべての候補が受け付ける時
-だけ書きます。どのブロックや文字列でも説明できない記録は、展開がソースより多くの行に分かれた
-マクロから来ています。AX はマクロの本体を残さないため、出力は 1 行目に
-`#define global __line_record(%1) %c` を定義し、そのような記録の前の行に `__line_record` を
-書きます。
-
-### HSP 2 のプログラム
-
-deHSP は 2.3d から 2.61 までのすべての hspcmp の AX を読みます。フォーマットワードはリリース、
-またはリリースの範囲を示します。2.3d〜2.4f は 0x203、2.4g と 2.4h は 0x204、2.5 は 0x205、
-2.55 は 0x255、2.6 と 2.61 は 0x206 です。2.4 の各アップデートはキーワード表が違うため、
-プログラムが呼ぶ組み込み命令が範囲を絞ります。`strmid` は 2.4d 以降、`continue` は 2.4f 以降を
-意味します。コード 0x48 0x42 は 2.4e までは `hspmode`、2.4f〜2.4h では `keysend` です。AX が
-どちらとも決めない時は新しい方の名前を警告付きで書き、`--compiler` でもう一方を選べます。
-
-HSP 2.3d と 2.4 には `{ }` のブロック、`#deffunc`、`#module` がありません。`if` はその行の残りに
-及ぶため、ブロックは `if x : a : else : b` の形で戻り、これらのリリースが 1 行で読む 248 バイト
-より長い文字列は `{"..."}` のブロックで戻ります。2.3d・2.4・2.4c・2.4e・2.4f・2.4h のそれぞれで
-コンパイルできる 2.4 のサンプル 16 本は、そのリリースの START.AX コマンドで再ビルドすると、
-これらのリリースが初期化しない最初のラベルのワードを除いて同じ AX に戻ります。SAMPLES.AS は
-2 つのラベルを二重に定義しているため、どのリリースでもコンパイルできません。2.3d の実行コマンドが
-書く `obj` は行テーブルも持ちますが、出力は元のソースの空行とコメント行を残さないため、再ビルドは
-その表だけが異なります。AX はメインファイルの名前をエディタが渡した形で
-記録します。フルパス、`start.as`、または 2.4c〜2.4f の START.AX コマンドなら `hsptmp` です。
-別のディレクトリから再ビルドすると別の名前が書かれます。
-
-### HSP 1 のプログラム
-
-deHSP は HSP 1.1(ver.A6)と 1.2f(ver.A5)の ASC.EXE が書く "Aspo" の AX を、デバッグビルドと
-`/r` ビルドの両方で読みます。両者は同じ形式のため、ASC が最初のユーザー変数に与える番号で
-見分けます。1.1 は 0x10、1.2f は 0x20 で、1.2f では `mspleft` などのマップの命令が 1.1 の演算子の
-コードを使います。出力は変数を `v0`、`v1` …、ラベルを `*l0`、`*l1` … と名付け、`define` の別名を
-`define d40 40` の形に戻します。デバッグビルドはソースの各行を元の位置に保ちます。`/r` ビルドには
-行の印が無いため、`if` とその行の残りを除いて 1 行に 1 つの文を置きます。ASC は 1 行の 255 バイト
-までしか読まず、それより長い行で止まります。行をそれより長くする文字列と、ASC のリテラルを終える
-`\"` を中に持つ文字列は継続の行で戻ります。`"文字列"+` だけの行は、その前の文字列に足されます。
-
-1.1 と 1.2f のサンプル(TEST.AS、MAPED.AS、SAMP.AS)と同梱の TEST.AX・TEST.DPM は、それを書いた
-ASC でデバッグビルドでも `/r` ビルドでも同じ AX に戻ります。AX はすべてを記録してはいないため、
-再ビルドが違いうる位置で deHSP は警告します。
-
-- 単独の CR や 2 バイトのまま残った `\n` など、どのソースのリテラルも作らない格納バイト
-- ASC がラベルの番号のまま残す最初の `end` より後のラベル参照と、ASC がラベルを解決しなかった AX
-- ASC が割り当てる順に無いラベルの番号やローカル変数
-- デバッグビルドで、その行の後にビルドが空けた行より多くの継続の行を要する文字列
-- 読み手の知らないトークン
-
-### ソースの書き方
-
-いくつかの構文は、どう書いても同じバイト列にコンパイルされます。書き方のオプションはその綴りを
-選ぶもので、どれを選んでも同じ AX に戻ります。デフォルトは一般的な HSP の書き方に従います。
-
-| オプション | デフォルト | 他の書き方 |
-| --- | --- | --- |
-| `--if-parens` | `if x == 1 {` | `tight`: `if (x == 1) {`、`spaced`: `if ( x == 1 ) {` |
-| `--one-line-if` | `if x : mes "a"` | `braces`: `if x { mes "a" }` |
-| `--paren-negatives` | `a - -1` | `a - (-1)` |
-| `--logical` | `a == 1 & b == 2` | `doubled`: `(a == 1) && (b == 2)`、`words`: `(a == 1) and (b == 2)` |
-| `--compact` | `a + 1` | `a+1` |
-| `--no-macros` | `dir_exe`、`ginfo_mx` | `dirinfo(1)`、`ginfo(0)` |
-| `--hex` | `poke b, 0, 239` | `poke`: 128 以上の `poke`・`wpoke`・`lpoke` の値を `poke b, 0, 0xEF` と書く、`all`: すべての整数 |
-
-- `--one-line-if colon` はデバッグビルドに使われます。どのブロックが 1 行にあったかは行テーブルで
-  分かるためです。複数行の `{"..."}` 文字列がその行を通る場合、本体に文以外がある場合、`else`
-  が別の行で始まる場合、ブロックは波括弧のままです。
-- `--no-macros` が無ければ、`hspdef.as` のマクロは AX をビルドしたコンパイラが持つ場合だけ
-  書きます。hspcmp 3.0a〜3.4 には `ginfo_newid`・`dir_tv`・`ginfo_accelx` などのセンサーの
-  マクロが無いリリースがあり、3.1〜3.4 は同じ AX バージョンを使うため、これらのマクロは
-  AX バージョン 3.5 以降でだけ書きます。
-
-それぞれの書き方は hspcmp 3.0a、3.1、3.2、3.21、3.3、3.31、3.32、3.4、3.5、3.51、3.6、3.7、
-3.8β2 の通常ビルドとデバッグビルドで確かめ、どの組の書き方もすべてで同じバイト列になりました。
-例外は、3.5 より前のコンパイラで上のマクロが定義されていないことだけです。
-
-### 文字コード
-
-ソースは既定で Shift_JIS で書き出します。hspcmp はソースを Shift_JIS として読むため、
-Shift_JIS のプログラムを同じバイト列に戻せるのはこの出力です。
-
-`--utf8` は BOM なしの UTF-8 で書き出します。UTF-8 の文字列でコンパイルされたプログラムに
-使い、結果は `hspcmp -i` か `-j` でコンパイルしてください。どちらのスイッチも無いと UTF-8 の
-ソースは壊れます。
-
-- hspcmp 3.5 と 3.7 はバイト列を Shift_JIS として読みます。`0x86` のような UTF-8 のバイトが
-  Shift_JIS の文字の 1 バイト目に見え、閉じ引用符を巻き込むため、文字列が行末まで続きます。
-- hspcmp 3.8β2 は UTF-8 を検出して Windows のコードページに変換するため、そのコードページに
-  無い文字は `?` になります。
-
-UTF-8 の文字列を持つプログラムの Shift_JIS 出力も再コンパイルできますが、hspcmp はその
-文字列を Windows のコードページを通して UTF-8 に変換します。この方法で同じバイト列に戻せる
-のは日本語のシステム（コードページ 932）だけで、それ以外のシステムでは `--utf8` を使って
-ください。hspcmp 3.8β2 は hsp64 のプログラムには常に UTF-8 の文字列を格納するため、
-`#cmpopt utf8 1` が無くてもその出力にはこれが当てはまります。
-
-## プロジェクト構成
-
-| プロジェクト | 説明 |
-| --- | --- |
-| `HspDecompiler.Core` | コアライブラリ（全アルゴリズム） |
-| `HspDecompiler.Cli` | コマンドラインインターフェース |
-| `HspDecompiler.Gui` | Avalonia クロスプラットフォームGUI |
+確かめた範囲と、元と違う AX になる例外は [CHANGELOG](CHANGELOG.md) にあります。
 
 ## 辞書
 
-デコンパイラーが読むすべてのコンパイラーのリリース(HSP 1.1 から 3.8β2)を 1 つのキーワード表で
-扱います。表はデコンパイラーに組み込まれているため、隣にファイルを置く必要はありません。
-組み込み命令・関数・引数の型と、`dir_exe` のような hspdef.as のマクロを収録しています。
-元データは [`Dictionary.xml`](src/HspDecompiler.Core/Keywords/Dictionary.xml) です。
+命令や関数の名前は、組み込みのキーワード表
+[`Dictionary.xml`](src/HspDecompiler.Core/Keywords/Dictionary.xml) から取ります。表には HSP 1.1
+から 3.8β2 までの全バージョンが入っており、プログラムが使う命令からコンパイラのバージョンを
+推定します。推定が外れる時は `--compiler` で指定してください。
 
-各項目は `since` と `until` でそれを持つリリースを示し、`codes` や `macros` の節は中の項目の
-既定値を与えます。そのため 1 つのコードがリリースごとに別の名前を持てます。`0x0F 0x1E` は
-3.6 までは `resume`、3.7 からは `varprop` です。デコンパイラーは表を 2 度使います。まず
-プログラムが使うコードから、それを持たないリリースを除きます。`strrep` を呼ぶプログラムは
-3.3 とは見なしません。リリースを推定した後、各コードはそのリリースでの名前を取ります。
-プログラムから 2 つのリリースを区別できない時は新しい方の名前を使い、`--compiler` で決められます。
+独自の表を使う時は `Dictionary.xml` をコピーして編集し、`--dictionary` で渡します。形式は
+[`Dictionary.xsd`](src/HspDecompiler.Core/Keywords/Dictionary.xsd) にあります。
 
-独自の表を使うには、`Dictionary.xml` をコピーして編集し、`--dictionary` で渡します。形式は
-[`Dictionary.xsd`](src/HspDecompiler.Core/Keywords/Dictionary.xsd) で定義しており、XML スキーマに
-対応したエディターなら入力中に検査できます。数値は桁数固定の大文字 16 進数(`0x0F`、`0x001E`)
-です。デコンパイラーは読む前にファイルを検証し、最初の誤りの行番号を示して止まります。
+## ソースからビルド
 
-## 開発
-
-作業は [`just`](https://github.com/casey/just) で実行します。`just` でレシピの一覧が出ます。
+.NET 10 SDK が必要です。
 
 ```bash
-just setup     # 固定したバージョンのツールを入れる
-just test      # テストを実行する
-just lint      # アナライザーを有効にし、警告をエラーとしてビルドする
-just inspect   # ReSharper InspectCode の警告が 1 つでもあれば失敗する
-just verify    # CI と同じ検査をすべて実行する
+dotnet build HspDecompiler.sln
+dotnet run --project src/HspDecompiler.Cli -- input.ax   # CLI
+dotnet run --project src/HspDecompiler.Gui               # GUI
 ```
 
-## 歴史
+開発の作業は [`just`](https://github.com/casey/just) で行います。`just verify` で CI と同じ検査を
+すべて実行します。
 
-### 作者
+## 歴史
 
 | ソフト名 | 作者 | 説明 |
 | --- | --- | --- |
 | [HSP逆コンパイラ](http://www.vector.co.jp/soft/win95/prog/se390297.html) | [きつつき](http://www.vector.co.jp/vpack/browse/person/an043697.html) | オリジナルのソフト |
 | [HSPdeco](https://osdn.jp/projects/hspdeco/) | [minorshift](https://osdn.jp/users/minorshift/) | オリジナルの改良版 |
-| [HSPdecom](http://stpr18.blogspot.jp/2015/10/hspdecohspelona.html) | [したぷる](https://www.blogger.com/profile/00794326060600750840)、[YSRKEN](https://github.com/YSRKEN) | HSPdecoの改良版 |
-| [HSPdecoのパッチ](http://vivibit.net/hspdeco/) | [xx2zz](http://vivibit.net/about/) | 復号失敗時の対策パッチ |
-
-### バージョン履歴
+| [HSPdecom](http://stpr18.blogspot.jp/2015/10/hspdecohspelona.html) | [したぷる](https://www.blogger.com/profile/00794326060600750840)、[YSRKEN](https://github.com/YSRKEN) | HSPdeco の改良版 |
+| [HSPdeco のパッチ](http://vivibit.net/hspdeco/) | [xx2zz](http://vivibit.net/about/) | 復号に失敗する時の対策パッチ |
 
 | 日付 | ソフト名 | バージョン | 説明 |
 | --- | --- | --- | --- |
-| 2006/01/28 | HSP逆コンパイラ | 1.0 | 当初シェアウェアとして公開 |
-| 2007/09/10 | HSP逆コンパイラ | 1.1 | HSP3に対応 |
-| 2010/09/12 | HSP逆コンパイラ | 1.2 | PDS・OSSになった他、バグ修正 |
-| 2012/01/13 | HSPdeco | 1.0 | axファイルのデコード機能を開放、バグ修正 |
-| 2015/12/15 | HSPdecom | 1.0 | 変数名復元をサポート、辞書データ追加 |
-| 2016/08/16 | HSPdecom | 1.1 | パッチを全て付加、GitHubに上げ直し |
-| 2026-03-13 | deHSP | 2.0 | .NET 8.0 + Avalonia、CLIツール、クロスプラットフォーム対応 |
-| 未リリース | deHSP | 3.0 | .NET 10 + Avalonia 12、同じ AX に戻る出力、`--utf8`。[CHANGELOG](CHANGELOG.md) を参照 |
+| 2006-01-28 | HSP逆コンパイラ | 1.0 | シェアウェアとして公開 |
+| 2007-09-10 | HSP逆コンパイラ | 1.1 | HSP3 に対応 |
+| 2010-09-12 | HSP逆コンパイラ | 1.2 | PDS・OSS になり、バグを修正 |
+| 2012-01-13 | HSPdeco | 1.0 | ax ファイルのデコード機能を公開、バグを修正 |
+| 2015-12-15 | HSPdecom | 1.0 | 変数名の復元、辞書データを追加 |
+| 2016-08-16 | HSPdecom | 1.1 | パッチをすべて適用し、GitHub に公開し直し |
+| 2026-03-13 | deHSP | 2.0 | .NET 8 + Avalonia、CLI ツール、クロスプラットフォーム対応 |
+| 2026-11-24 | deHSP | 3.0 | HSP 1.1〜3.8β2 に対応、同じ AX に戻る出力、.NET 10 + Avalonia 12 |
 
 ## ライセンス
 
-HSPdecom部分はPDSライセンス、HSPdeco部分はzlib/libpngライセンスです。
-詳しくは[LICENSE](LICENSE)ファイルを参照してください。
+HSPdecom の部分は PDS、HSPdeco の部分は zlib/libpng ライセンスです。詳しくは [LICENSE](LICENSE) を
+参照してください。
