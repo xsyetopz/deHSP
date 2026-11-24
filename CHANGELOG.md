@@ -1,30 +1,13 @@
 # Changelog
 
-deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
+All notable changes to this project are documented in this file.
 
-## 3.0.0 (unreleased)
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
+project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### Breaking changes
+## [Unreleased]
 
-- deHSP now builds on .NET 10 and Avalonia 12. Hosts on .NET 8 have to upgrade.
-- The built-in keyword dictionary is an XML file, `Dictionary.xml`, checked against
-  `Dictionary.xsd`. It replaces the CSV table. `--dictionary` and
-  `DecompilerPipeline.Initialize(string)` read only XML in that schema. If a file is
-  missing, unreadable or fails the schema, `Initialize` logs the reason with the line
-  number and returns `false`.
-- The keyword dictionary covers every release from HSP 1.1 to 3.8β2 and moved to
-  `src/HspDecompiler.Core/Keywords/`. Entries carry `since` and `until`, `codes` and `macros`
-  sections set their defaults, and a code can have one entry per release range. The HSP 2
-  built-in names and the hspdef.as macros moved from code into the file, so a custom
-  dictionary without a `macros` section writes no macro names. One code listed twice for the
-  same release is an error that names its line.
-- `DecompilerOptions.DictionaryPath` and `DecompilerOptions.Verbose` are gone, because
-  the pipeline never read them. Load a dictionary with `DecompilerPipeline.Initialize(string)`.
-- An archive whose options block every entry now fails with a message. That covers an
-  archive where every entry is encrypted, and one with encrypted entries when neither
-  decryption nor skipping is allowed. Before, the run reported success and wrote nothing.
-- The unused `ExeExtractor` class is removed. `DpmExtractor` finds the archive inside an
-  executable.
+## [3.0.0] - 2026-11-24
 
 ### Added
 
@@ -123,6 +106,21 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
 
 ### Changed
 
+- **Breaking:** deHSP builds on .NET 10 and Avalonia 12. Hosts on .NET 8 have to upgrade.
+- **Breaking:** the built-in keyword dictionary is an XML file, `Dictionary.xml`, checked
+  against `Dictionary.xsd`. It replaces the CSV table. `--dictionary` and
+  `DecompilerPipeline.Initialize(string)` read only XML in that schema. If a file is
+  missing, unreadable or fails the schema, `Initialize` logs the reason with the line
+  number and returns `false`.
+- **Breaking:** the keyword dictionary covers every release from HSP 1.1 to 3.8β2 and moved
+  to `src/HspDecompiler.Core/Keywords/`. Entries carry `since` and `until`, `codes` and
+  `macros` sections set their defaults, and a code can have one entry per release range. The
+  HSP 2 built-in names and the hspdef.as macros moved from code into the file, so a custom
+  dictionary without a `macros` section writes no macro names. One code listed twice for the
+  same release is an error that names its line.
+- **Breaking:** an archive whose options block every entry fails with a message. That covers
+  an archive where every entry is encrypted, and one with encrypted entries when neither
+  decryption nor skipping is allowed. Before, the run reported success and wrote nothing.
 - The default HSP 3 spelling follows common HSP style. An `if` condition has no
   parentheses, a negative literal stays bare (`a - -1`), `hspdef.as` macros replace their
   expansions, and one-line blocks of a debug build use `:`. `--if-parens spaced`,
@@ -136,6 +134,13 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
 - HSP 2 output keeps literals and labels as hspcmp read them, and writes each include file as
   its own source file.
 - The keyword table covers HSP 3.8β2.
+
+### Removed
+
+- **Breaking:** `DecompilerOptions.DictionaryPath` and `DecompilerOptions.Verbose`, which the
+  pipeline never read. Load a dictionary with `DecompilerPipeline.Initialize(string)`.
+- **Breaking:** the unused `ExeExtractor` class. `DpmExtractor` finds the archive inside an
+  executable.
 
 ### Fixed
 
@@ -171,3 +176,6 @@ deHSP follows [Semantic Versioning](https://semver.org/). Dates use ISO 8601.
 - The `#struct` warning is logged only for a `#struct` line the output holds, with its line.
 - The GUI logs errors from Open, drag and drop, and About instead of crashing, and keeps
   decompile continuations on the UI thread.
+
+[Unreleased]: https://github.com/xsyetopz/deHSP/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/xsyetopz/deHSP/compare/v2.2.0...v3.0.0
