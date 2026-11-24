@@ -24,7 +24,9 @@ internal static class ImportPlacement
 {
     internal static void Insert(List<LogicalLine> lines, AxData data, int anchor)
     {
-        List<Function> imports = data.Functions.FindAll(f => f.Dll != null && !f.DeclaredByInclude);
+        List<Function> imports = data.Functions.FindAll(f =>
+            f is { Dll: not null, DeclaredByInclude: false }
+        );
         if (imports.Count == 0)
         {
             return;
