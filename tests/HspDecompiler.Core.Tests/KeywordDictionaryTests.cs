@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Xml;
 using System.Xml.Schema;
 using HspDecompiler.Core.Ax3;
@@ -32,7 +33,7 @@ public sealed class KeywordDictionaryTests : IDisposable
     {
         KeywordDictionary dict = KeywordDictionary.BuiltIn;
 
-        Assert.Equal("2.4-3.8beta2", dict.Version);
+        Assert.Equal("1.1-3.8beta2", dict.Version);
         Assert.True(
             dict.CodeLookUp(
                 new HspDictionaryKey(0x0F, 0x001E),
@@ -231,7 +232,7 @@ public sealed class KeywordDictionaryTests : IDisposable
     [InlineData(CompilerReleases.Word26, 0x40, 0x09, "on")]
     [InlineData(CompilerReleases.Word25, 0x48, 0x43, "notesel")]
     [InlineData(CompilerReleases.Word26, 0x48, 0x43, "sysinfo")]
-    [InlineData(CompilerReleases.Word24, 0x48, 0x42, "hspmode")]
+    [InlineData(CompilerReleases.Word24G, 0x48, 0x42, "keysend")]
     [InlineData(CompilerReleases.Word25, 0x48, 0x42, "objmode")]
     [InlineData(CompilerReleases.Word24, 0x48, 0x43, "notesel")]
     public void Hsp2CodeTakesItsReleasesName(uint word, int type, int value, string expected) =>
@@ -239,6 +240,53 @@ public sealed class KeywordDictionaryTests : IDisposable
             expected,
             KeywordDictionary.BuiltIn.NameOf(type, value, ReleaseProfile.ForFormat(word))
         );
+
+    [Theory]
+    [InlineData("2.4", 0x48, 0x42, "hspmode")]
+    [InlineData("2.4e", 0x48, 0x42, "hspmode")]
+    [InlineData("2.4f", 0x48, 0x42, "keysend")]
+    [InlineData("2.4h", 0x48, 0x42, "keysend")]
+    [InlineData("2.5", 0x48, 0x42, "objmode")]
+    public void Hsp24UpdateCodeTakesItsReleasesName(
+        string release,
+        int type,
+        int value,
+        string expected
+    )
+    {
+        // Arrange
+        var profile = new ReleaseProfile([CompilerReleases.All.First(r => r.Names(release))]);
+
+        // Act
+        string? name = KeywordDictionary.BuiltIn.NameOf(type, value, profile);
+
+        // Assert
+        Assert.Equal(expected, name);
+    }
+
+    [Theory]
+    [InlineData("2.3d", 0x48, 0x3E, false)]
+    [InlineData("2.4", 0x48, 0x3E, true)]
+    [InlineData("2.4", 0x38, 0x64, false)]
+    [InlineData("2.4c", 0x38, 0x64, true)]
+    [InlineData("2.4c", 0x40, 0x29, false)]
+    [InlineData("2.4d", 0x40, 0x29, true)]
+    [InlineData("2.4d", 0x48, 0x4C, true)]
+    [InlineData("2.4e", 0x40, 0x2B, false)]
+    [InlineData("2.4f", 0x40, 0x2B, true)]
+    [InlineData("2.4h", 0x40, 0x2C, false)]
+    [InlineData("2.5", 0x40, 0x2C, true)]
+    public void Hsp2CodeSpansTheReleasesThatHaveIt(string release, int type, int value, bool has)
+    {
+        // Arrange
+        CompilerRelease target = CompilerReleases.All.First(r => r.Names(release));
+
+        // Act
+        ReleaseSpan? span = KeywordDictionary.BuiltIn.SpanOf(type, value);
+
+        // Assert
+        Assert.Equal(has, span?.Contains(target) ?? false);
+    }
 
     [Fact]
     public void MacroNeedsEveryCandidateToHaveIt()

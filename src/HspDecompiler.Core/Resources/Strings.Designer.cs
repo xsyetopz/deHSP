@@ -78,7 +78,7 @@ namespace HspDecompiler.Core.Resources
         internal static string OutputComplete => ResourceManager.GetString("OutputComplete", resourceCulture);
         internal static string AnalysisComplete => ResourceManager.GetString("AnalysisComplete", resourceCulture);
         internal static string UnrecognizedFileFormat => ResourceManager.GetString("UnrecognizedFileFormat", resourceCulture);
-        internal static string NotHsp2OrHsp3 => ResourceManager.GetString("NotHsp2OrHsp3", resourceCulture);
+        internal static string NotAxImage => ResourceManager.GetString("NotAxImage", resourceCulture);
 
         // Decoder phases
         internal static string AnalyzingHeader => ResourceManager.GetString("AnalyzingHeader", resourceCulture);
@@ -162,5 +162,21 @@ namespace HspDecompiler.Core.Resources
         // Misc
         internal static string OperatorPriorityOnNonOperator => ResourceManager.GetString("OperatorPriorityOnNonOperator", resourceCulture);
         internal static string UnsupportedType => ResourceManager.GetString("UnsupportedType", resourceCulture);
+        // HSP 1 decoder
+        internal static string Ax1Differs => ResourceManager.GetString("Ax1Differs", resourceCulture);
+        internal static string Ax1StringBytes => ResourceManager.GetString("Ax1StringBytes", resourceCulture);
+        internal static string Ax1LabelOffset => ResourceManager.GetString("Ax1LabelOffset", resourceCulture);
+        internal static string Ax1JumpTarget => ResourceManager.GetString("Ax1JumpTarget", resourceCulture);
+        internal static string Ax1VariableOrder => ResourceManager.GetString("Ax1VariableOrder", resourceCulture);
+        internal static string Ax1VariableCount => ResourceManager.GetString("Ax1VariableCount", resourceCulture);
+        internal static string Ax1WideNumber => ResourceManager.GetString("Ax1WideNumber", resourceCulture);
+        internal static string Ax1UnknownToken => ResourceManager.GetString("Ax1UnknownToken", resourceCulture);
+        internal static string Ax1LineOrder => ResourceManager.GetString("Ax1LineOrder", resourceCulture);
+        internal static string Ax1LabelBeforeUse => ResourceManager.GetString("Ax1LabelBeforeUse", resourceCulture);
+        internal static string Ax1LabelIndexOrder => ResourceManager.GetString("Ax1LabelIndexOrder", resourceCulture);
+        internal static string Ax1UnresolvedLabels => ResourceManager.GetString("Ax1UnresolvedLabels", resourceCulture);
+        internal static string Ax1LineLength => ResourceManager.GetString("Ax1LineLength", resourceCulture);
+        internal static string Ax1ContinuationLines => ResourceManager.GetString("Ax1ContinuationLines", resourceCulture);
+        internal static string Ax1LabelsAfterEnd => ResourceManager.GetString("Ax1LabelsAfterEnd", resourceCulture);
     }
 }

@@ -71,7 +71,7 @@
   <data name="OutputComplete" xml:space="preserve"><value>Output complete</value></data>
   <data name="AnalysisComplete" xml:space="preserve"><value>Analysis complete</value></data>
   <data name="UnrecognizedFileFormat" xml:space="preserve"><value>Unrecognized file format</value></data>
-  <data name="NotHsp2OrHsp3" xml:space="preserve"><value>Format is neither HSP2 nor HSP3</value></data>
+  <data name="NotAxImage" xml:space="preserve"><value>Format is not an HSP 1, 2 or 3 AX image</value></data>
 
   <!-- Decoder phases -->
   <data name="AnalyzingHeader" xml:space="preserve"><value>Analyzing header...</value></data>
@@ -155,4 +155,21 @@
   <!-- Misc -->
   <data name="OperatorPriorityOnNonOperator" xml:space="preserve"><value>Operator priority requested on non-operator primitive</value></data>
   <data name="UnsupportedType" xml:space="preserve"><value>Unsupported type</value></data>
+
+  <!-- HSP 1 decoder -->
+  <data name="Ax1Differs" xml:space="preserve"><value>0x{0:X4}: {1}. The recompiled AX differs here</value></data>
+  <data name="Ax1StringBytes" xml:space="preserve"><value>the string holds bytes no source string produces</value></data>
+  <data name="Ax1LabelOffset" xml:space="preserve"><value>a label targets an offset where no statement starts</value></data>
+  <data name="Ax1JumpTarget" xml:space="preserve"><value>an if, else or loop target is not where the line layout puts it</value></data>
+  <data name="Ax1VariableOrder" xml:space="preserve"><value>a variable index is used before the ones below it, or a local outside its local statement</value></data>
+  <data name="Ax1VariableCount" xml:space="preserve"><value>the header counts more variables than the code creates</value></data>
+  <data name="Ax1WideNumber" xml:space="preserve"><value>a three-byte number holds a value below 0x8000</value></data>
+  <data name="Ax1UnknownToken" xml:space="preserve"><value>an unknown token</value></data>
+  <data name="Ax1LineOrder" xml:space="preserve"><value>a line number does not follow the one before it</value></data>
+  <data name="Ax1LabelBeforeUse" xml:space="preserve"><value>a label stands as a value before its first definition or reference, where ASC would make it a variable</value></data>
+  <data name="Ax1LabelIndexOrder" xml:space="preserve"><value>a label index needs a filler label after a new reference in the same statement</value></data>
+  <data name="Ax1UnresolvedLabels" xml:space="preserve"><value>The AX keeps label indices instead of offsets, which ASC writes when a label is undefined. The output references those labels without defining them, so it recompiles to the same indices</value></data>
+  <data name="Ax1LineLength" xml:space="preserve"><value>a line is longer than the 255 bytes ASC reads</value></data>
+  <data name="Ax1ContinuationLines" xml:space="preserve"><value>a string needs more continuation lines than the debug build left after its line</value></data>
+  <data name="Ax1LabelsAfterEnd" xml:space="preserve"><value>References after the first end keep label indices, since ASC resolves labels only up to it. The output reproduces the indices; which label each index named is not in the AX</value></data>
 </root>

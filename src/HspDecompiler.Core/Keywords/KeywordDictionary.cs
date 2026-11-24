@@ -316,6 +316,17 @@ internal sealed class KeywordDictionary
     internal string? NameOf(int type, int value, ReleaseProfile release) =>
         Pick(Variants(new HspDictionaryKey(type, value)), release)?.Value._name;
 
+    // The name of an entry every candidate has, with no fallback to another release of the
+    // major version. HSP 1 asks this of a byte that is a command in 1.2f and an operator in 1.1.
+    //
+    // すべての候補が持つ項目の名前。同じメジャーバージョンの別のリリースには頼らない。HSP 1 は
+    // 1.2f では命令、1.1 では演算子であるバイトについてこれを尋ねる。
+    internal string? ExactNameOf(int type, int value, ReleaseProfile release) =>
+        Variants(new HspDictionaryKey(type, value))
+            .Where(k => !release.Candidates.IsEmpty && release.Candidates.All(k.Span.Contains))
+            .Select(k => k.Value._name)
+            .FirstOrDefault();
+
     // True when the code has entries that name it differently across releases, so its name is
     // settled only once the release is.
     //

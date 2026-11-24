@@ -1,22 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The deHSP keyword table for every hspcmp release. The HSP 3 codes come from OpenHSP
-  hspcmp/hspcmd.cpp and hsp3/hsp3struct.h (3.8beta2), and their since and until from the
-  keyword table inside each hspcmp.dll from 3.0a to 3.8beta2. Dictionary.xsd defines the format.
-  A code without a value matches every value of its type, because hspcmp stores variables,
-  literals and labels as one type code with an index or offset in the value field.
+  The deHSP keyword table for every compiler release, ASC 1.1 to hspcmp 3.8beta2. The HSP 3
+  codes come from OpenHSP hspcmp/hspcmd.cpp and hsp3/hsp3struct.h (3.8beta2), and their since
+  and until from the keyword table inside each hspcmp.dll from 3.0a to 3.8beta2.
+  Dictionary.xsd defines the format. A code without a value matches every value of its type,
+  because hspcmp stores variables, literals and labels as one type code with an index or offset
+  in the value field.
 
-  deHSP の全 hspcmp リリースのキーワード表。HSP 3 のコードは OpenHSP の hspcmp/hspcmd.cpp と
-  hsp3/hsp3struct.h(3.8beta2)から、その since と until は 3.0a から 3.8beta2 までの各
-  hspcmp.dll の中にあるキーワード表から作成した。形式は Dictionary.xsd で定義する。value の
-  無い code はその型のすべての値に一致する。hspcmp は変数・リテラル・ラベルを 1 つの型コードで
-  表し、値フィールドに番号やオフセットを入れるため。
+  ASC 1.1 から hspcmp 3.8beta2 までの全コンパイラーのリリースの deHSP のキーワード表。
+  HSP 3 のコードは OpenHSP の hspcmp/hspcmd.cpp と hsp3/hsp3struct.h(3.8beta2)から、
+  その since と until は 3.0a から 3.8beta2 までの各 hspcmp.dll の中にあるキーワード表から
+  作成した。形式は Dictionary.xsd で定義する。value の無い code はその型のすべての値に一致する。
+  hspcmp は変数・リテラル・ラベルを 1 つの型コードで表し、値フィールドに番号やオフセットを
+  入れるため。
 -->
 <dictionary
   xmlns="urn:dehsp:dictionary"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="urn:dehsp:dictionary Dictionary.xsd"
-  version="2.4-3.8beta2"
+  version="1.1-3.8beta2"
 >
   <codes since="3.0">
     <code type="0x00" value="0x0000" name="+" kind="Operator" priority="3" />
@@ -322,21 +324,25 @@
     <code type="0x0D" value="0x0200" name="int64" kind="HspFunction" since="3.8β2" />
   </codes>
   <!--
-    HSP 2.4 to 2.61 built-ins, from the keyword table each hspcmp.dll, or the HSED2.EXE of
-    2.4, carries ("$104 8 onexit": code, type, name). The token type is the table's type times
-    8: 0x38 system variables, 0x40 program control and memory commands, 0x48 GUI, file and ll_
-    commands. The code's high bits are attributes, so the token value is its low byte. 2.5 added
-    strmid, instr, continue, mref, exedir and objsel, and renamed hspmode to objmode. 2.55 moved
-    the note commands from 0x48 to 0x40, and 2.6 put onerror at 0x40/0x08, where 2.55 had on.
+    HSP 2.3d to 2.61 built-ins, from the keyword table each hspcmp.dll, or the HSED2.EXE of
+    2.3d and the 2.4 updates, carries ("$104 8 onexit": code, type, name). The token type is the
+    table's type times 8: 0x38 system variables, 0x40 program control and memory commands, 0x48
+    GUI, file and ll_ commands. The code's high bits are attributes, so the token value is its
+    low byte. 2.4 added combox to listbox at 0x48/0x3E-0x4B. Among the 2.4 updates, 2.4c added
+    exedir, 2.4d strmid, instr and objsel, and 2.4f continue, with keysend in place of hspmode.
+    2.5 added mref and named 0x48/0x42 objmode. 2.55 moved the note commands from 0x48 to 0x40,
+    and 2.6 put onerror at 0x40/0x08, where 2.55 had on.
 
-    HSP 2.4〜2.61 の組み込み命令。各 hspcmp.dll、または 2.4 の HSED2.EXE が持つキーワード表
-    ("$104 8 onexit": コード、型、名前)による。トークン型は表の型の 8 倍で、0x38 はシステム
-    変数、0x40 はプログラム制御とメモリの命令、0x48 は GUI・ファイル・ll_ の命令。コードの上位
-    ビットは属性なので、トークンの値はその下位バイト。2.5 は strmid・instr・continue・mref・
-    exedir・objsel を加え、hspmode を objmode に改名した。2.55 は note 系の命令を 0x48 から
-    0x40 へ移し、2.6 は 2.55 で on があった 0x40/0x08 に onerror を置いた。
+    HSP 2.3d〜2.61 の組み込み命令。各 hspcmp.dll、または 2.3d と 2.4 の各アップデートの
+    HSED2.EXE が持つキーワード表("$104 8 onexit": コード、型、名前)による。トークン型は表の型の
+    8 倍で、0x38 はシステム変数、0x40 はプログラム制御とメモリの命令、0x48 は GUI・ファイル・
+    ll_ の命令。コードの上位ビットは属性なので、トークンの値はその下位バイト。2.4 は 0x48 の
+    0x3E〜0x4B に combox から listbox までを加えた。2.4 のアップデートのうち、2.4c は exedir、
+    2.4d は strmid・instr・objsel、2.4f は continue を加え、hspmode の代わりに keysend を置いた。
+    2.5 は mref を加え、0x48/0x42 を objmode と名付けた。2.55 は note 系の命令を 0x48 から 0x40
+    へ移し、2.6 は 2.55 で on があった 0x40/0x08 に onerror を置いた。
   -->
-  <codes since="2.4" until="2.61">
+  <codes since="2.3d" until="2.61">
     <code type="0x38" value="0x0000" name="system" kind="HspFunction" />
     <code type="0x38" value="0x0001" name="hspstat" kind="HspFunction" />
     <code type="0x38" value="0x0002" name="hspver" kind="HspFunction" />
@@ -367,7 +373,7 @@
     <code type="0x38" value="0x0061" name="windir" kind="HspFunction" />
     <code type="0x38" value="0x0062" name="curdir" kind="HspFunction" />
     <code type="0x38" value="0x0063" name="refstr" kind="HspFunction" />
-    <code type="0x38" value="0x0064" name="exedir" kind="HspFunction" since="2.5" />
+    <code type="0x38" value="0x0064" name="exedir" kind="HspFunction" since="2.4c" />
     <code type="0x40" value="0x0000" name="goto" kind="HspFunction" />
     <code type="0x40" value="0x0001" name="gosub" kind="HspFunction" />
     <code type="0x40" value="0x0002" name="return" kind="HspFunction" />
@@ -405,9 +411,9 @@
     <code type="0x40" value="0x0026" name="strlen" kind="HspFunction" />
     <code type="0x40" value="0x0027" name="getstr" kind="HspFunction" />
     <code type="0x40" value="0x0028" name="exist" kind="HspFunction" />
-    <code type="0x40" value="0x0029" name="strmid" kind="HspFunction" since="2.5" />
-    <code type="0x40" value="0x002A" name="instr" kind="HspFunction" since="2.5" />
-    <code type="0x40" value="0x002B" name="continue" kind="HspFunction" since="2.5" />
+    <code type="0x40" value="0x0029" name="strmid" kind="HspFunction" since="2.4d" />
+    <code type="0x40" value="0x002A" name="instr" kind="HspFunction" since="2.4d" />
+    <code type="0x40" value="0x002B" name="continue" kind="HspFunction" since="2.4f" />
     <code type="0x40" value="0x002C" name="mref" kind="HspFunction" since="2.5" />
     <code type="0x40" value="0x002D" name="logmode" kind="HspFunction" since="2.55" />
     <code type="0x40" value="0x002E" name="logmes" kind="HspFunction" since="2.55" />
@@ -467,24 +473,25 @@
     <code type="0x48" value="0x003B" name="line" kind="HspFunction" />
     <code type="0x48" value="0x003C" name="stick" kind="HspFunction" />
     <code type="0x48" value="0x003D" name="ginfo" kind="HspFunction" />
-    <code type="0x48" value="0x003E" name="combox" kind="HspFunction" />
-    <code type="0x48" value="0x003F" name="chdir" kind="HspFunction" />
-    <code type="0x48" value="0x0040" name="objprm" kind="HspFunction" />
-    <code type="0x48" value="0x0041" name="objsend" kind="HspFunction" />
-    <code type="0x48" value="0x0042" name="hspmode" kind="HspFunction" until="2.4" />
+    <code type="0x48" value="0x003E" name="combox" kind="HspFunction" since="2.4" />
+    <code type="0x48" value="0x003F" name="chdir" kind="HspFunction" since="2.4" />
+    <code type="0x48" value="0x0040" name="objprm" kind="HspFunction" since="2.4" />
+    <code type="0x48" value="0x0041" name="objsend" kind="HspFunction" since="2.4" />
+    <code type="0x48" value="0x0042" name="hspmode" kind="HspFunction" since="2.4" until="2.4e" />
+    <code type="0x48" value="0x0042" name="keysend" kind="HspFunction" since="2.4f" until="2.4h" />
     <code type="0x48" value="0x0042" name="objmode" kind="HspFunction" since="2.5" />
-    <code type="0x48" value="0x0043" name="notesel" kind="HspFunction" until="2.5" />
+    <code type="0x48" value="0x0043" name="notesel" kind="HspFunction" since="2.4" until="2.5" />
     <code type="0x48" value="0x0043" name="sysinfo" kind="HspFunction" since="2.6" />
-    <code type="0x48" value="0x0044" name="noteadd" kind="HspFunction" until="2.5" />
+    <code type="0x48" value="0x0044" name="noteadd" kind="HspFunction" since="2.4" until="2.5" />
     <code type="0x48" value="0x0044" name="getpath" kind="HspFunction" since="2.6" />
-    <code type="0x48" value="0x0045" name="noteget" kind="HspFunction" until="2.5" />
-    <code type="0x48" value="0x0046" name="notemax" kind="HspFunction" until="2.5" />
-    <code type="0x48" value="0x0047" name="notedel" kind="HspFunction" until="2.5" />
-    <code type="0x48" value="0x0048" name="mouse" kind="HspFunction" />
-    <code type="0x48" value="0x0049" name="dirlist" kind="HspFunction" />
-    <code type="0x48" value="0x004A" name="delete" kind="HspFunction" />
-    <code type="0x48" value="0x004B" name="listbox" kind="HspFunction" />
-    <code type="0x48" value="0x004C" name="objsel" kind="HspFunction" since="2.5" />
+    <code type="0x48" value="0x0045" name="noteget" kind="HspFunction" since="2.4" until="2.5" />
+    <code type="0x48" value="0x0046" name="notemax" kind="HspFunction" since="2.4" until="2.5" />
+    <code type="0x48" value="0x0047" name="notedel" kind="HspFunction" since="2.4" until="2.5" />
+    <code type="0x48" value="0x0048" name="mouse" kind="HspFunction" since="2.4" />
+    <code type="0x48" value="0x0049" name="dirlist" kind="HspFunction" since="2.4" />
+    <code type="0x48" value="0x004A" name="delete" kind="HspFunction" since="2.4" />
+    <code type="0x48" value="0x004B" name="listbox" kind="HspFunction" since="2.4" />
+    <code type="0x48" value="0x004C" name="objsel" kind="HspFunction" since="2.4d" />
     <code type="0x48" value="0x004D" name="ll_ret" kind="HspFunction" since="2.6" />
     <code type="0x48" value="0x004E" name="ll_retset" kind="HspFunction" since="2.6" />
     <code type="0x48" value="0x004F" name="ll_getptr" kind="HspFunction" since="2.6" />
@@ -512,6 +519,118 @@
     <code type="0x48" value="0x0065" name="ll_libload" kind="HspFunction" since="2.6" />
     <code type="0x48" value="0x0066" name="ll_getproc" kind="HspFunction" since="2.6" />
     <code type="0x48" value="0x0067" name="ll_bin" kind="HspFunction" since="2.6" />
+  </codes>
+  <!--
+    HSP 1.1 and 1.2f built-ins, from the keyword table in each ASC.EXE ("mes,0,$c1": name, type,
+    code), read with Ghidra. Type 0x00 is a command, whose code is the byte the statement starts
+    with, and type 0x13 a system variable, whose code is its variable index. ASC's table gives if
+    and else types 0x0C and 0x0D, which HSP 2 uses for other codes, so they stand here as the
+    bytes that start them in the code: 0xfc for if and 0x80 for else. int, var and data share $c0, mes and print $c1, and sndload and bload $d3;
+    the table lists the first name of each. 1.2f added the map commands $a0 to $af and the system
+    variables damflg and clrflg.
+
+    HSP 1.1 と 1.2f の組み込み命令。各 ASC.EXE が持つキーワード表("mes,0,$c1": 名前、型、
+    コード)を Ghidra で読んだ。型 0x00 は命令で、コードは文の先頭のバイト。型 0x13 はシステム
+    変数で、コードは変数の番号。ASC の表は if と else に型 0x0C と 0x0D を与えるが、HSP 2 は
+    それを別のコードに使うため、ここではコードでそれらを始めるバイトで表す。if は 0xfc、else
+    は 0x80。int・var・data は $c0、mes と
+    print は $c1、sndload と bload は $d3 を共有し、表はそれぞれ最初の名前を載せる。1.2f は
+    マップの命令 $a0〜$af と、システム変数 damflg・clrflg を加えた。
+  -->
+  <codes since="1.1" until="1.2f">
+    <code type="0x00" value="0x00FC" name="if" kind="IfStatement" />
+    <code type="0x00" value="0x0080" name="else" kind="ElseStatement" />
+    <code type="0x00" value="0x008F" name="end" kind="HspFunction" />
+    <code type="0x00" value="0x00B1" name="goto" kind="HspFunction" />
+    <code type="0x00" value="0x00B2" name="gosub" kind="HspFunction" />
+    <code type="0x00" value="0x00B3" name="local" kind="HspFunction" />
+    <code type="0x00" value="0x00B4" name="getstr" kind="HspFunction" />
+    <code type="0x00" value="0x00B5" name="button" kind="HspFunction" />
+    <code type="0x00" value="0x00B8" name="repeat" kind="HspFunction" />
+    <code type="0x00" value="0x00B9" name="break" kind="HspFunction" />
+    <code type="0x00" value="0x00BA" name="loop" kind="HspFunction" />
+    <code type="0x00" value="0x00BB" name="define" kind="HspFunction" />
+    <code type="0x00" value="0x00BC" name="input" kind="HspFunction" />
+    <code type="0x00" value="0x00BD" name="gclip" kind="HspFunction" />
+    <code type="0x00" value="0x00BE" name="rnd" kind="HspFunction" />
+    <code type="0x00" value="0x00BF" name="sprdraw" kind="HspFunction" />
+    <code type="0x00" value="0x00C0" name="int" kind="HspFunction" />
+    <code type="0x00" value="0x00C1" name="mes" kind="HspFunction" />
+    <code type="0x00" value="0x00C2" name="gcopy" kind="HspFunction" />
+    <code type="0x00" value="0x00C3" name="wait" kind="HspFunction" />
+    <code type="0x00" value="0x00C4" name="gzoom" kind="HspFunction" />
+    <code type="0x00" value="0x00C5" name="picload" kind="HspFunction" />
+    <code type="0x00" value="0x00C6" name="return" kind="HspFunction" />
+    <code type="0x00" value="0x00C7" name="run" kind="HspFunction" />
+    <code type="0x00" value="0x00C8" name="font" kind="HspFunction" />
+    <code type="0x00" value="0x00C9" name="getkey" kind="HspFunction" />
+    <code type="0x00" value="0x00CA" name="stop" kind="HspFunction" />
+    <code type="0x00" value="0x00D0" name="title" kind="HspFunction" />
+    <code type="0x00" value="0x00D1" name="clrobj" kind="HspFunction" />
+    <code type="0x00" value="0x00D2" name="pos" kind="HspFunction" />
+    <code type="0x00" value="0x00D3" name="sndload" kind="HspFunction" />
+    <code type="0x00" value="0x00D4" name="color" kind="HspFunction" />
+    <code type="0x00" value="0x00D5" name="winsize" kind="HspFunction" />
+    <code type="0x00" value="0x00D6" name="exec" kind="HspFunction" />
+    <code type="0x00" value="0x00D7" name="menu" kind="HspFunction" />
+    <code type="0x00" value="0x00D8" name="align" kind="HspFunction" />
+    <code type="0x00" value="0x00D9" name="objsize" kind="HspFunction" />
+    <code type="0x00" value="0x00DA" name="snd" kind="HspFunction" />
+    <code type="0x00" value="0x00DB" name="mesbox" kind="HspFunction" />
+    <code type="0x00" value="0x00DC" name="cls" kind="HspFunction" />
+    <code type="0x00" value="0x00DD" name="mci" kind="HspFunction" />
+    <code type="0x00" value="0x00DE" name="getcsr" kind="HspFunction" />
+    <code type="0x00" value="0x00DF" name="alloc" kind="HspFunction" />
+    <code type="0x00" value="0x00E0" name="sprset" kind="HspFunction" />
+    <code type="0x00" value="0x00E1" name="spratr" kind="HspFunction" />
+    <code type="0x00" value="0x00E2" name="sprget" kind="HspFunction" />
+    <code type="0x00" value="0x00E3" name="gsel" kind="HspFunction" />
+    <code type="0x00" value="0x00E4" name="pset" kind="HspFunction" />
+    <code type="0x00" value="0x00E5" name="boxf" kind="HspFunction" />
+    <code type="0x00" value="0x00E6" name="line" kind="HspFunction" />
+    <code type="0x00" value="0x00E7" name="point" kind="HspFunction" />
+    <code type="0x00" value="0x00E8" name="palcolor" kind="HspFunction" />
+    <code type="0x00" value="0x00E9" name="sprinit" kind="HspFunction" />
+    <code type="0x00" value="0x00EA" name="poke" kind="HspFunction" />
+    <code type="0x00" value="0x00EB" name="peek" kind="HspFunction" />
+    <code type="0x00" value="0x00EC" name="bsave" kind="HspFunction" />
+    <code type="0x00" value="0x00ED" name="nop" kind="HspFunction" />
+    <code type="0x00" value="0x00EE" name="sprwipe" kind="HspFunction" />
+    <code type="0x00" value="0x00EF" name="sprcheck" kind="HspFunction" />
+    <code type="0x00" value="0x00A0" name="mapset" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00A1" name="mapput" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00A2" name="amdset" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00A3" name="winclr" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00A4" name="mspset" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00A5" name="mspchg" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00A6" name="mput" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00A7" name="mget" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00A8" name="mspget" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00A9" name="mspene" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00AA" name="mspst" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00AB" name="mspmode" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00AC" name="mspleft" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00AD" name="mapchg" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00AE" name="mspitm" kind="HspFunction" since="1.2f" />
+    <code type="0x00" value="0x00AF" name="mspent" kind="HspFunction" since="1.2f" />
+    <code type="0x13" value="0x0000" name="system" kind="HspFunction" />
+    <code type="0x13" value="0x0001" name="stat" kind="HspFunction" />
+    <code type="0x13" value="0x0002" name="err" kind="HspFunction" />
+    <code type="0x13" value="0x0003" name="csrx" kind="HspFunction" />
+    <code type="0x13" value="0x0004" name="csry" kind="HspFunction" />
+    <code type="0x13" value="0x0005" name="hspver" kind="HspFunction" />
+    <code type="0x13" value="0x0006" name="gmode" kind="HspFunction" />
+    <code type="0x13" value="0x0007" name="dispx" kind="HspFunction" />
+    <code type="0x13" value="0x0008" name="dispy" kind="HspFunction" />
+    <code type="0x13" value="0x0009" name="cnt" kind="HspFunction" />
+    <code type="0x13" value="0x000A" name="rval" kind="HspFunction" />
+    <code type="0x13" value="0x000B" name="gval" kind="HspFunction" />
+    <code type="0x13" value="0x000C" name="bval" kind="HspFunction" />
+    <code type="0x13" value="0x000D" name="spx" kind="HspFunction" />
+    <code type="0x13" value="0x000E" name="spy" kind="HspFunction" />
+    <code type="0x13" value="0x000F" name="spat" kind="HspFunction" />
+    <code type="0x13" value="0x0010" name="damflg" kind="HspFunction" since="1.2f" />
+    <code type="0x13" value="0x0011" name="clrflg" kind="HspFunction" since="1.2f" />
   </codes>
   <!--
     hspdef.as macros that expand to a built-in call with one integer argument.

@@ -70,6 +70,8 @@ internal enum Ax2TokenLayout
 // and continue carry; 2.5 writes it only after those two. BraceBlocks says if and else take a
 // "{ }" block; 2.4 ends an if at the end of its line instead. InlineStringLimit is the longest
 // string literal, in source bytes, that hspcmp keeps whole on one line, 0 for no limit.
+// FirstVariable is the index HSP 1's ASC.EXE gives the first user variable, past the system
+// variables it numbers from 0; 0 for the later releases, which name variables in a table.
 //
 // 1 つの hspcmp のビルドと、それが書く AX に現れる、または AX を決める振る舞い。Order は全ビルド
 // 中の位置で、"3.2 から" は Order を比べる。FormatWord は hspcmp が書くヘッダーのバージョンで、
@@ -83,6 +85,8 @@ internal enum Ax2TokenLayout
 // 終わりのラベルを repeat も持つことで、2.5 はその 2 つの後にだけ書く。BraceBlocks は if と
 // else が "{ }" のブロックを取ることで、2.4 は代わりに行末で if を終える。InlineStringLimit は
 // hspcmp が 1 行で切らずに読む文字列リテラルの最長(ソースのバイト数)で、0 は制限無し。
+// FirstVariable は HSP 1 の ASC.EXE が最初のユーザー変数に与える番号で、0 から数えるシステム
+// 変数の後に続く。変数名を表に持つ後のリリースでは 0。
 internal sealed record CompilerRelease(
     string Name,
     int Order,
@@ -98,12 +102,13 @@ internal sealed record CompilerRelease(
     bool IncludesHspdef = true,
     bool LabelsRepeat = true,
     bool BraceBlocks = true,
-    int InlineStringLimit = 0
+    int InlineStringLimit = 0,
+    int FirstVariable = 0
 )
 {
-    // The major version, 2 or 3; releases of one major share a token encoding.
+    // The major version, 1, 2 or 3; releases of one major share a token encoding.
     //
-    // メジャーバージョン(2 か 3)。同じメジャーのリリースはトークンの符号化を共有する。
+    // メジャーバージョン(1、2、3)。同じメジャーのリリースはトークンの符号化を共有する。
     internal uint Major => FormatWord >> 8;
 
     // "3.8b2" names 3.8β2, since a command line may not carry the Greek letter.
@@ -128,7 +133,9 @@ internal static class CompilerReleases
     // 2.6 以降のどの hspcmp もメインファイルの前に取り込むヘッダー。
     internal const string ImplicitHeader = "hspdef.as";
 
+    internal const uint Word1 = 0x100;
     internal const uint Word24 = 0x203;
+    internal const uint Word24G = 0x204;
     internal const uint Word25 = 0x205;
     internal const uint Word255 = 0x255;
     internal const uint Word26 = 0x206;
@@ -136,6 +143,36 @@ internal static class CompilerReleases
     internal const uint Word31 = 0x301;
     internal const uint Word35 = 0x350;
     internal const uint Word36 = 0x360;
+
+    // HSP 1 has no format word: its "Aspo" header carries only sizes, so both rows take 0x100,
+    // which sorts below every HSP 2 word. The rows come from Ghidra on each ASC.EXE and from
+    // probe builds under DOSBox-X. 1.1 (ASC ver.A6) numbers user variables from 0x10 after 16
+    // system variables; 1.2f (ver.A5) adds damflg, clrflg and the map commands and starts at 0x20.
+    // Neither has a #directive, a table or a code-generation option.
+    //
+    // HSP 1 には形式のワードが無い。"Aspo" のヘッダーは大きさだけを持つため、両方の行は HSP 2 の
+    // どのワードより小さい 0x100 を取る。行は各 ASC.EXE を Ghidra で見た結果と、DOSBox-X 上の試験
+    // ビルドによる。1.1(ASC ver.A6)は 16 個のシステム変数の後、0x10 からユーザー変数を数える。
+    // 1.2f(ver.A5)は damflg・clrflg とマップの命令を加え、0x20 から数える。どちらにも #命令・
+    // 表・コード生成のオプションは無い。
+    private static CompilerRelease Aspo(string name, int order, int firstVariable) =>
+        new(
+            name,
+            order,
+            Word1,
+            OptcodeMode.None,
+            OptprmSupport.Ignored,
+            NormalBuildRecords.None,
+            TokenLayout: Ax2TokenLayout.ByteValue,
+            IncludesHspdef: false,
+            LabelsRepeat: false,
+            BraceBlocks: false,
+            FirstVariable: firstVariable
+        );
+
+    internal static CompilerRelease Hsp11 { get; } = Aspo("1.1", 0, 0x10);
+
+    internal static CompilerRelease Hsp12F { get; } = Aspo("1.2f", 1, 0x20);
 
     // The HSP 2 rows come from each release's hspcmp.dll: Ghidra for the format word and the
     // token packing, and probe builds under Wine for the rest. 2.55 writes 0x255, above the 0x206
@@ -150,22 +187,26 @@ internal static class CompilerReleases
     // 持つ。#undef の後に組み込み命令の名前で #deffunc するソースをコンパイルするのは 2.61 だけで、
     // 2.5 と 2.55 は #undef を拒否し、2.6 は関数の定義で失敗する。HSP 2 には 3.x のコード生成の
     // オプションが無い。
-    // 2.4 writes the 2.5 token packing under a 64-byte header with no #deffunc or #module table,
-    // since it has neither directive, and compiles "{" as a token, so an if covers the rest of its
-    // line. It stops reading a string literal after 249 to 252 source bytes, by the probes; a
-    // {"..."} block's lines it reads in full. Its HSED2.EXE holds the compiler, run under Wine from the START.AX menu command for
-    // the probes.
+    // 2.3d and 2.4 write the 2.5 token packing under a 64-byte header with no #deffunc or #module
+    // table, since they have neither directive, and compile "{" as a token, so an if covers the
+    // rest of its line. They stop reading a string literal after 249 to 252 source bytes, by the
+    // probes; a {"..."} block's lines they read in full. Each release's HSED2.EXE holds the
+    // compiler, run under Wine for the probes. 2.3d to 2.4f write format word 0x203, and 2.4g and
+    // 2.4h write 0x204; past that the releases differ only in their keyword tables. The 2.4h row
+    // also stands for the 2.4hβ2 beta and the later 2.4h repack, whose builds match it.
     //
-    // 2.4 は 2.5 のトークンの詰め方を、#deffunc と #module のテーブルの無い 64 バイトのヘッダーの
-    // 下に書く。どちらの命令も無いためである。また "{" をトークンとしてコンパイルするため、if は
-    // その行の残りに及ぶ。試験では文字列リテラルをソースの 249〜252 バイトで読み終え、{"..."} の
-    // ブロックの行は全部読む。コンパイラは HSED2.EXE の中にあり、試験では Wine 上で START.AX の
-    // メニューコマンドから動かした。
-    internal static CompilerRelease Hsp24 { get; } =
+    // 2.3d と 2.4 は 2.5 のトークンの詰め方を、#deffunc と #module のテーブルの無い 64 バイトの
+    // ヘッダーの下に書く。どちらの命令も無いためである。また "{" をトークンとしてコンパイルする
+    // ため、if はその行の残りに及ぶ。試験では文字列リテラルをソースの 249〜252 バイトで読み終え、
+    // {"..."} のブロックの行は全部読む。コンパイラは各リリースの HSED2.EXE の中にあり、試験では
+    // Wine 上で動かした。2.3d〜2.4f は形式のワード 0x203 を、2.4g と 2.4h は 0x204 を書き、それ
+    // 以外の違いはキーワード表だけである。2.4h の行は、ビルドが一致する 2.4hβ2 のベータと後の
+    // 2.4h の再配布も表す。
+    private static CompilerRelease Early(string name, int order, uint word) =>
         new(
-            "2.4",
-            0,
-            Word24,
+            name,
+            order,
+            word,
             OptcodeMode.None,
             OptprmSupport.Ignored,
             NormalBuildRecords.None,
@@ -176,10 +217,26 @@ internal static class CompilerReleases
             InlineStringLimit: 248
         );
 
+    internal static CompilerRelease Hsp23D { get; } = Early("2.3d", 2, Word24);
+
+    internal static CompilerRelease Hsp24 { get; } = Early("2.4", 3, Word24);
+
+    internal static CompilerRelease Hsp24C { get; } = Early("2.4c", 4, Word24);
+
+    internal static CompilerRelease Hsp24D { get; } = Early("2.4d", 5, Word24);
+
+    internal static CompilerRelease Hsp24E { get; } = Early("2.4e", 6, Word24);
+
+    internal static CompilerRelease Hsp24F { get; } = Early("2.4f", 7, Word24);
+
+    internal static CompilerRelease Hsp24G { get; } = Early("2.4g", 8, Word24G);
+
+    internal static CompilerRelease Hsp24H { get; } = Early("2.4h", 9, Word24G);
+
     internal static CompilerRelease Hsp25 { get; } =
         new(
             "2.5",
-            1,
+            10,
             Word25,
             OptcodeMode.None,
             OptprmSupport.Ignored,
@@ -192,7 +249,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp255 { get; } =
         new(
             "2.55",
-            2,
+            11,
             Word255,
             OptcodeMode.None,
             OptprmSupport.Ignored,
@@ -201,12 +258,12 @@ internal static class CompilerReleases
         );
 
     internal static CompilerRelease Hsp26 { get; } =
-        new("2.6", 3, Word26, OptcodeMode.None, OptprmSupport.Ignored, NormalBuildRecords.None);
+        new("2.6", 12, Word26, OptcodeMode.None, OptprmSupport.Ignored, NormalBuildRecords.None);
 
     internal static CompilerRelease Hsp261 { get; } =
         new(
             "2.61",
-            4,
+            13,
             Word26,
             OptcodeMode.None,
             OptprmSupport.Ignored,
@@ -215,15 +272,15 @@ internal static class CompilerReleases
         );
 
     internal static CompilerRelease Hsp30 { get; } =
-        new("3.0", 5, Word30, OptcodeMode.None, OptprmSupport.Ignored, NormalBuildRecords.None);
+        new("3.0", 14, Word30, OptcodeMode.None, OptprmSupport.Ignored, NormalBuildRecords.None);
 
     internal static CompilerRelease Hsp30A { get; } =
-        new("3.0a", 6, Word30, OptcodeMode.None, OptprmSupport.Ignored, NormalBuildRecords.None);
+        new("3.0a", 15, Word30, OptcodeMode.None, OptprmSupport.Ignored, NormalBuildRecords.None);
 
     internal static CompilerRelease Hsp31 { get; } =
         new(
             "3.1",
-            7,
+            16,
             Word31,
             OptcodeMode.DropsUnused,
             OptprmSupport.Rejected,
@@ -233,7 +290,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp32 { get; } =
         new(
             "3.2",
-            8,
+            17,
             Word31,
             OptcodeMode.DropsUnused,
             OptprmSupport.Rejected,
@@ -243,7 +300,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp321 { get; } =
         new(
             "3.21",
-            9,
+            18,
             Word31,
             OptcodeMode.DropsUnused,
             OptprmSupport.Rejected,
@@ -253,7 +310,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp33 { get; } =
         new(
             "3.3",
-            10,
+            19,
             Word31,
             OptcodeMode.DropsUnused,
             OptprmSupport.Known,
@@ -263,7 +320,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp331 { get; } =
         new(
             "3.31",
-            11,
+            20,
             Word31,
             OptcodeMode.DropsUnused,
             OptprmSupport.Known,
@@ -273,7 +330,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp332 { get; } =
         new(
             "3.32",
-            12,
+            21,
             Word31,
             OptcodeMode.DropsUnused,
             OptprmSupport.Known,
@@ -283,7 +340,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp34 { get; } =
         new(
             "3.4",
-            13,
+            22,
             Word31,
             OptcodeMode.DropsUnused,
             OptprmSupport.Known,
@@ -293,7 +350,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp35 { get; } =
         new(
             "3.5",
-            14,
+            23,
             Word35,
             OptcodeMode.DropsUnused,
             OptprmSupport.Known,
@@ -303,7 +360,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp351 { get; } =
         new(
             "3.51",
-            15,
+            24,
             Word35,
             OptcodeMode.DropsUnused,
             OptprmSupport.Known,
@@ -313,7 +370,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp36 { get; } =
         new(
             "3.6",
-            16,
+            25,
             Word36,
             OptcodeMode.DropsUnusedAndPoolsStrings,
             OptprmSupport.Known,
@@ -323,7 +380,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp37 { get; } =
         new(
             "3.7",
-            17,
+            26,
             Word36,
             OptcodeMode.DropsUnusedAndPoolsStrings,
             OptprmSupport.Known,
@@ -342,7 +399,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp38B2 { get; } =
         new(
             "3.8β2",
-            18,
+            27,
             Word36,
             OptcodeMode.DropsUnusedAndPoolsStrings,
             OptprmSupport.Known,
@@ -355,7 +412,7 @@ internal static class CompilerReleases
     internal static CompilerRelease Hsp38B2X64 { get; } =
         new(
             "3.8β2 x64",
-            19,
+            28,
             Word36,
             OptcodeMode.DropsUnusedAndPoolsStrings,
             OptprmSupport.Known,
@@ -367,7 +424,16 @@ internal static class CompilerReleases
 
     internal static ImmutableArray<CompilerRelease> All { get; } =
     [
+        Hsp11,
+        Hsp12F,
+        Hsp23D,
         Hsp24,
+        Hsp24C,
+        Hsp24D,
+        Hsp24E,
+        Hsp24F,
+        Hsp24G,
+        Hsp24H,
         Hsp25,
         Hsp255,
         Hsp26,

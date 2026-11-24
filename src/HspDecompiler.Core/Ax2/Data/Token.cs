@@ -172,6 +172,14 @@ internal class Token
     internal int VariableIndex => Type == Ax2TokenType.Variable ? Value : -1;
 
     internal int FuncIndex => Type == Ax2TokenType.UserFunction ? Value - 0x10 : -1;
+
+    // The type and value of a built-in, which the keyword table names; null for other tokens.
+    //
+    // キーワード表が名付ける組み込み命令の型と値。他のトークンでは null。
+    internal (int Type, int Value)? Builtin =>
+        Type is Ax2TokenType.SystemVariable or Ax2TokenType.FlowControl or Ax2TokenType.GuiFunction
+            ? (Type, Value)
+            : null;
     #endregion
 
     #region properties for decompile

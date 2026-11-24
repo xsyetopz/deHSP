@@ -63,6 +63,11 @@ internal sealed record AxEvidence(
     //
     // コードが使うすべてのキーワードを持つリリース。何も読んでいなければ null。
     internal ReleaseSpan? Keywords { get; init; }
+
+    // The index an HSP 1 AX gives its first user variable; null when the AX does not show it.
+    //
+    // HSP 1 の AX が最初のユーザー変数に与える番号。AX がそれを示さない時は null。
+    internal int? FirstVariable { get; init; }
 }
 
 // The releases that could have written one AX, and the questions the decompiler's stages ask of
@@ -198,6 +203,11 @@ internal sealed class ReleaseProfile
         if (evidence.Keywords is { } keywords)
         {
             candidates = Keep(candidates, keywords.Contains);
+        }
+
+        if (evidence.FirstVariable is { } first)
+        {
+            candidates = Keep(candidates, r => r.FirstVariable == first);
         }
 
         if (evidence.RedefinedBuiltin)

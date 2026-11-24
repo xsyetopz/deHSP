@@ -3,11 +3,14 @@ using System.IO;
 
 namespace HspDecompiler.Core.Pipeline;
 
-// The two AX layouts: hspcmp 2.x writes "HSP2" images and 3.x writes "HSP3" ones.
+// The three AX layouts: the HSP 1 compiler ASC writes "Aspo" images, hspcmp 2.x writes "HSP2"
+// ones and 3.x writes "HSP3" ones.
 //
-// 2 つの AX の形式。hspcmp 2.x は "HSP2"、3.x は "HSP3" のイメージを書く。
+// 3 つの AX の形式。HSP 1 のコンパイラ ASC は "Aspo"、hspcmp 2.x は "HSP2"、3.x は "HSP3" の
+// イメージを書く。
 internal enum AxFormat
 {
+    Ax1,
     Ax2,
     Ax3,
 }
@@ -19,6 +22,7 @@ internal enum AxFormat
 // 見分ける唯一の場所。
 internal static class AxFormats
 {
+    internal const string Ax1Magic = "Aspo";
     internal const string Ax2Magic = "HSP2";
     internal const string Ax3Magic = "HSP3";
     private const int MagicLength = 4;
@@ -35,7 +39,8 @@ internal static class AxFormats
     }
 
     internal static AxFormat? Of(string magic) =>
-        magic.Equals(Ax2Magic, StringComparison.Ordinal) ? AxFormat.Ax2
+        magic.Equals(Ax1Magic, StringComparison.Ordinal) ? AxFormat.Ax1
+        : magic.Equals(Ax2Magic, StringComparison.Ordinal) ? AxFormat.Ax2
         : magic.Equals(Ax3Magic, StringComparison.Ordinal) ? AxFormat.Ax3
         : null;
 
@@ -49,5 +54,5 @@ internal static class AxFormats
         || magic.StartsWith("DPM", StringComparison.Ordinal);
 
     internal static string SourceExtension(AxFormat? format) =>
-        format == AxFormat.Ax2 ? ".as" : ".hsp";
+        format is AxFormat.Ax1 or AxFormat.Ax2 ? ".as" : ".hsp";
 }

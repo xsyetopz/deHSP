@@ -64,7 +64,7 @@ public class ReleaseProfileTests
     public void LaterFormatWordTakesTheNearestKnownOne()
     {
         Assert.Equal("3.6-3.8β2 x64", Infer(0x370).ToString());
-        Assert.Equal(CompilerReleases.All.Length, Infer(0x200).Candidates.Length);
+        Assert.Equal(CompilerReleases.All.Length, Infer(0xff).Candidates.Length);
     }
 
     [Fact]
@@ -144,17 +144,60 @@ public class ReleaseProfileTests
         Assert.Equal(0, profile.InlineStringLimit);
     }
 
-    [Fact]
-    public void Hsp24WordNamesTheReleaseWithoutBraceBlocks()
+    [Theory]
+    [InlineData(CompilerReleases.Word24, "2.3d-2.4f")]
+    [InlineData(CompilerReleases.Word24G, "2.4g-2.4h")]
+    public void Hsp24WordNamesTheReleasesWithoutBraceBlocks(uint word, string expected)
     {
         // Act
-        ReleaseProfile profile = Infer(CompilerReleases.Word24);
+        ReleaseProfile profile = Infer(word);
 
         // Assert
-        Assert.Equal("2.4", profile.ToString());
+        Assert.Equal(expected, profile.ToString());
         Assert.False(profile.BraceBlocks);
         Assert.Equal(248, profile.InlineStringLimit);
         Assert.Equal(Ax2TokenLayout.ByteValue, profile.TokenLayout);
+        Assert.False(profile.IncludesHspdef);
+    }
+
+    [Fact]
+    public void Hsp24UpdateKeywordLeavesTheUpdatesThatHaveIt()
+    {
+        // Arrange
+        ReleaseSpan strmid = ReleaseSpan.Parse("2.4d", "2.61", ReleaseSpan.All)!.Value;
+
+        // Act
+        var profile = ReleaseProfile.Infer(
+            new AxEvidence(CompilerReleases.Word24, 0, false) { Keywords = strmid }
+        );
+
+        // Assert
+        Assert.Equal("2.4d-2.4f", profile.ToString());
+    }
+
+    [Fact]
+    public void Hsp1WordAloneKeepsBothAscReleases()
+    {
+        // Act
+        ReleaseProfile profile = Infer(CompilerReleases.Word1);
+
+        // Assert
+        Assert.Equal("1.1-1.2f", profile.ToString());
+    }
+
+    [Theory]
+    [InlineData(0x10, "1.1")]
+    [InlineData(0x20, "1.2f")]
+    public void Hsp1FirstVariableNamesItsAsc(int first, string expected)
+    {
+        // Arrange
+        var evidence = new AxEvidence(CompilerReleases.Word1, 0, false) { FirstVariable = first };
+
+        // Act
+        var profile = ReleaseProfile.Infer(evidence);
+
+        // Assert
+        Assert.Equal(expected, profile.ToString());
     }
 
     [Fact]

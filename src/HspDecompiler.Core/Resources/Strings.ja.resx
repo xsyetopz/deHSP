@@ -71,7 +71,7 @@
   <data name="OutputComplete" xml:space="preserve"><value>出力完了</value></data>
   <data name="AnalysisComplete" xml:space="preserve"><value>解析終了</value></data>
   <data name="UnrecognizedFileFormat" xml:space="preserve"><value>解析できないファイル形式です</value></data>
-  <data name="NotHsp2OrHsp3" xml:space="preserve"><value>HSP2でもHSP3でもない形式</value></data>
+  <data name="NotAxImage" xml:space="preserve"><value>HSP 1・2・3 の AX イメージではない形式</value></data>
 
   <!-- Decoder phases -->
   <data name="AnalyzingHeader" xml:space="preserve"><value>ヘッダー解析中...</value></data>
@@ -155,4 +155,21 @@
   <!-- Misc -->
   <data name="OperatorPriorityOnNonOperator" xml:space="preserve"><value>演算子でないプリミティブに優先度を要求されました</value></data>
   <data name="UnsupportedType" xml:space="preserve"><value>サポート外</value></data>
+
+  <!-- HSP 1 decoder -->
+  <data name="Ax1Differs" xml:space="preserve"><value>0x{0:X4}: {1}。再コンパイルした AX はここで異なる</value></data>
+  <data name="Ax1StringBytes" xml:space="preserve"><value>どのソースの文字列も作らないバイトを文字列が持つ</value></data>
+  <data name="Ax1LabelOffset" xml:space="preserve"><value>文の始まりではないオフセットをラベルが指す</value></data>
+  <data name="Ax1JumpTarget" xml:space="preserve"><value>if・else・loop の飛び先が行の並びの置く位置と違う</value></data>
+  <data name="Ax1VariableOrder" xml:space="preserve"><value>変数の番号がそれより小さい番号より先に使われる、またはローカル変数が local 文の外にある</value></data>
+  <data name="Ax1VariableCount" xml:space="preserve"><value>コードが作るより多くの変数をヘッダーが数える</value></data>
+  <data name="Ax1WideNumber" xml:space="preserve"><value>3 バイトの数値が 0x8000 未満の値を持つ</value></data>
+  <data name="Ax1UnknownToken" xml:space="preserve"><value>未知のトークン</value></data>
+  <data name="Ax1LineOrder" xml:space="preserve"><value>行番号が前の行番号に続かない</value></data>
+  <data name="Ax1LabelBeforeUse" xml:space="preserve"><value>最初の定義または参照より前にラベルが値として現れる。ASC はそこでそれを変数にする</value></data>
+  <data name="Ax1LabelIndexOrder" xml:space="preserve"><value>同じ文の新しい参照の後に、ラベルの番号が埋め草のラベルを必要とする</value></data>
+  <data name="Ax1UnresolvedLabels" xml:space="preserve"><value>AX はオフセットではなくラベルの番号を持つ。ASC はラベルが未定義の時にこれを書く。出力はそれらのラベルを定義せずに参照するため、同じ番号に再コンパイルされる</value></data>
+  <data name="Ax1LineLength" xml:space="preserve"><value>行が ASC の読む 255 バイトより長い</value></data>
+  <data name="Ax1ContinuationLines" xml:space="preserve"><value>文字列に要る継続行が、デバッグビルドがその行の後に残した行より多い</value></data>
+  <data name="Ax1LabelsAfterEnd" xml:space="preserve"><value>最初の end より後の参照はラベルの番号のままである。ASC はそこまでしかラベルを解決しないため。出力は番号を再現するが、各番号がどのラベルを指したかは AX に無い</value></data>
 </root>

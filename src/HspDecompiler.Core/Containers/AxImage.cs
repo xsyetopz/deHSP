@@ -22,7 +22,7 @@ internal sealed record AxImage(ReadOnlyMemory<byte> Bytes, AxFormat Format)
     internal static AxImage Of(byte[] bytes) =>
         FormatOf(bytes) is { } format
             ? new AxImage(bytes, format)
-            : throw new HspDecoderException(Strings.NotHsp2OrHsp3);
+            : throw new HspDecoderException(Strings.NotAxImage);
 
     internal static AxFormat? FormatOf(byte[] bytes)
     {

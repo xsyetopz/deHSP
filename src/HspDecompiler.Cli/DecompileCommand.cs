@@ -27,7 +27,8 @@ internal sealed class DecompileCommand : RootCommand
 
     private readonly Option<FileInfo> _dictionary = new("--dictionary", "-d")
     {
-        Description = "Custom dictionary XML (default: built-in table for hspcmp 2.4 to 3.8beta2)",
+        Description =
+            "Custom dictionary XML (default: built-in table for ASC 1.1 to hspcmp 3.8beta2)",
     };
 
     private readonly Option<bool> _noDecrypt = new("--no-decrypt")

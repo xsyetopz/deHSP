@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using HspDecompiler.Core.Abstractions;
+using HspDecompiler.Core.Ax1;
 using HspDecompiler.Core.Ax2;
 using HspDecompiler.Core.Ax3;
 using HspDecompiler.Core.Keywords;
@@ -28,13 +29,19 @@ internal sealed record DecodeSettings(
     );
 
     internal ISourceDecoder DecoderFor(AxFormat format) =>
-        format == AxFormat.Ax2 ? new Ax2Decoder(this) : new Ax3Decoder(this);
+        format switch
+        {
+            AxFormat.Ax1 => new Ax1Decoder(this),
+            AxFormat.Ax2 => new Ax2Decoder(this),
+            AxFormat.Ax3 => new Ax3Decoder(this),
+            _ => throw new System.ArgumentOutOfRangeException(nameof(format)),
+        };
 
     // The release the evidence allows, pinned to the caller's hint when the evidence leaves the
-    // hint a candidate. Both decoders ask this, so a hint means the same for AX2 and AX3.
+    // hint a candidate. Every decoder asks this, so a hint means the same for each format.
     //
-    // 証拠が許すリリース。呼び出し側の指定が候補に残る時はそれに絞る。両方のデコーダーがこれを
-    // 尋ねるため、指定は AX2 でも AX3 でも同じ意味を持つ。
+    // 証拠が許すリリース。呼び出し側の指定が候補に残る時はそれに絞る。すべてのデコーダーがこれを
+    // 尋ねるため、指定はどの形式でも同じ意味を持つ。
     internal ReleaseProfile ReleaseFor(AxEvidence evidence, IDecompilerLogger logger)
     {
         var inferred = ReleaseProfile.Infer(evidence);
