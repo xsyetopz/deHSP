@@ -70,14 +70,76 @@ public class ReleaseProfileTests
     [Fact]
     public void Hsp2FormatWordKeepsBothHsp2Releases()
     {
+        ReleaseProfile profile = Infer(CompilerReleases.Word26);
+
+        Assert.Equal("2.6-2.61", profile.ToString());
+        Assert.False(profile.RedefinesBuiltins);
+        Assert.True(profile.IncludesHspdef);
+        Assert.Equal("2.61", profile.Pin("2.61")?.ToString());
+        Assert.Null(profile.Pin("3.0"));
+    }
+
+    [Fact]
+    public void RedefinedBuiltinLeavesOnly261()
+    {
         var profile = ReleaseProfile.Infer(
             new AxEvidence(CompilerReleases.Word26, 0, false) { RedefinedBuiltin = true }
         );
 
-        Assert.Equal("2.6-2.61", profile.ToString());
+        Assert.Equal("2.61", profile.ToString());
         Assert.True(profile.RedefinesBuiltins);
-        Assert.Equal("2.61", profile.Pin("2.61")?.ToString());
-        Assert.Null(profile.Pin("3.0"));
+    }
+
+    [Fact]
+    public void RuntimeOfSourceWithCodeOnEveryLineLeavesItsDefaultWriter()
+    {
+        // Arrange
+        var evidence = new AxEvidence(CompilerReleases.Word36, 0, false)
+        {
+            Runtime = CompilerReleases.Hsp64Runtime,
+            BootOption = CompilerReleases.Hsp64BootOption,
+            CodeOnEveryLine = true,
+        };
+
+        // Act
+        var profile = ReleaseProfile.Infer(evidence);
+
+        // Assert
+        Assert.Equal("3.8β2 x64", profile.ToString());
+    }
+
+    [Fact]
+    public void RuntimeOfSourceWithAFreeLineLeavesEveryRelease()
+    {
+        // Arrange
+        var evidence = new AxEvidence(CompilerReleases.Word36, 0, false)
+        {
+            Runtime = CompilerReleases.Hsp64Runtime,
+            BootOption = CompilerReleases.Hsp64BootOption,
+        };
+
+        // Act
+        var profile = ReleaseProfile.Infer(evidence);
+
+        // Assert
+        Assert.Contains(CompilerReleases.Hsp38B2, profile.Candidates);
+    }
+
+    [Theory]
+    [InlineData(CompilerReleases.Word25, "2.5", true)]
+    [InlineData(CompilerReleases.Word255, "2.55", false)]
+    public void EarlyHsp2WordNamesOneReleaseWithoutHspdef(
+        uint word,
+        string expected,
+        bool byteValues
+    )
+    {
+        ReleaseProfile profile = Infer(word);
+
+        Assert.Equal(expected, profile.ToString());
+        Assert.Equal(byteValues, profile.TokenLayout == Ax2TokenLayout.ByteValue);
+        Assert.Equal(!byteValues, profile.LabelsRepeat);
+        Assert.False(profile.IncludesHspdef);
     }
 
     [Fact]
@@ -142,6 +204,28 @@ public class ReleaseProfileTests
         ReleaseProfile? pinned = profile.Pin("3.4");
 
         Assert.Null(pinned);
+    }
+
+    [Fact]
+    public void KeywordsRuleOutReleasesWithoutThem()
+    {
+        ReleaseSpan since34 = ReleaseSpan.Parse("3.4", null, ReleaseSpan.All)!.Value;
+
+        var profile = ReleaseProfile.Infer(
+            new AxEvidence(CompilerReleases.Word31, 0, false) { Keywords = since34 }
+        );
+
+        Assert.Equal("3.4", profile.ToString());
+    }
+
+    [Fact]
+    public void KeywordsNoReleaseHasAreIgnored()
+    {
+        var profile = ReleaseProfile.Infer(
+            new AxEvidence(CompilerReleases.Word31, 0, false) { Keywords = new ReleaseSpan(1, 0) }
+        );
+
+        Assert.Equal("3.1-3.4", profile.ToString());
     }
 
     [Fact]

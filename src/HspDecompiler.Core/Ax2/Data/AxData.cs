@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using HspDecompiler.Core.Keywords;
+using HspDecompiler.Core.Releases;
 
 namespace HspDecompiler.Core.Ax2.Data;
 
@@ -30,6 +32,28 @@ internal sealed class AxData(
     internal byte[] TokenData { get; } = tokenData;
 
     internal byte[] StringData { get; } = stringData;
+
+    // The #module names in the order the source opens them; empty for a release that records
+    // none.
+    //
+    // ソースが開く順の #module の名前。記録しないリリースでは空。
+    internal string[] Modules { get; init; } = [];
+
+    // The keyword table and the releases that name the built-in codes; the decoder sets both
+    // before any token is read.
+    //
+    // 組み込みのコードを名付けるキーワードの表とリリース。デコーダーがトークンを読む前に両方を
+    // 設定する。
+    internal KeywordDictionary Keywords { get; set; } = KeywordDictionary.BuiltIn;
+
+    internal ReleaseProfile Release { get; set; } = ReleaseProfile.Unknown;
+
+    // True when the name is a built-in of some candidate release, so a #deffunc of that name
+    // replaces it.
+    //
+    // 名前がいずれかの候補のリリースの組み込み命令である時に真。その名前の #deffunc はそれを
+    // 置き換える。
+    internal bool IsBuiltinName(string name) => Keywords.IsName(name, Release);
 
     // The built-ins a #deffunc replaces, whose own calls the source writes as name@hsp.
     //

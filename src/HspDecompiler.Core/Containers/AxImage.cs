@@ -14,14 +14,14 @@ namespace HspDecompiler.Core.Containers;
 // メモリ上の 1 つの AX イメージ。出どころ(素の .ax ファイル、DPMX・DPM2 のエントリ、実行
 // ファイル内のアーカイブ)を問わない。すべてのコンテナがこの 1 つの値を返すため、コンテナの
 // 癖はデコーダーの前で片付き、デコーダーはファイルを読まない。
-internal sealed record AxImage(string Name, ReadOnlyMemory<byte> Bytes, AxFormat Format)
+internal sealed record AxImage(ReadOnlyMemory<byte> Bytes, AxFormat Format)
 {
     // The image named by the AX magic at the start of the bytes.
     //
     // バイト列の先頭にある AX のマジックで決まるイメージ。
-    internal static AxImage Of(string name, byte[] bytes) =>
+    internal static AxImage Of(byte[] bytes) =>
         FormatOf(bytes) is { } format
-            ? new AxImage(name, bytes, format)
+            ? new AxImage(bytes, format)
             : throw new HspDecoderException(Strings.NotHsp2OrHsp3);
 
     internal static AxFormat? FormatOf(byte[] bytes)

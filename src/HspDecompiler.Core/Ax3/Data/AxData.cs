@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using HspDecompiler.Core.Ax3.Data.PP;
 using HspDecompiler.Core.Encoding;
+using HspDecompiler.Core.Keywords;
 using HspDecompiler.Core.Pipeline;
 using HspDecompiler.Core.Releases;
 
@@ -15,7 +16,7 @@ namespace HspDecompiler.Core.Ax3.Data;
 // NameAssigner が名前を付ける。ここではストリームを読まない。
 internal class AxData
 {
-    internal Hsp3Dictionary? Dictionary { get; init; }
+    internal KeywordDictionary? Dictionary { get; init; }
 
     internal AxHeader? Header { get; set; }
 
@@ -25,9 +26,11 @@ internal class AxData
 
     internal SourceStyle Style { get; init; } = SourceStyle.Default;
 
-    // The releases that could have written this AX; every release until the code is read.
+    // The releases that could have written this AX: every release until the header is read,
+    // the releases of its format word until the code is read, then the inferred ones.
     //
-    // この AX を書いた可能性のあるリリース。コードを読むまではすべてのリリース。
+    // この AX を書いた可能性のあるリリース。ヘッダーを読むまではすべてのリリース、コードを
+    // 読むまでは形式のワードのリリース、その後は推定したリリース。
     internal ReleaseProfile Release { get; set; } = ReleaseProfile.Unknown;
 
     internal List<Function> Modules { get; } = [];
@@ -44,6 +47,11 @@ internal class AxData
     internal List<(int DataOffset, int TokenOffset)> LiteralAnchors { get; } = [];
 
     internal bool HasSingleItemFlags { get; set; }
+
+    // The releases that have every keyword the code uses (LexicalAnalyzer.NoteKeyword).
+    //
+    // コードが使うすべてのキーワードを持つリリース(LexicalAnalyzer.NoteKeyword)。
+    internal ReleaseSpan KeywordSpan { get; set; } = ReleaseSpan.All;
 
     internal List<Label> Labels { get; private set; } = [];
 

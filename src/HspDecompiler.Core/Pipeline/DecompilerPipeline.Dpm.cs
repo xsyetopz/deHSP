@@ -127,7 +127,7 @@ public sealed partial class DecompilerPipeline
             (settings with { CommonFiles = null })
                 .DecoderFor(format)
                 .DecodeAsync(
-                    new AxImage("start.ax", array, format),
+                    new AxImage(array, format),
                     "start" + AxFormats.SourceExtension(format),
                     NullDecompilerLogger.Instance,
                     _progress,

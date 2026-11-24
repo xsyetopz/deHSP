@@ -121,7 +121,7 @@ internal static class DebugNames
 
     private static HashSet<string> TakenNames(AxData data)
     {
-        HashSet<string> taken = data.Dictionary!.GetAllNames();
+        HashSet<string> taken = data.Dictionary!.GetAllNames(data.Release);
         // A module variable is written bare inside its module, so its bare name is taken too.
         //
         // モジュール変数はそのモジュール内では裸で書くため、裸の名前も使用済みにする。

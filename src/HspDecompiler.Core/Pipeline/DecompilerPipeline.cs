@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Schema;
 using HspDecompiler.Core.Abstractions;
-using HspDecompiler.Core.Ax3;
 using HspDecompiler.Core.Containers;
 using HspDecompiler.Core.Encoding;
 using HspDecompiler.Core.Exceptions;
+using HspDecompiler.Core.Keywords;
 using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Pipeline;
@@ -46,7 +46,7 @@ public sealed partial class DecompilerPipeline
     private readonly IDecompilerLogger _logger;
     private readonly IProgressReporter _progress;
     private readonly OutputWriter _writer;
-    private Hsp3Dictionary? _dictionary;
+    private KeywordDictionary? _dictionary;
 
     /// <summary>
     /// <para xml:lang="en">Creates a pipeline that reports to the given logger and progress sink.</para>
@@ -83,7 +83,7 @@ public sealed partial class DecompilerPipeline
     /// </returns>
     public bool Initialize()
     {
-        _dictionary = Hsp3Dictionary.BuiltIn;
+        _dictionary = KeywordDictionary.BuiltIn;
         _logger.Write(
             string.Format(
                 CultureInfo.InvariantCulture,
@@ -123,7 +123,7 @@ public sealed partial class DecompilerPipeline
         string name = Path.GetFileName(dictionaryPath);
         try
         {
-            _dictionary = Hsp3Dictionary.FromFile(dictionaryPath);
+            _dictionary = KeywordDictionary.FromFile(dictionaryPath);
         }
         catch (Exception ex)
             when (ex
@@ -250,7 +250,6 @@ public sealed partial class DecompilerPipeline
             );
             decompilerOutput.OutputPath = outputPath;
             AxImage image = new(
-                Path.GetFileName(options.InputPath),
                 reader.ReadBytes((int)(reader.BaseStream.Length - reader.BaseStream.Position)),
                 format
             );
@@ -342,7 +341,7 @@ public sealed partial class DecompilerPipeline
                 AxFormats.SourceExtension(format)
             );
             await DecodeImageAsync(
-                    new AxImage(entry.File.FileName!, entry.Bytes, format),
+                    new AxImage(entry.Bytes, format),
                     outputPath,
                     settings,
                     SourceEncoding(options),
@@ -456,13 +455,7 @@ public sealed partial class DecompilerPipeline
         byte[] bytes = reader.ReadBytes(
             (int)(reader.BaseStream.Length - reader.BaseStream.Position)
         );
-        await DecodeImageAsync(
-                AxImage.Of(Path.GetFileName(outputPath), bytes),
-                outputPath,
-                settings,
-                sourceEncoding,
-                ct
-            )
+        await DecodeImageAsync(AxImage.Of(bytes), outputPath, settings, sourceEncoding, ct)
             .ConfigureAwait(false);
     }
 

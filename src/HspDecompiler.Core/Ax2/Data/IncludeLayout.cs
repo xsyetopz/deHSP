@@ -14,14 +14,16 @@ internal readonly record struct FileSwitch(int Offset, string Name);
 // hspcmp 2.x appends literals, #func names and #deffunc names to the data segment in source
 // order and never reuses an entry, so the first data offset a line introduces places it in the
 // source. Each switch between files appends the file name there too: the included name on
-// entry, the parent's name again on return. hspcmp includes hspdef.as before the main file by
-// itself, so the first switch is the return into the main file.
+// entry, the parent's name again on return. hspcmp from 2.6 includes hspdef.as before the main
+// file by itself, so the first switch is the return into the main file; in 2.5 and 2.55 the
+// first switch names the main file.
 //
 // hspcmp 2.x はリテラル・#func 名・#deffunc 名をソース順にデータセグメントへ追加し、同じ
 // エントリを再利用しない。そのため行が最初に持ち込むデータオフセットでソース上の位置が
 // 決まる。ファイルが切り替わるたびにファイル名も追加される。入るときは取り込んだファイル名、
-// 戻るときは親のファイル名である。hspcmp はメインファイルの前に hspdef.as を自動で取り込む
-// ため、最初の切り替えはメインファイルへの戻りになる。
+// 戻るときは親のファイル名である。2.6 以降の hspcmp はメインファイルの前に hspdef.as を自動で
+// 取り込むため、最初の切り替えはメインファイルへの戻りになる。2.5 と 2.55 では最初の切り替えが
+// メインファイルの名前を示す。
 internal sealed class IncludeLayout
 {
     private static readonly SearchValues<char> s_pathChars = SearchValues.Create("/\\:*?\"<>|");
@@ -70,10 +72,11 @@ internal sealed class IncludeLayout
     internal static DecodedSource Split(
         List<SourceLine> lines,
         List<FileSwitch> switches,
-        string? mainFileName
+        string? mainFileName,
+        bool includesHspdef
     )
     {
-        var layout = new IncludeLayout(BuildTree(switches), mainFileName);
+        var layout = new IncludeLayout(BuildTree(switches, includesHspdef), mainFileName);
         List<string> main = layout.Emit(layout._root, lines, 0, lines.Count);
         return new DecodedSource(main, layout._includes);
     }
@@ -105,16 +108,25 @@ internal sealed class IncludeLayout
         }
     }
 
-    private static Segment BuildTree(List<FileSwitch> switches)
+    private static Segment BuildTree(List<FileSwitch> switches, bool includesHspdef)
     {
         var root = new Segment(null, null, 0);
         Segment current = root;
         foreach (FileSwitch fileSwitch in switches)
         {
-            if ((current.Parent != null) && current.Parent.TakeName(fileSwitch.Name))
+            if (!includesHspdef && (current == root) && root.TakeName(fileSwitch.Name))
             {
-                current.End = fileSwitch.Offset;
-                current = current.Parent;
+                continue;
+            }
+
+            if (ReturnTarget(current, fileSwitch.Name) is { } target)
+            {
+                for (Segment closed = current; closed != target; closed = closed.Parent!)
+                {
+                    closed.End = fileSwitch.Offset;
+                }
+
+                current = target;
                 continue;
             }
 
@@ -124,6 +136,36 @@ internal sealed class IncludeLayout
         }
 
         return root;
+    }
+
+    // A switch back to an enclosing file ends every include inside it. hspcmp writes no switch
+    // for a return that leaves no data behind, so a switch may skip levels, as when the last
+    // line of an include is an #include itself. Only the direct parent may still be unnamed.
+    //
+    // 外側のファイルへの切り替えは、その内側のすべての取り込みを終える。hspcmp はデータを
+    // 残さない戻りには切り替えを書かないため、取り込みの最後の行自体が #include の時のように、
+    // 切り替えが階層を飛ばすことがある。名前が無いままであり得るのは直接の親だけである。
+    private static Segment? ReturnTarget(Segment current, string name)
+    {
+        if (current.Parent == null)
+        {
+            return null;
+        }
+
+        if (current.Parent.TakeName(name))
+        {
+            return current.Parent;
+        }
+
+        for (Segment? outer = current.Parent.Parent; outer != null; outer = outer.Parent)
+        {
+            if (string.Equals(outer.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return outer;
+            }
+        }
+
+        return null;
     }
 
     private List<string> Emit(Segment segment, List<SourceLine> lines, int from, int to)
@@ -160,11 +202,18 @@ internal sealed class IncludeLayout
     // An include that left nothing in the data segment goes right after the last line before it.
     // Lines without data after an include's last anchored line, such as the return closing a
     // #deffunc, stay in the include up to the next label, since a parent usually jumps past an
-    // include to a label.
+    // include to a label. The #global closing a module stays with the include too, and the lines
+    // after it belong to the parent. An include ending in #func lines is a DLL header, so the
+    // lines after it belong to the parent; hspcmp 2.5 and 2.55 reject a repeat left open at the
+    // end of a file, so a header that took the parent's repeat would not compile.
     //
     // データセグメントに何も残さなかった取り込みは、その直前の行のすぐ後ろに置く。取り込みの
     // 最後のアンカー付き行に続くデータを持たない行(#deffunc を閉じる return など)は、次の
     // ラベルまで取り込み側に残す。親は取り込みを飛び越えてラベルへ移ることが多いためである。
+    // モジュールを閉じる #global も取り込み側に残り、その後の行は親に属する。
+    // #func の行で終わる取り込みは DLL のヘッダーなので、その後の行は親に属する。hspcmp 2.5 と
+    // 2.55 はファイルの終わりで閉じていない repeat を拒否するため、親の repeat を取り込んだ
+    // ヘッダーはコンパイルできない。
     private static (int From, int To) FindRange(
         List<SourceLine> lines,
         int from,
@@ -208,9 +257,18 @@ internal sealed class IncludeLayout
         }
 
         int end = last + 1;
+        if (lines[last].Text.StartsWith("#func", StringComparison.Ordinal))
+        {
+            return (first, end);
+        }
+
         while ((end < to) && (lines[end].Anchor < 0) && !lines[end].Text.StartsWith('*'))
         {
             end++;
+            if (lines[end - 1].Text == "#global")
+            {
+                break;
+            }
         }
 
         return (first, end);
@@ -279,9 +337,11 @@ internal sealed class IncludeLayout
 
         internal List<Segment> Children { get; } = [];
 
-        // The main file's name first appears on the return from hspdef.as.
+        // The main file's name first appears on the return from hspdef.as, or as the first switch
+        // where no hspdef.as comes first.
         //
-        // メインファイルの名前は hspdef.as からの戻りで初めて現れる。
+        // メインファイルの名前は hspdef.as からの戻りで、hspdef.as が先に来ない時は最初の
+        // 切り替えで初めて現れる。
         internal bool TakeName(string name)
         {
             if (Name == null)

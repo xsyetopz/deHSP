@@ -3,6 +3,7 @@ using System.Text;
 using HspDecompiler.Core.Abstractions;
 using HspDecompiler.Core.Ax2;
 using HspDecompiler.Core.Ax3;
+using HspDecompiler.Core.Keywords;
 using HspDecompiler.Core.Releases;
 using HspDecompiler.Core.Resources;
 
@@ -16,7 +17,7 @@ namespace HspDecompiler.Core.Pipeline;
 // ファイル、呼び出し側が AX を書いたと言うコンパイラのリリース。1 回の実行で一度作って下へ
 // 渡すため、どの段も実行ごとの状態をフィールドに持たない。
 internal sealed record DecodeSettings(
-    Hsp3Dictionary Dictionary,
+    KeywordDictionary Dictionary,
     SourceStyle Style,
     ICommonFiles? CommonFiles = null,
     string? CompilerHint = null

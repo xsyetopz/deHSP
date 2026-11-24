@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 using System.Text;
-using HspDecompiler.Core.Ax3.Dictionary;
+using HspDecompiler.Core.Keywords;
 using HspDecompiler.Core.Resources;
 
 namespace HspDecompiler.Core.Ax3.Data;
@@ -41,6 +41,8 @@ internal abstract class PrimitiveToken
     protected readonly int _flag;
     protected readonly int _value;
 
+    internal int Type => _type;
+
     internal int Value => _value;
 
     // True for the code hspcmp wrote with this type and value, before any dictionary naming.
@@ -73,6 +75,16 @@ internal abstract class PrimitiveToken
     internal string? Name => _name;
 
     internal int TokenOffset { get; }
+
+    // Names the code for the inferred release, for a code whose name differs across releases
+    // (KeywordNames).
+    //
+    // リリースで名前の異なるコードに、推定したリリースでの名前を付ける(KeywordNames)。
+    internal void Rename(string name)
+    {
+        _dicValueName = name;
+        _name = name;
+    }
 
     internal void SetName()
     {

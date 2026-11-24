@@ -37,6 +37,8 @@
   <data name="DictionaryLoadSuccess" xml:space="preserve"><value>load {0}: succeeded</value></data>
   <data name="DictionaryLoadFailed" xml:space="preserve"><value>load {0}: failed ({1})</value></data>
   <data name="DictionaryDuplicateEntry" xml:space="preserve"><value>Duplicate dictionary entry {0} on line {1}</value></data>
+  <data name="DictionaryUnknownRelease" xml:space="preserve"><value>Dictionary entry {0} on line {1} names a release the release table does not have</value></data>
+  <data name="DictionaryVariantMismatch" xml:space="preserve"><value>Dictionary entry {0} on line {1} differs from another variant of its code in kind, flags or priority</value></data>
   <data name="DictionaryLoadError" xml:space="preserve"><value>Failed to read {0}</value></data>
   <data name="DictionaryNotInitialized" xml:space="preserve"><value>Dictionary not initialized. Call Initialize() first.</value></data>
 
@@ -117,6 +119,7 @@
 
   <!-- Syntactic analysis -->
   <data name="RpnConversionFailed" xml:space="preserve"><value>Failed to convert to reverse Polish notation</value></data>
+  <data name="KeywordNameAmbiguous" xml:space="preserve"><value>The code written as {0} has another name in some candidate release: {1}. Pass --compiler to choose</value></data>
   <data name="CompilerHintIgnored" xml:space="preserve"><value>The compiler hint {0} does not fit this AX ({1}); the inferred release is kept</value></data>
   <data name="StructNotInHspSpec" xml:space="preserve"><value>#struct output by deHSP is not included in HSP's published declaration specification</value></data>
   <data name="AnalysisFailedEndNotStored" xml:space="preserve"><value>Analysis failed: end position not stored</value></data>

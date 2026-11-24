@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace HspDecompiler.Core.Ax3.Dictionary;
+namespace HspDecompiler.Core.Keywords;
 
 internal struct HspDictionaryKey : IComparable<HspDictionaryKey>, IEquatable<HspDictionaryKey>
 {

@@ -27,12 +27,11 @@ internal class Param : Preprocessor
             : lookupName ?? "NULL";
 
         ret._deffuncIndex = reader.ReadInt16();
-        // STRUCTPRM.offset, the parameter position on the stack. The order already implies it
-        // for the source; its spacing tells which compiler build laid the stack out.
+        // STRUCTPRM.offset, the parameter position on the stack, which the parameter order
+        // already gives the source.
         //
-        // STRUCTPRM.offset。スタック上の引数の位置。ソースには並び順から分かるが、その間隔は
-        // どのコンパイラのビルドがスタックを組んだかを示す。
-        ret.StackOffset = reader.ReadInt32();
+        // STRUCTPRM.offset。スタック上の引数の位置で、ソースには引数の並び順から分かる。
+        _ = reader.ReadInt32();
 
         return ret;
     }
@@ -45,7 +44,6 @@ internal class Param : Preprocessor
 
     internal short TypeCode => unchecked((short)_paramType);
 
-    internal int StackOffset { get; private set; }
     private bool _isStructParameter;
 
     internal void SetFunction(AxData parent)

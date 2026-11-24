@@ -2,11 +2,12 @@
 <!--
   Format of the deHSP keyword dictionary. The decompiler validates every dictionary against
   this schema before it reads one, so a custom dictionary fails with the line of its first
-  error. Numbers are fixed-width uppercase hex, which lets xs:unique catch duplicates.
+  error. One dictionary covers every hspcmp release: since and until on an entry name the
+  releases that know it. Numbers are fixed-width uppercase hex.
 
   deHSP のキーワード辞書の形式。デコンパイラーは辞書を読む前に必ずこのスキーマで検証するため、
-  独自の辞書は最初の誤りの行番号とともに失敗する。数値は桁数固定の大文字 16 進数で、これにより
-  xs:unique が重複を検出できる。
+  独自の辞書は最初の誤りの行番号とともに失敗する。1 つの辞書がすべての hspcmp のリリースを
+  扱い、項目の since と until がそれを知るリリースを指す。数値は桁数固定の大文字 16 進数。
 -->
 <xs:schema
   xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -17,18 +18,8 @@
   <xs:element name="dictionary">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="codes">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="code" type="d:code" maxOccurs="unbounded" />
-            </xs:sequence>
-          </xs:complexType>
-          <xs:unique name="uniqueCode">
-            <xs:selector xpath="d:code" />
-            <xs:field xpath="@type" />
-            <xs:field xpath="@value" />
-          </xs:unique>
-        </xs:element>
+        <xs:element name="codes" type="d:codes" maxOccurs="unbounded" />
+        <xs:element name="macros" type="d:macros" minOccurs="0" maxOccurs="unbounded" />
         <xs:element name="paramTypes">
           <xs:complexType>
             <xs:sequence>
@@ -46,11 +37,36 @@
   </xs:element>
 
   <!--
-    One HSP 3 code: the type and value fields of an AX code segment word. Without a value the
-    entry matches every value of the type.
+    since and until name the first and last hspcmp release that knows an entry, such as "3.2"
+    or "3.8b2" (deHSP's CompilerReleases). A codes or macros element gives the span its entries
+    take when they name none. Two entries for one type and value must not share a release, and
+    they must agree on kind, priority and flags, because the lexer reads a code before it knows
+    the release; only the name follows the release.
 
-    HSP 3 のコード 1 つ。AX のコードセグメントにある語の型と値のフィールド。value が無ければ
-    その型のすべての値に一致する。
+    since と until は項目を知る最初と最後の hspcmp のリリースを "3.2" や "3.8b2" のように指す
+    (deHSP の CompilerReleases)。codes と macros 要素は、範囲を指さない項目が取る範囲を与える。
+    同じ type と value の 2 つの項目はリリースを共有してはならず、kind・priority・flags が
+    一致しなければならない。字句解析はリリースが分かる前にコードを読むため、リリースに従うのは
+    名前だけである。
+  -->
+  <xs:attributeGroup name="span">
+    <xs:attribute name="since" type="xs:string" />
+    <xs:attribute name="until" type="xs:string" />
+  </xs:attributeGroup>
+
+  <xs:complexType name="codes">
+    <xs:sequence>
+      <xs:element name="code" type="d:code" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attributeGroup ref="d:span" />
+  </xs:complexType>
+
+  <!--
+    One code: the type and value fields of a token word, an AX3 code segment word or an AX2
+    token. Without a value the entry matches every value of the type.
+
+    コード 1 つ。トークンの語(AX3 のコードセグメントの語や AX2 のトークン)の型と値のフィールド。
+    value が無ければその型のすべての値に一致する。
   -->
   <xs:complexType name="code">
     <xs:attribute name="type" type="d:hex8" use="required" />
@@ -59,6 +75,30 @@
     <xs:attribute name="kind" type="d:kind" use="required" />
     <xs:attribute name="priority" type="xs:int" />
     <xs:attribute name="flags" type="d:flags" />
+    <xs:attributeGroup ref="d:span" />
+  </xs:complexType>
+
+  <xs:complexType name="macros">
+    <xs:sequence>
+      <xs:element name="macro" type="d:macro" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attributeGroup ref="d:span" />
+  </xs:complexType>
+
+  <!--
+    A hspdef.as macro that expands to a call of a built-in function with one integer argument,
+    such as dir_exe for dirinfo(1). The decompiler writes the macro only when every release that
+    could have compiled the AX has it.
+
+    1 つの整数の引数で組み込み関数を呼ぶ形に展開される hspdef.as のマクロ。dirinfo(1) に対する
+    dir_exe など。AX をコンパイルできたすべてのリリースが持つ時だけ、デコンパイラーはマクロを
+    書く。
+  -->
+  <xs:complexType name="macro">
+    <xs:attribute name="name" type="xs:string" use="required" />
+    <xs:attribute name="function" type="xs:string" use="required" />
+    <xs:attribute name="argument" type="xs:int" use="required" />
+    <xs:attributeGroup ref="d:span" />
   </xs:complexType>
 
   <xs:complexType name="paramType">

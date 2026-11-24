@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HspDecompiler.Core.Abstractions;
+using HspDecompiler.Core.Ax3.Analysis;
 using HspDecompiler.Core.Ax3.Data;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.Layout;
@@ -36,9 +37,10 @@ internal sealed class Ax3Decoder(DecodeSettings settings) : ISourceDecoder
             logger.Write(Strings.AnalyzingHeader);
             var axImage = new Ax3ImageReader(reader, data.ScriptStrings);
             data.Header = axImage.Header;
+            data.Release = ReleaseProfile.ForFormat(data.Header.Version);
             logger.Write(Strings.AnalyzingPreprocessor);
             axImage.ReadTables(data);
-            NameAssigner.NameFunctions(data.Functions, settings.Dictionary);
+            NameAssigner.NameFunctions(data.Functions, settings.Dictionary, data.Release);
             data.DebugInfo = axImage.ReadDebugInfo();
             logger.Write(Strings.LexicalAnalysis);
             var lex = new LexicalAnalyzer(settings.Dictionary);
@@ -50,6 +52,7 @@ internal sealed class Ax3Decoder(DecodeSettings settings) : ISourceDecoder
             );
             AxEvidence evidence = EvidenceReader.Read(data);
             data.Release = settings.ReleaseFor(evidence, logger);
+            KeywordNames.Apply(stream, settings.Dictionary, data.Release, logger);
             IncludeNames? names = data.DebugInfo.HasLines
                 ? IncludeNamesOf(data, mainFileName)
                 : null;

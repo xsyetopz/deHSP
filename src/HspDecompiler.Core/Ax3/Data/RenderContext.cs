@@ -1,25 +1,35 @@
+using HspDecompiler.Core.Keywords;
 using HspDecompiler.Core.Pipeline;
 using HspDecompiler.Core.Releases;
 
 namespace HspDecompiler.Core.Ax3.Data;
 
 // Everything a line's text depends on besides the line: the module it sits in, the global
-// functions that decide how names inside a module are spelled, the style the caller chose, and
-// the releases that could have written the AX. Rendering reads nothing else, so a line renders
+// functions that decide how names inside a module are spelled, the style the caller chose, the
+// releases that could have written the AX, and the keyword table that names their macros.
+// Rendering reads nothing else, so a line renders
 // the same however many passes ran before.
 //
 // 行のテキストが行以外に依存するものすべて。行が属するモジュール、モジュール内の名前の書き方を
-// 決めるグローバル関数、呼び出し側が選んだ書き方、そして AX を書いた可能性のあるリリース。
+// 決めるグローバル関数、呼び出し側が選んだ書き方、AX を書いた可能性のあるリリース、そして
+// そのマクロを名付けるキーワードの表。
 // 出力はこれ以外を読まないため、それまでに何度出力しても行は同じに書かれる。
 internal sealed record RenderContext(
     ModuleScope Scope,
     string? Module,
     SourceStyle Style,
-    ReleaseProfile Release
+    ReleaseProfile Release,
+    KeywordDictionary Keywords
 )
 {
     internal static RenderContext Of(AxData data) =>
-        new(data.Scope, null, data.Style, data.Release);
+        new(
+            data.Scope,
+            null,
+            data.Style,
+            data.Release,
+            data.Dictionary ?? KeywordDictionary.BuiltIn
+        );
 
     internal RenderContext In(string? module) => this with { Module = module };
 

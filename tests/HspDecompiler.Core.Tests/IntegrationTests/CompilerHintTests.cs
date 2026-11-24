@@ -63,6 +63,41 @@ public sealed class CompilerHintTests : IDisposable
         );
     }
 
+    // resume.ax is hspcmp 3.6's `resume`, whose code 3.7 renamed varprop. Inference keeps 3.6
+    // through 3.8β2, so the newest name is written with a warning naming both; the 3.6 hint
+    // gives resume without one.
+    //
+    // resume.ax は hspcmp 3.6 の `resume` で、そのコードを 3.7 は varprop に改名した。推定では
+    // 3.6 から 3.8β2 が残るため最新の名前を書いて両方の名前を警告し、3.6 の指定では警告無しで
+    // resume を書く。
+    [Theory]
+    [InlineData(null, "resume.expected.hsp", true)]
+    [InlineData("3.6", "resume.3.6.expected.hsp", false)]
+    public async Task VariantNameFollowsTheRelease(string? hint, string expected, bool warned)
+    {
+        var logger = new NullLogger();
+        var pipeline = new DecompilerPipeline(logger, new NullProgressReporter());
+        Assert.True(pipeline.Initialize());
+        var options = new DecompilerOptions
+        {
+            InputPath = Fixture("resume.ax"),
+            OutputDirectory = _root,
+            CompilerRelease = hint,
+        };
+
+        DecompilerResult result = await pipeline.RunAsync(options, CancellationToken.None);
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Equal(
+            warned,
+            logger.Warnings.Any(w => w.Contains("resume (3.6)", StringComparison.Ordinal))
+        );
+        Assert.Equal(
+            await File.ReadAllBytesAsync(Fixture(expected)),
+            await File.ReadAllBytesAsync(result.OutputPath!)
+        );
+    }
+
     private static string Fixture(string name) =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "Ax", name);
 }

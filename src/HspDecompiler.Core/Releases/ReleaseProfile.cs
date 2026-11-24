@@ -6,7 +6,8 @@ namespace HspDecompiler.Core.Releases;
 
 // What one AX shows about the compiler that wrote it and the options it ran with, gathered once
 // after the code is read (Ax3.EvidenceReader). The release inference reads FormatWord,
-// NormalBuildMarks, SingleItemFlags and Frames; the directive planner reads the rest as well.
+// NormalBuildMarks, SingleItemFlags, Frames, Keywords, RedefinedBuiltin, Runtime and
+// CodeOnEveryLine; the directive planner reads the rest as well.
 // FormatWord is the header version. NormalBuildMarks counts the line records of a build without
 // -d, SingleItemFlags says some one-literal parameter carries hspcmp's optprm flag, and Frames is
 // the parameter layout a user function shows, if any does. RepeatedStrings, UncalledImport,
@@ -15,8 +16,8 @@ namespace HspDecompiler.Core.Releases;
 //
 // 1 つの AX が書いたコンパイラと、その時のオプションについて示すこと。コードを読んだ後に一度
 // だけ集める(Ax3.EvidenceReader)。リリースの推定は FormatWord・NormalBuildMarks・
-// SingleItemFlags・Frames を読み、指示文の計画はそれ以外も読む。FormatWord はヘッダーの
-// バージョン、NormalBuildMarks は -d 無しのビルドの行の記録の数、SingleItemFlags は 1 リテラルの
+// SingleItemFlags・Frames・Keywords・RedefinedBuiltin・Runtime・CodeOnEveryLine を読み、
+// 指示文の計画はそれ以外も読む。FormatWord はヘッダーのバージョン、NormalBuildMarks は -d 無しのビルドの行の記録の数、SingleItemFlags は 1 リテラルの
 // 引数のどれかに hspcmp の optprm の印があること、Frames はユーザー関数が示す引数の並べ方
 // (示すものがあれば)。RepeatedStrings・UncalledImport・VariableNames・Utf8Strings・UsesAwait は
 // optcode・varname・UTF-8 出力・await が AX に残したもの、DebugLines は AX が -d のビルドである
@@ -47,6 +48,21 @@ internal sealed record AxEvidence(
     //
     // #deffunc が組み込み命令の名前を取る。置き換えを受け付けるリリースだけがこれをコンパイルする。
     internal bool RedefinedBuiltin { get; init; }
+
+    // The runtime the AX names, and whether a debug build shows a source with code on every
+    // line. Such a source had no line for a #runtime, so the compiler wrote the runtime by
+    // itself.
+    //
+    // AX が示すランタイムと、デバッグビルドがすべての行にコードのあるソースを示すこと。その
+    // ソースには #runtime を書く行が無いため、ランタイムはコンパイラ自身が書いている。
+    internal string? Runtime { get; init; }
+
+    internal bool CodeOnEveryLine { get; init; }
+
+    // The releases that have every keyword the code uses; null when nothing was read.
+    //
+    // コードが使うすべてのキーワードを持つリリース。何も読んでいなければ null。
+    internal ReleaseSpan? Keywords { get; init; }
 }
 
 // The releases that could have written one AX, and the questions the decompiler's stages ask of
@@ -84,6 +100,16 @@ internal sealed class ReleaseProfile
         All(r => r.Records == NormalBuildRecords.ModulesAndStringEnds);
 
     internal bool RedefinesBuiltins => All(r => r.RedefinesBuiltins);
+
+    internal bool IncludesHspdef => All(r => r.IncludesHspdef);
+
+    internal bool LabelsRepeat => All(r => r.LabelsRepeat);
+
+    // The format word alone sets the token packing, so the candidates never disagree on it.
+    //
+    // トークンの詰め方は形式のワードだけで決まるため、候補の間で食い違うことは無い。
+    internal Ax2TokenLayout TokenLayout =>
+        Candidates.IsEmpty ? Ax2TokenLayout.NineBitValue : Candidates[0].TokenLayout;
 
     // True when every candidate writes this runtime and these boot bits for a source that names
     // no runtime, so the source needs neither the #runtime line nor the #bootopt for those bits.
@@ -152,13 +178,31 @@ internal sealed class ReleaseProfile
             candidates = Keep(candidates, r => r.Frames == frames);
         }
 
+        if (evidence.Keywords is { } keywords)
+        {
+            candidates = Keep(candidates, keywords.Contains);
+        }
+
         if (evidence.RedefinedBuiltin)
         {
             candidates = Keep(candidates, r => r.RedefinesBuiltins);
         }
 
+        if (evidence.CodeOnEveryLine && (evidence.Runtime != null))
+        {
+            candidates = Keep(candidates, r =>
+                r.DefaultRuntime == evidence.Runtime
+                && (evidence.BootOption & r.DefaultBootOption) == r.DefaultBootOption
+            );
+        }
+
         return new ReleaseProfile(candidates);
     }
+
+    // The releases of one format word, which is all the header tells before the code is read.
+    //
+    // 1 つの形式のワードのリリース。コードを読む前にヘッダーが示すのはこれだけである。
+    internal static ReleaseProfile ForFormat(uint word) => Infer(new AxEvidence(word, 0, false));
 
     // The release the caller names, when the evidence left it a candidate. A hint is advisory:
     // it settles what the AX cannot show, such as 3.2 against 3.32, and never overrides what the
@@ -169,16 +213,9 @@ internal sealed class ReleaseProfile
     // 指定の損は、null を返した結果の警告だけである。
     internal ReleaseProfile? Pin(string hint)
     {
-        ImmutableArray<CompilerRelease> pinned = [.. Candidates.Where(r => Names(r, hint))];
+        ImmutableArray<CompilerRelease> pinned = [.. Candidates.Where(r => r.Names(hint))];
         return pinned.IsEmpty ? null : new ReleaseProfile(pinned);
     }
-
-    // "3.8b2" names 3.8β2, since a command line may not carry the Greek letter.
-    //
-    // コマンドラインがギリシャ文字を通さないことがあるため、"3.8b2" は 3.8β2 を指す。
-    private static bool Names(CompilerRelease release, string hint) =>
-        release.Name.Equals(hint, StringComparison.OrdinalIgnoreCase)
-        || release.Name.Replace('β', 'b').Equals(hint, StringComparison.OrdinalIgnoreCase);
 
     private static ImmutableArray<CompilerRelease> Keep(
         ImmutableArray<CompilerRelease> candidates,

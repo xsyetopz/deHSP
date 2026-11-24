@@ -65,7 +65,7 @@ internal sealed class DebugLayout : ILayoutStrategy
 {
     public bool Applies(LayoutInput input) => input.Names != null;
 
-    public DecodedSource? TryLayout(LayoutInput input)
+    public DecodedSource TryLayout(LayoutInput input)
     {
         bool unused = input.Lines.Exists(line => line is ModuleStart { Used: false });
         return SourceLayout.Build(
@@ -96,7 +96,7 @@ internal sealed class InOrderLayout : ILayoutStrategy
 {
     public bool Applies(LayoutInput input) => true;
 
-    public DecodedSource? TryLayout(LayoutInput input)
+    public DecodedSource TryLayout(LayoutInput input)
     {
         var renderer = new LineRenderer(RenderContext.Of(input.Data));
         return DecodedSource.Single([

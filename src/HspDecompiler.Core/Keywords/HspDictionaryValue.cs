@@ -1,4 +1,6 @@
-namespace HspDecompiler.Core.Ax3.Dictionary;
+using HspDecompiler.Core.Ax3;
+
+namespace HspDecompiler.Core.Keywords;
 
 internal struct HspDictionaryValue
 {

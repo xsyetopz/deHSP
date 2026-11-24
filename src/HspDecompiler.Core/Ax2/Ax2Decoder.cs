@@ -29,7 +29,10 @@ internal sealed class Ax2Decoder(DecodeSettings settings) : ISourceDecoder
             logger.Write(Strings.AnalyzingHeader);
             using BinaryReader reader = image.Open();
             AxData data = Ax2ImageReader.Read(reader.BaseStream);
+            data.Keywords = settings.Dictionary;
+            data.Release = ReleaseProfile.ForFormat(data.Header.Version);
             ReleaseProfile release = settings.ReleaseFor(EvidenceOf(data), logger);
+            data.Release = release;
 
             logger.Write(Strings.AnalyzingData);
             return Task.FromResult(Ax2Emitter.Emit(data, release, mainFileName));
@@ -48,6 +51,6 @@ internal sealed class Ax2Decoder(DecodeSettings settings) : ISourceDecoder
     private static AxEvidence EvidenceOf(AxData data) =>
         new(data.Header.Version, 0, false)
         {
-            RedefinedBuiltin = data.Deffuncs.Any(d => Token.IsBuiltinName(d.Name)),
+            RedefinedBuiltin = data.Deffuncs.Any(d => data.IsBuiltinName(d.Name)),
         };
 }

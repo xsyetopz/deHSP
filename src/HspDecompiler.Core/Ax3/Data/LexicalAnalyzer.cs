@@ -3,14 +3,14 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using HspDecompiler.Core.Ax3.Data.Analyzer;
 using HspDecompiler.Core.Ax3.Data.Primitive;
-using HspDecompiler.Core.Ax3.Dictionary;
 using HspDecompiler.Core.Ax3.Reading;
+using HspDecompiler.Core.Keywords;
 
 namespace HspDecompiler.Core.Ax3.Data;
 
 internal class LexicalAnalyzer
 {
-    internal LexicalAnalyzer(Hsp3Dictionary theDic)
+    internal LexicalAnalyzer(KeywordDictionary theDic)
     {
         ArgumentNullException.ThrowIfNull(theDic);
 
@@ -23,7 +23,7 @@ internal class LexicalAnalyzer
     private const int ProgramCommandType = 0x0F;
     private const int AwaitCode = 0x08;
 
-    private readonly Hsp3Dictionary? _dictionary;
+    private readonly KeywordDictionary? _dictionary;
     private int _tokenOffset;
 
     internal TokenCollection Analyze(Ax3ImageReader image, AxData data)
@@ -72,7 +72,8 @@ internal class LexicalAnalyzer
         }
 
         var key = new HspDictionaryKey { _type = type, _value = value };
-        bool known = _dictionary!.CodeLookUp(key, out HspDictionaryValue dicValue);
+        bool known = _dictionary!.CodeLookUp(key, data.Release, out HspDictionaryValue dicValue);
+        NoteKeyword(data, type, value);
         int extraValue = -1;
         if (
             known
@@ -99,6 +100,21 @@ internal class LexicalAnalyzer
         ret.SetName();
 
         return ret;
+    }
+
+    // Narrows the releases whose keywords the code uses: a code hspcmp writes only from 3.5 on
+    // rules out every earlier release. A code no release of the format word has, such as a
+    // plug-in code that shares a type with an HSP 2 keyword, says nothing.
+    //
+    // コードが使うキーワードを持つリリースに範囲を絞る。3.5 から hspcmp が書くコードはそれより
+    // 前のリリースをすべて除く。形式のワードのどのリリースも持たないコード、例えば HSP 2 の
+    // キーワードと型を共有するプラグインのコードは何も示さない。
+    private void NoteKeyword(AxData data, int type, int value)
+    {
+        if (_dictionary!.SpanOf(type, value) is { } span && span.Overlaps(data.Release))
+        {
+            data.KeywordSpan = data.KeywordSpan.Intersect(span);
+        }
     }
 
     // IDE0072 asks for every HspCodeType member, so None stays named next to the discard even

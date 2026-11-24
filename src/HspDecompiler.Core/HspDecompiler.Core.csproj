@@ -20,12 +20,12 @@
     </EmbeddedResource>
     <EmbeddedResource Update="Resources\Strings.ja.resx" />
     <EmbeddedResource
-      Include="Ax3\Dictionary.xml"
-      LogicalName="HspDecompiler.Core.Ax3.Dictionary.xml"
+      Include="Keywords\Dictionary.xml"
+      LogicalName="HspDecompiler.Core.Keywords.Dictionary.xml"
     />
     <EmbeddedResource
-      Include="Ax3\Dictionary.xsd"
-      LogicalName="HspDecompiler.Core.Ax3.Dictionary.xsd"
+      Include="Keywords\Dictionary.xsd"
+      LogicalName="HspDecompiler.Core.Keywords.Dictionary.xsd"
     />
   </ItemGroup>
 </Project>

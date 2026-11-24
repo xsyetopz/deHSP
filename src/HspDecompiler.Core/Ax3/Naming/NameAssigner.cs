@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using HspDecompiler.Core.Ax3.Data;
 using HspDecompiler.Core.Ax3.Data.PP;
+using HspDecompiler.Core.Keywords;
+using HspDecompiler.Core.Releases;
 
 namespace HspDecompiler.Core.Ax3.Naming;
 
@@ -39,13 +41,17 @@ internal static class NameAssigner
     //
     // まずグローバルなユーザー関数が自分の名前を使い、残りをモジュールのメンバー、DLL の
     // インポート、COM のインポートの順に取る。
-    internal static void NameFunctions(IEnumerable<Function> functions, Hsp3Dictionary dictionary)
+    internal static void NameFunctions(
+        IEnumerable<Function> functions,
+        KeywordDictionary dictionary,
+        ReleaseProfile scope
+    )
     {
         var functionNames = new List<string>();
         var initializer = new List<Function>();
         var comfuncs = new List<Function>();
         var dllfuncs = new List<Function>();
-        functionNames.AddRange(dictionary.GetAllFuncName());
+        functionNames.AddRange(dictionary.GetAllFuncName(scope));
         foreach (Function func in functions)
         {
             switch (func.Type)

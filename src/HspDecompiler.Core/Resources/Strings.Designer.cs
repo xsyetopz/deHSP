@@ -44,6 +44,8 @@ namespace HspDecompiler.Core.Resources
         internal static string DictionaryLoadSuccess => ResourceManager.GetString("DictionaryLoadSuccess", resourceCulture);
         internal static string DictionaryLoadFailed => ResourceManager.GetString("DictionaryLoadFailed", resourceCulture);
         internal static string DictionaryDuplicateEntry => ResourceManager.GetString("DictionaryDuplicateEntry", resourceCulture);
+        internal static string DictionaryUnknownRelease => ResourceManager.GetString("DictionaryUnknownRelease", resourceCulture);
+        internal static string DictionaryVariantMismatch => ResourceManager.GetString("DictionaryVariantMismatch", resourceCulture);
         internal static string DictionaryLoadError => ResourceManager.GetString("DictionaryLoadError", resourceCulture);
         internal static string DictionaryNotInitialized => ResourceManager.GetString("DictionaryNotInitialized", resourceCulture);
 
@@ -124,6 +126,7 @@ namespace HspDecompiler.Core.Resources
 
         // Syntactic analysis
         internal static string RpnConversionFailed => ResourceManager.GetString("RpnConversionFailed", resourceCulture);
+        internal static string KeywordNameAmbiguous => ResourceManager.GetString("KeywordNameAmbiguous", resourceCulture);
         internal static string CompilerHintIgnored => ResourceManager.GetString("CompilerHintIgnored", resourceCulture);
         internal static string StructNotInHspSpec => ResourceManager.GetString("StructNotInHspSpec", resourceCulture);
         internal static string AnalysisFailedEndNotStored => ResourceManager.GetString("AnalysisFailedEndNotStored", resourceCulture);

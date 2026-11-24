@@ -24,6 +24,7 @@ internal static class Ax2ImageReader
         byte[] dllData;
         byte[] funcData;
         byte[] deffuncData;
+        byte[] moduleData;
         byte[] labelData;
         byte[] stringData;
         try
@@ -32,10 +33,7 @@ internal static class Ax2ImageReader
             dllData = ReadSegment(stream, start + header.DllOffset, header.DllByte);
             funcData = ReadSegment(stream, start + header.FuncOffset, header.FuncByte);
             deffuncData = ReadSegment(stream, start + header.DeffuncOffset, header.DeffuncByte);
-            // The decompiler ignores #module data, but reading it still rejects a truncated file.
-            //
-            // デコンパイラーは #module のデータを使わないが、読むことで途中で切れたファイルを弾く。
-            _ = ReadSegment(stream, start + header.ModuleOffset, header.ModuleByte);
+            moduleData = ReadSegment(stream, start + header.ModuleOffset, header.ModuleByte);
             labelData = ReadSegment(stream, start + header.LabelOffset, header.LabelByte);
             stringData = ReadSegment(stream, start + header.TextOffset, header.TextByte);
         }
@@ -54,7 +52,10 @@ internal static class Ax2ImageReader
             ReadDeffuncs(header, deffuncData, stringData, labels),
             tokenData,
             stringData
-        );
+        )
+        {
+            Modules = ReadModules(header, moduleData),
+        };
     }
 
     private static Header ReadHeader(Stream stream)
@@ -132,6 +133,22 @@ internal static class Ax2ImageReader
         }
 
         return funcs;
+    }
+
+    // hspcmp 2.5 and 2.55 write one 24-byte record per #module: a word hspcmp always sets to 1,
+    // then the module name in 20 bytes. Later releases write none.
+    //
+    // hspcmp 2.5 と 2.55 は #module ごとに 24 バイトの記録を書く。hspcmp が常に 1 にするワードと、
+    // 20 バイトのモジュール名である。後のリリースは書かない。
+    private static string[] ReadModules(Header header, byte[] moduleData)
+    {
+        string[] modules = new string[header.ModuleCount];
+        for (int i = 0; i < modules.Length; i++)
+        {
+            modules[i] = AxData.ReadString(4 + (i * 24), moduleData);
+        }
+
+        return modules;
     }
 
     // Each #deffunc entry points at the label its code starts at, which then prints as the
